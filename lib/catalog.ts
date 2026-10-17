@@ -159,3 +159,20 @@ export function sortFilms(
     return a.rank - b.rank;
   });
 }
+
+export type ServiceAvailability = "available" | "unavailable" | "unknown";
+
+/**
+ * Whether a film streams (`FLATRATE`, `FREE`, `ADS`) on one of the TMDB provider ids.
+ * Rent and buy never count. A film without offer data is `unknown`, which is À vérifier
+ * and not proof that it is unavailable.
+ */
+export function availabilityOn(
+  film: { offers: Offer[]; availabilityStatus: "verified" | "unknown" },
+  services: ReadonlySet<string>,
+): ServiceAvailability {
+  if (film.availabilityStatus === "unknown") return "unknown";
+  return film.offers.some((offer) => STREAM_TYPES.has(offer.type) && services.has(offer.id))
+    ? "available"
+    : "unavailable";
+}
