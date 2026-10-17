@@ -59,6 +59,8 @@ describe("validation", () => {
     ["/api/discover?providers=8&maxRuntime=601"],
     ["/api/discover?providers=8,"],
     ["/api/discover?providers=8&maxRuntime=1e3"],
+    ["/api/discover?providers=8&sort=revenue"],
+    ["/api/discover?providers=8&sort=rating&sort=year"],
     [`/api/discover?providers=${Array.from({ length: 21 }, (_, i) => i + 1).join(",")}`],
   ])("rejects %s with 400", async (path) => {
     expect((await discover(req(path))).status).toBe(400);
@@ -196,6 +198,20 @@ describe("routes", () => {
     expect(url.searchParams.get("with_watch_monetization_types")).toBe("flatrate|free|ads");
     expect(url.searchParams.get("with_runtime.lte")).toBe("120");
     expect(url.searchParams.get("watch_region")).toBe("FR");
+  });
+
+  it("orders discover results by popularity, rating or year", async () => {
+    reply({ results: [] });
+    reply({ results: [] });
+    reply({ results: [] });
+    await discover(req("/api/discover?providers=8"));
+    await discover(req("/api/discover?providers=8&sort=rating"));
+    await discover(req("/api/discover?providers=8&sort=year"));
+    const params = fetchMock.mock.calls.map((call) => new URL(call[0]).searchParams);
+    expect(params[0].get("sort_by")).toBe("popularity.desc");
+    expect(params[1].get("sort_by")).toBe("vote_average.desc");
+    expect(params[1].get("vote_count.gte")).toBe("300");
+    expect(params[2].get("sort_by")).toBe("primary_release_date.desc");
   });
 
   it("sends the token as a header only, never in the URL, with the 24 h revalidation", async () => {
