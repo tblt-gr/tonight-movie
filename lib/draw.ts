@@ -52,7 +52,7 @@ export function effectiveSources(sources: string[], lists: Pick<StoredList, "id"
 
 const titleYear = (title: string, year: number | null) => `${normalizeTitle(title)}|${year ?? ""}`;
 
-function shuffle<T>(items: T[], random: () => number): T[] {
+export function shuffle<T>(items: T[], random: () => number): T[] {
   const result = [...items];
   for (let index = result.length - 1; index > 0; index -= 1) {
     const other = Math.floor(random() * (index + 1));
