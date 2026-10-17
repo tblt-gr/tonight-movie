@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
+import "@fontsource-variable/familjen-grotesk/wght.css";
 import "./base.css";
-import "./features.css";
-import "./profile.css";
-import "./next.css";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteHeader } from "@/components/SiteHeader";
 
 export const metadata: Metadata = {
   title: "Tonight’s Movie — trouvez votre film du soir",
   description:
-    "Explorez vos listes Letterboxd et trouvez où regarder un film en France selon vos plateformes.",
+    "Choisissez vos plateformes en France et laissez le hasard choisir votre film du soir.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        <SiteHeader />
+        <main className="shell page">{children}</main>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

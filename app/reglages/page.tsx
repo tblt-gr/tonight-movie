@@ -1,0 +1,5 @@
+export const metadata = { title: "Réglages — Tonight’s Movie" };
+
+export default function SettingsPage() {
+  return <h1>Réglages</h1>;
+}
