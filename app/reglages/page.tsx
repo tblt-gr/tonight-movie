@@ -1,3 +1,4 @@
+import { ImportBlock } from "@/components/ImportBlock";
 import { ServicesPicker } from "@/components/ServicesPicker";
 
 export const metadata = { title: "Réglages — Tonight’s Movie" };
@@ -6,7 +7,9 @@ export default function SettingsPage() {
   return (
     <>
       <h1>Réglages</h1>
-      <ServicesPicker />
+      <ServicesPicker>
+        <ImportBlock />
+      </ServicesPicker>
     </>
   );
 }

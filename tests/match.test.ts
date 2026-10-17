@@ -197,6 +197,14 @@ describe("resolveFilms", () => {
     expect(await find(library, "c")).toMatchObject({ tmdbId: 20, confidence: 1 });
   });
 
+  it("reports progress after each film", async () => {
+    const library = await setup();
+    const onProgress = vi.fn();
+    await resolveFilms(["a", "b", "c"], library, catalog(), { sleep: noSleep, onProgress });
+    expect(onProgress.mock.calls.map(([done]) => done)).toEqual([1, 2, 3]);
+    expect(onProgress).toHaveBeenLastCalledWith(3, 3);
+  });
+
   it("never searches a stored verdict again", async () => {
     const library = await setup();
     const search = vi.fn(catalog(movie(3, "Stalker", 1979)));

@@ -2,7 +2,7 @@
 
 import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { filterProviders, selectedFirst, validateServices } from "@/lib/services";
 import { resetAll } from "@/lib/storage";
 import { loadSettings, updateSettings } from "@/lib/storage/settings";
@@ -10,7 +10,7 @@ import type { ProviderInfo, ProvidersResponse } from "@/lib/types";
 
 type Status = "loading" | "ready" | "error";
 
-export function ServicesPicker() {
+export function ServicesPicker({ children }: { children?: ReactNode }) {
   const router = useRouter();
   const ids = useId();
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
@@ -155,6 +155,7 @@ export function ServicesPicker() {
           Valider
         </button>
       </form>
+      {children}
       <section className="reset" aria-labelledby={`${ids}-reset`}>
         <h2 id={`${ids}-reset`}>Vos données</h2>
         <p>Efface vos services, vos listes importées et vos films vus de ce navigateur.</p>
