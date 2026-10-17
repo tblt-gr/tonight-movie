@@ -1,0 +1,179 @@
+"use client";
+
+import { Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { filterProviders, selectedFirst, validateServices } from "@/lib/services";
+import { resetAll } from "@/lib/storage";
+import { loadSettings, updateSettings } from "@/lib/storage/settings";
+import type { ProviderInfo, ProvidersResponse } from "@/lib/types";
+
+type Status = "loading" | "ready" | "error";
+
+export function ServicesPicker() {
+  const router = useRouter();
+  const ids = useId();
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [status, setStatus] = useState<Status>("loading");
+  const [attempt, setAttempt] = useState(0);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(
+    () => new Set(loadSettings().services),
+  );
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/providers", { signal: controller.signal })
+      .then((response) => (response.ok ? (response.json() as Promise<ProvidersResponse>) : null))
+      .then((data) => {
+        if (!data) return setStatus("error");
+        setProviders(data.providers);
+        setStatus("ready");
+      })
+      .catch((reason: unknown) => {
+        if (!(reason instanceof DOMException && reason.name === "AbortError")) setStatus("error");
+      });
+    return () => controller.abort();
+  }, [attempt]);
+
+  const visible = useMemo(
+    () => filterProviders(selectedFirst(providers, selected), query),
+    [providers, selected, query],
+  );
+
+  function toggle(id: string) {
+    setError(null);
+    setSelected((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const problem = validateServices(selected);
+    setError(problem);
+    if (problem) return;
+    updateSettings({ services: [...selected] });
+    router.push("/tirage");
+  }
+
+  function retry() {
+    setStatus("loading");
+    setAttempt((n) => n + 1);
+  }
+
+  async function erase() {
+    await resetAll();
+    setSelected(new Set());
+    setConfirming(false);
+    setError(null);
+  }
+
+  const count = selected.size;
+  const summary =
+    count === 0
+      ? "Aucun service choisi"
+      : `${count} service${count > 1 ? "s" : ""} choisi${count > 1 ? "s" : ""}`;
+
+  return (
+    <>
+      <form className="services" onSubmit={submit} noValidate>
+        <fieldset className="services-group" aria-describedby={error ? `${ids}-error` : undefined}>
+          <legend className="services-title">Vos services de streaming</legend>
+          <p className="services-hint">
+            Cochez les abonnements que vous avez. Le tirage ne propose que des films disponibles
+            chez eux.
+          </p>
+          <div className="services-search">
+            <label htmlFor={`${ids}-search`}>Rechercher un service</label>
+            <input
+              id={`${ids}-search`}
+              type="search"
+              autoComplete="off"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          {status === "ready" && (
+            <p className="services-count" role="status">
+              {summary}
+            </p>
+          )}
+          {status === "loading" && <p role="status">Chargement des services…</p>}
+          {status === "error" && (
+            <div role="alert" className="services-message">
+              <p>Impossible de charger la liste des services.</p>
+              <button type="button" className="button ghost" onClick={retry}>
+                Réessayer
+              </button>
+            </div>
+          )}
+          {status === "ready" && visible.length === 0 && (
+            <p role="status" className="services-message">
+              Aucun service ne correspond à « {query.trim()} ».
+            </p>
+          )}
+          {status === "ready" && visible.length > 0 && (
+            <ul className="services-list">
+              {visible.map((provider) => {
+                const inputId = `${ids}-${provider.id}`;
+                return (
+                  <li key={provider.id}>
+                    <input
+                      id={inputId}
+                      className="sr-only"
+                      type="checkbox"
+                      checked={selected.has(provider.id)}
+                      onChange={() => toggle(provider.id)}
+                    />
+                    <label htmlFor={inputId} className="service-tile">
+                      {provider.logo ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- TMDB serves sized logos.
+                        <img src={provider.logo} alt="" width={32} height={32} loading="lazy" />
+                      ) : (
+                        <span className="service-logo-empty" aria-hidden="true" />
+                      )}
+                      <span className="service-name">{provider.name}</span>
+                      <Check className="service-tick" aria-hidden="true" />
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </fieldset>
+        {error && (
+          <p id={`${ids}-error`} className="services-error" role="alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" className="button primary">
+          Valider
+        </button>
+      </form>
+      <section className="reset" aria-labelledby={`${ids}-reset`}>
+        <h2 id={`${ids}-reset`}>Vos données</h2>
+        <p>Efface vos services, vos listes importées et vos films vus de ce navigateur.</p>
+        {confirming ? (
+          <div role="alertdialog" aria-labelledby={`${ids}-confirm`} className="reset-confirm">
+            <p id={`${ids}-confirm`}>Cette action est définitive. Tout effacer ?</p>
+            <button type="button" className="button danger" onClick={erase}>
+              Oui, tout effacer
+            </button>
+            <button type="button" className="button ghost" onClick={() => setConfirming(false)}>
+              Annuler
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="button ghost" onClick={() => setConfirming(true)}>
+            Effacer mes données
+          </button>
+        )}
+      </section>
+    </>
+  );
+}
