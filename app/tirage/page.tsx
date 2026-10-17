@@ -1,3 +1,4 @@
+import { DrawMachine } from "@/components/DrawMachine";
 import { RequireServices } from "@/components/RequireServices";
 
 export const metadata = { title: "Tirage — Tonight’s Movie" };
@@ -7,6 +8,7 @@ export default function DrawPage() {
     <>
       <RequireServices />
       <h1>Tirage</h1>
+      <DrawMachine />
     </>
   );
 }
