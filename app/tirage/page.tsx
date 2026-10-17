@@ -7,7 +7,6 @@ export default function DrawPage() {
   return (
     <>
       <RequireServices />
-      <h1>Tirage</h1>
       <DrawMachine />
     </>
   );

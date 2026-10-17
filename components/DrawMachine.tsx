@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useReducer, useRef, useState } from "react";
 import { FilmOffers } from "@/components/FilmOffers";
 import { FilmPoster } from "@/components/FilmPoster";
 import { formatMinutes, formatRating } from "@/lib/catalog";
@@ -13,8 +13,10 @@ import {
   durationLabel,
   durationOptions,
   noneMessage,
+  roomLight,
   sourceOptions,
   swapDelays,
+  watchLinks,
 } from "@/lib/draw-state";
 import { onReset } from "@/lib/storage";
 import { library } from "@/lib/storage/library";
@@ -51,9 +53,13 @@ export function DrawMachine() {
   const [hasSeen, setHasSeen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [slot, setSlot] = useState<Slot>({ poster: null, framed: false });
+  const [screening, setScreening] = useState(false);
   const alive = useRef(true);
   const running = useRef(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const watchRef = useRef<HTMLButtonElement>(null);
+  const roomRef = useRef<HTMLDivElement>(null);
+  const slotRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     alive.current = true;
@@ -79,13 +85,42 @@ export function DrawMachine() {
     if (settled) headingRef.current?.focus();
   }, [settled, state]);
 
+  const drawing = state.phase === "drawing";
+  useEffect(() => {
+    if (!drawing) return;
+    const room = roomRef.current;
+    const poster = slotRef.current;
+    function place() {
+      if (!room || !poster || window.innerWidth <= 900) {
+        poster?.style.setProperty("--shift", "0px");
+        return;
+      }
+      const shift = (room.clientWidth - poster.offsetWidth) / 2 - poster.offsetLeft;
+      poster.style.setProperty("--shift", `${shift}px`);
+    }
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [drawing, slot.poster, slot.framed]);
+
   function change(patch: Partial<Settings>) {
     setSettings(updateSettings(patch));
   }
 
+  const closeScreening = useCallback(() => {
+    setScreening(false);
+  }, []);
+
+  const screeningWasOpen = useRef(false);
+  useEffect(() => {
+    if (screeningWasOpen.current && !screening) watchRef.current?.focus();
+    screeningWasOpen.current = screening;
+  }, [screening]);
+
   async function run() {
     if (running.current) return;
     running.current = true;
+    setScreening(false);
     dispatch({ type: "start" });
     setSlot({ poster: null, framed: false });
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -98,9 +133,9 @@ export function DrawMachine() {
         state.phase === "result" ? state.film : null,
       );
       const client = createDrawClient();
-      const drawing = drawFilm(input, client.deps);
+      const drawingPromise = drawFilm(input, client.deps);
       let scanned = false;
-      void drawing.then(() => {
+      void drawingPromise.then(() => {
         scanned = true;
       });
 
@@ -126,7 +161,7 @@ export function DrawMachine() {
         while (!scanned && alive.current) await swap(SCAN_SWAP_MS);
       }
 
-      const result = await drawing;
+      const result = await drawingPromise;
       if (!alive.current) return;
       if (result.status === "none") {
         dispatch(client.isOutage() ? { type: "fail" } : { type: "none", reason: result.reason });
@@ -147,10 +182,10 @@ export function DrawMachine() {
     }
   }
 
-  const drawing = state.phase === "drawing";
   const services = new Set(settings.services);
   const sources = effectiveSources(settings.sources, lists);
   const sourceValue = sources.length === 1 ? sources[0] : MANY_SOURCES;
+  const showPoster = drawing || state.phase === "result";
 
   const announcement = {
     idle: "",
@@ -164,11 +199,13 @@ export function DrawMachine() {
   }[state.phase];
 
   return (
-    <>
-      <div className="draw-stage">
+    <div className="draw-page" data-phase={state.phase} data-room={roomLight(state.phase)}>
+      <div className="ambient" aria-hidden="true" />
+      <div className="draw-room" ref={roomRef}>
         <div
+          ref={slotRef}
           className={`poster-slot${drawing && slot.framed ? " is-framed" : ""}${drawing ? " is-drawing" : ""}`}
-          aria-hidden={drawing ? "true" : undefined}
+          aria-hidden={drawing || !showPoster ? "true" : undefined}
         >
           {drawing ? (
             slot.poster ? (
@@ -179,9 +216,7 @@ export function DrawMachine() {
             )
           ) : state.phase === "result" ? (
             <FilmPoster title={state.film.title} poster={state.film.poster} />
-          ) : (
-            <span className="poster-missing">Votre film du soir</span>
-          )}
+          ) : null}
         </div>
 
         <div className="draw-side">
@@ -190,45 +225,45 @@ export function DrawMachine() {
               film={state.film}
               services={services}
               headingRef={headingRef}
-              onRedraw={() => void run()}
+              watchRef={watchRef}
+              onWatch={() => setScreening(true)}
             />
           )}
           {state.phase === "none" && (
             <div className="draw-outcome">
-              <h2 tabIndex={-1} ref={headingRef}>
-                Rien à proposer
-              </h2>
+              <h1 tabIndex={-1} ref={headingRef} className="title-stack none-frame">
+                <span>Rien à proposer</span>
+              </h1>
               <p>{noneMessage(state.reason).reason}</p>
               <p>{noneMessage(state.reason).hint}</p>
-              <button type="button" className="button primary" onClick={() => void run()}>
-                Réessayer
-              </button>
             </div>
           )}
           {state.phase === "error" && (
             <div className="draw-outcome">
-              <h2 tabIndex={-1} ref={headingRef}>
-                Tirage impossible
-              </h2>
+              <h1 tabIndex={-1} ref={headingRef} className="title-stack">
+                <span>Tirage impossible</span>
+              </h1>
               <p>Impossible de joindre TMDB pour le moment. Vérifiez votre connexion.</p>
-              <button type="button" className="button primary" onClick={() => void run()}>
-                Réessayer
-              </button>
             </div>
           )}
           {(state.phase === "idle" || drawing) && (
             <div className="draw-outcome">
+              <h1 className="title-stack">
+                <span>Qu’est-ce qu’on</span>
+                <span className="title-accent">regarde ce soir ?</span>
+              </h1>
               <p className="draw-lead">
                 Un film, tiré au sort parmi ceux que vous pouvez regarder ce soir.
               </p>
-              <button
-                type="button"
-                className="button primary draw-trigger"
-                aria-disabled={drawing}
-                onClick={() => void run()}
-              >
-                {drawing ? "Tirage en cours…" : "Tirer un film"}
-              </button>
+              {state.phase === "idle" && (
+                <button
+                  type="button"
+                  className="button primary draw-trigger"
+                  onClick={() => void run()}
+                >
+                  Tirer un film
+                </button>
+              )}
             </div>
           )}
           <p role="status" className="sr-only">
@@ -238,8 +273,7 @@ export function DrawMachine() {
       </div>
 
       {loaded && (
-        <fieldset className="draw-settings">
-          <legend>Réglages du tirage</legend>
+        <div className="draw-player" role="group" aria-label="Réglages du tirage">
           <div className="field">
             <label htmlFor={`${ids}-source`}>Source</label>
             <select
@@ -260,7 +294,7 @@ export function DrawMachine() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor={`${ids}-duration`}>Durée maximale</label>
+            <label htmlFor={`${ids}-duration`}>Durée max</label>
             <select
               id={`${ids}-duration`}
               value={settings.maxDuration ?? ""}
@@ -287,9 +321,18 @@ export function DrawMachine() {
               <label htmlFor={`${ids}-seen`}>Exclure les films déjà vus</label>
             </div>
           )}
-        </fieldset>
+          {state.phase !== "idle" && !drawing && (
+            <button type="button" className="button draw-go" onClick={() => void run()}>
+              Relancer
+            </button>
+          )}
+        </div>
       )}
-    </>
+
+      {screening && state.phase === "result" && (
+        <Screening film={state.film} services={services} onClose={closeScreening} />
+      )}
+    </div>
   );
 }
 
@@ -297,19 +340,21 @@ function Result({
   film,
   services,
   headingRef,
-  onRedraw,
+  watchRef,
+  onWatch,
 }: {
   film: MovieDetails;
   services: ReadonlySet<string>;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
-  onRedraw: () => void;
+  watchRef: React.RefObject<HTMLButtonElement | null>;
+  onWatch: () => void;
 }) {
   return (
     <article className="result">
-      <h2 tabIndex={-1} ref={headingRef}>
-        {film.title}
-        {film.year && <span className="result-year"> ({film.year})</span>}
-      </h2>
+      <h1 tabIndex={-1} ref={headingRef} className="title-stack is-in">
+        <span>{film.title}</span>
+        {film.year && <span className="title-accent">{film.year}</span>}
+      </h1>
       <dl className="result-figures">
         <div>
           <dt>Durée</dt>
@@ -320,14 +365,113 @@ function Result({
           <dd>{formatRating(film.rating)}</dd>
         </div>
       </dl>
-      <p className="result-synopsis">{film.overview || "Synopsis indisponible."}</p>
       <FilmOffers film={film} services={services} />
-      <button type="button" className="button primary" onClick={onRedraw}>
-        Relancer
+      <p className="result-synopsis">{film.overview || "Synopsis indisponible."}</p>
+      <button type="button" className="button primary" ref={watchRef} onClick={onWatch}>
+        Regarder ce film
       </button>
       <p className="result-escape">
-        <Link href="/films">Pas ce qui vous convient ? Parcourir les films</Link>
+        Pas ce qui vous convient ? <Link href="/films">Parcourir les films</Link>
       </p>
     </article>
+  );
+}
+
+function Screening({
+  film,
+  services,
+  onClose,
+}: {
+  film: MovieDetails;
+  services: ReadonlySet<string>;
+  onClose: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const lightsRef = useRef<HTMLButtonElement>(null);
+  const where = watchLinks(film, services);
+
+  useEffect(() => {
+    const inertRoots = [
+      document.querySelector(".site-header"),
+      document.querySelector(".site-footer"),
+      document.querySelector(".draw-room"),
+      document.querySelector(".draw-player"),
+    ].filter((node): node is HTMLElement => node instanceof HTMLElement);
+    for (const node of inertRoots) node.setAttribute("inert", "");
+    lightsRef.current?.focus();
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = [
+        ...(panelRef.current?.querySelectorAll<HTMLElement>("a[href], button:not([disabled])") ??
+          []),
+      ];
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      for (const node of inertRoots) node.removeAttribute("inert");
+    };
+  }, [onClose]);
+
+  return (
+    <div className="cinema" ref={panelRef} role="dialog" aria-modal="true" aria-label="Séance">
+      <div className="cinema-screen">
+        <FilmPoster title={film.title} poster={film.poster} />
+      </div>
+      <div className="cinema-bar">
+        <h2>Bonne séance</h2>
+        <p>
+          {film.title}
+          {film.runtime ? ` · ${formatMinutes(film.runtime)}` : ""}
+        </p>
+        {where.verified ? (
+          <div className="cinema-links">
+            {where.links.map((link, index) => (
+              <a
+                key={link.id}
+                className={index === 0 ? "button primary" : "button"}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {index === 0 ? `Regarder sur ${link.name}` : link.name}
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p className="tag-check">
+            <span className="tag">À vérifier</span>
+            {film.offersUrl && (
+              <>
+                {" "}
+                <a href={film.offersUrl} target="_blank" rel="noopener noreferrer">
+                  Voir la disponibilité sur TMDB (nouvel onglet)
+                </a>
+              </>
+            )}
+          </p>
+        )}
+        <button type="button" className="button" ref={lightsRef} onClick={onClose}>
+          Rallumer les lumières
+        </button>
+      </div>
+    </div>
   );
 }
