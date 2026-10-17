@@ -25,6 +25,8 @@ import type { MovieDetails } from "@/lib/types";
 const NEUTRAL_MS = 600;
 const POSTER_WAIT_MS = 1200;
 const WINNER_HOLD_MS = 1000;
+// Pace of the poster flashes while the scan is still collecting films after the opening spin.
+const SCAN_SWAP_MS = 300;
 const MANY_SOURCES = "many";
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -97,6 +99,10 @@ export function DrawMachine() {
       );
       const client = createDrawClient();
       const drawing = drawFilm(input, client.deps);
+      let scanned = false;
+      void drawing.then(() => {
+        scanned = true;
+      });
 
       if (reduced) await wait(NEUTRAL_MS);
       else {
@@ -106,13 +112,18 @@ export function DrawMachine() {
         ]);
         await Promise.all(posters.map(preload));
         let last: string | null = null;
-        for (const delay of swapDelays()) {
-          if (!alive.current) return;
+        const swap = async (delay: number) => {
           const choices = posters.filter((poster) => poster !== last);
           last = choices[Math.floor(Math.random() * choices.length)] ?? null;
           setSlot({ poster: last, framed: false });
           await wait(delay);
+        };
+        for (const delay of swapDelays()) {
+          if (!alive.current) return;
+          await swap(delay);
         }
+        // A long list is scanned in parallel batches: keep the screen moving until it settles.
+        while (!scanned && alive.current) await swap(SCAN_SWAP_MS);
       }
 
       const result = await drawing;

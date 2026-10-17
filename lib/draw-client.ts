@@ -5,6 +5,7 @@ import {
   type DrawDeps,
   type DrawInput,
 } from "@/lib/draw";
+import { fetchWithRetry, type RetryOptions } from "@/lib/fetch-retry";
 import { isDrawable } from "@/lib/match";
 import type { DiscoverResponse, MovieDetails, SearchResponse } from "@/lib/types";
 import { MAX_PROVIDERS } from "@/lib/validation";
@@ -16,14 +17,17 @@ const SERVICES_POSTERS = 14;
  * The engine's TMDB access through the app's own routes. The engine swallows
  * failures, so the client counts calls to tell a dead network from an empty result.
  */
-export function createDrawClient(fetcher: typeof fetch = (...args) => fetch(...args)) {
+export function createDrawClient(
+  fetcher: typeof fetch = (...args) => fetch(...args),
+  retry: Pick<RetryOptions, "sleep" | "baseDelayMs"> = {},
+) {
   let succeeded = 0;
   let failed = 0;
 
   async function get<T>(url: string): Promise<T> {
     try {
-      const response = await fetcher(url);
-      if (!response.ok) throw new Error(`Request failed with ${response.status}`);
+      // Scanning fires bursts of requests, so a 429 is waited out instead of counted as a miss.
+      const response = await fetchWithRetry(fetcher, url, retry);
       const body = (await response.json()) as T;
       succeeded += 1;
       return body;

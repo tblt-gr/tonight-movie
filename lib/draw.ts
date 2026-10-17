@@ -13,7 +13,14 @@ import { MAX_PAGE, MAX_PROVIDERS } from "@/lib/validation";
 /** Source id for "all films on my services", drawn from TMDB instead of an imported list. */
 export const SERVICES_SOURCE_ID = "services";
 
-export const MAX_ATTEMPTS = 20;
+/** Films on the visitor's services to collect before drawing among them. */
+export const TARGET_AVAILABLE = 8;
+/** Safety cap on candidates judged per draw, so a huge list cannot fire hundreds of requests. */
+export const MAX_CANDIDATES = 300;
+/** Candidates judged at once. */
+export const CONCURRENCY = 6;
+/** Failed lookups and empty discover picks tolerated before giving up. */
+export const MAX_MISSES = 20;
 
 export type NoneReason = "no-candidates" | "nothing-available" | "all-seen" | "all-too-long";
 
@@ -27,7 +34,12 @@ export type DrawDeps = {
   discover(providers: number[], maxRuntime: number | null, page: number): Promise<DiscoverResponse>;
   /** Uniform in [0, 1); injected so tests are deterministic. */
   random?: () => number;
-  maxAttempts?: number;
+  /** Candidates judged at once. */
+  concurrency?: number;
+  /** Available films to collect before drawing among them. */
+  target?: number;
+  /** Cap on candidates judged. */
+  maxCandidates?: number;
 };
 
 export type DrawInput = {
@@ -86,14 +98,17 @@ function fromSummary(movie: MovieSummary): Candidate {
 }
 
 /**
- * Picks one film the visitor can watch tonight. Never throws: a TMDB error skips the
- * candidate and counts as an attempt, and giving up returns a typed "none found".
- * With a list source and the services source together, each attempt flips a coin.
+ * Picks one film the visitor can watch tonight: scans the shuffled candidates a few at a time,
+ * collects the ones available on the visitor's services, then draws at random among them.
+ * Never throws: a TMDB error skips the candidate, and giving up returns a typed "none found".
+ * With a list source and the services source together, each candidate flips a coin.
  */
 export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawResult> {
   const { settings } = input;
   const random = deps.random ?? Math.random;
-  const maxAttempts = deps.maxAttempts ?? MAX_ATTEMPTS;
+  const concurrency = deps.concurrency ?? CONCURRENCY;
+  const target = deps.target ?? TARGET_AVAILABLE;
+  const maxCandidates = deps.maxCandidates ?? MAX_CANDIDATES;
   const services = new Set(settings.services);
   const sources = effectiveSources(settings.sources, input.lists);
   const listSources = new Set(sources.filter((id) => id !== SERVICES_SOURCE_ID));
@@ -130,6 +145,10 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
   const counts: Record<Rejection, number> = { unavailable: 0, seen: 0, tooLong: 0 };
   let attempts = 0;
   let judged = 0;
+  let misses = 0;
+  let exhausted = false;
+  const tried = new Set<number>();
+  const found: Array<{ key: string; film: MovieDetails }> = [];
 
   /** The film when it qualifies, a rejection reason, or `null` when it was merely repeated. */
   async function judge(candidate: Candidate): Promise<MovieDetails | Rejection | null> {
@@ -141,7 +160,8 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
       tmdbId = match.tmdbId;
     }
     if (tmdbId === null) return "unavailable";
-    if (recent.has(tmdbKey(tmdbId))) return null;
+    if (recent.has(tmdbKey(tmdbId)) || tried.has(tmdbId)) return null;
+    tried.add(tmdbId);
     if (isSeen(candidate, tmdbId)) return "seen";
     const details = await deps.getDetails(tmdbId);
     if (availabilityOn(details, services) !== "available") return "unavailable";
@@ -156,37 +176,67 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
   const pages = new Map<number, MovieSummary[]>();
   let totalPages = MAX_PAGE;
 
-  async function nextGlobal(): Promise<Candidate | null> {
-    const page = 1 + Math.floor(random() * totalPages);
-    let items = pages.get(page);
-    if (!items) {
-      const response = await deps.discover(providers, settings.maxDuration, page);
-      // A page past the real end comes back empty; the next draw stays within the true range.
-      totalPages = Math.max(1, Math.min(response.totalPages, MAX_PAGE));
-      items = [...response.results];
-      pages.set(page, items);
-    }
-    const [movie] = items.splice(Math.floor(random() * items.length), 1);
-    return movie && !recent.has(tmdbKey(movie.tmdbId)) ? fromSummary(movie) : null;
+  // Discover pages are fetched one at a time so parallel workers do not request the same page.
+  let discovering: Promise<unknown> = Promise.resolve();
+
+  function nextGlobal(): Promise<Candidate | null> {
+    const pick = discovering.then(async () => {
+      // Reuse a page already fetched while it has films left: one request yields many candidates.
+      const stocked = [...pages.values()].filter((remaining) => remaining.length > 0);
+      let items: MovieSummary[] | undefined = stocked[Math.floor(random() * stocked.length)];
+      if (!items) {
+        const page = 1 + Math.floor(random() * totalPages);
+        items = pages.get(page);
+        if (!items) {
+          const response = await deps.discover(providers, settings.maxDuration, page);
+          // A page past the real end comes back empty; the next draw stays within the true range.
+          totalPages = Math.max(1, Math.min(response.totalPages, MAX_PAGE));
+          items = [...response.results];
+          pages.set(page, items);
+        }
+      }
+      const [movie] = items.splice(Math.floor(random() * items.length), 1);
+      return movie && !recent.has(tmdbKey(movie.tmdbId)) ? fromSummary(movie) : null;
+    });
+    discovering = pick.catch(() => undefined);
+    return pick;
   }
 
-  while (attempts < maxAttempts) {
-    const global = useGlobal && (pool.length === 0 || random() < 0.5);
-    if (!global && pool.length === 0) break;
-    attempts += 1;
-    try {
-      const candidate = global ? await nextGlobal() : (pool.pop() ?? null);
-      if (!candidate) continue;
-      judged += 1;
-      const outcome = await judge(candidate);
-      if (outcome === null) continue;
-      if (typeof outcome === "string") counts[outcome] += 1;
-      else return { status: "found", key: candidate.key, film: outcome, attempts };
-    } catch {
-      // A TMDB failure only costs this attempt.
+  const done = () =>
+    exhausted || found.length >= target || attempts >= maxCandidates || misses >= MAX_MISSES;
+
+  async function worker() {
+    while (!done()) {
+      const global = useGlobal && (pool.length === 0 || random() < 0.5);
+      if (!global && pool.length === 0) {
+        exhausted = true;
+        return;
+      }
+      attempts += 1;
+      try {
+        const candidate = global ? await nextGlobal() : (pool.pop() ?? null);
+        if (!candidate) {
+          misses += 1;
+          continue;
+        }
+        judged += 1;
+        const outcome = await judge(candidate);
+        if (outcome === null) continue;
+        if (typeof outcome === "string") counts[outcome] += 1;
+        else found.push({ key: candidate.key, film: outcome });
+      } catch {
+        // A TMDB failure only costs this candidate.
+        misses += 1;
+      }
     }
   }
 
+  await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
+
+  if (found.length > 0) {
+    const pick = found[Math.floor(random() * found.length)];
+    return { status: "found", key: pick.key, film: pick.film, attempts };
+  }
   return { status: "none", reason: reasonFor(counts, judged), attempts };
 }
 

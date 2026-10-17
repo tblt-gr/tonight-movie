@@ -1,24 +1,14 @@
+import { fetchWithRetry } from "@/lib/fetch-retry";
 import type { DiscoverSort } from "@/lib/validation";
 import type { DiscoverResponse, MovieDetails, ProvidersResponse } from "@/lib/types";
 
-const RETRIES = 3;
-const BASE_DELAY_MS = 1500;
-
-const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-/**
- * GET JSON from the app's own routes. The routes are rate limited per visitor, so a 429 or a
- * temporary upstream error is retried with a growing pause before the lookup is given up.
- */
+/** GET JSON from the app's own routes, retrying a 429 or a temporary upstream error. */
 async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  for (let attempt = 0; ; attempt += 1) {
-    const response = await fetch(url, { signal });
-    if (response.ok) return (await response.json()) as T;
-    const retryable = response.status === 429 || response.status >= 500;
-    if (!retryable || attempt >= RETRIES) throw new Error(`Request failed with ${response.status}`);
-    await wait(BASE_DELAY_MS * 2 ** attempt);
-    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
-  }
+  const response = await fetchWithRetry((...args) => fetch(...args), url, {
+    signal,
+    retryable: (status) => status >= 500,
+  });
+  return (await response.json()) as T;
 }
 
 /** Successful lookups only, kept for the session so a filter change never refetches. */
