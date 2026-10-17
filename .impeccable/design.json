@@ -1,281 +1,361 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-17T13:57:35Z",
+  "generatedAt": "2026-10-17T00:00:00Z",
   "title": "Design System: Tonight’s Movie",
   "extensions": {
     "colorMeta": {
-      "background": {
+      "ground": {
         "role": "neutral",
-        "displayName": "Bleu nuit",
-        "canonical": "#0d1724",
+        "displayName": "Screen Black",
+        "canonical": "#0b0b0d",
         "tonalRamp": [
-          "#08111c",
-          "#0d1724",
-          "#152333",
-          "#1d3040",
-          "#304456",
-          "#536a79",
-          "#8fa2ad",
-          "#dce5e6"
+          "#030304",
+          "#060606",
+          "#080809",
+          "#09090b",
+          "#0b0b0d",
+          "#3c3c3d",
+          "#79797a",
+          "#b6b6b6"
         ]
       },
       "panel": {
         "role": "neutral",
-        "displayName": "Panneau nocturne",
-        "canonical": "#152333",
+        "displayName": "Ticket Panel",
+        "canonical": "#151518",
         "tonalRamp": [
-          "#091320",
-          "#0d1724",
-          "#152333",
-          "#1d3040",
-          "#304456",
-          "#536a79",
-          "#8fa2ad",
-          "#dce5e6"
+          "#060607",
+          "#0a0a0c",
+          "#0f0f11",
+          "#121214",
+          "#151518",
+          "#444446",
+          "#7e7e80",
+          "#b9b9ba"
         ]
       },
       "line": {
         "role": "neutral",
-        "displayName": "Trait ardoise",
-        "canonical": "#304456",
+        "displayName": "Projector Line",
+        "canonical": "#2a2a2e",
         "tonalRamp": [
-          "#0d1724",
-          "#152333",
-          "#223646",
-          "#304456",
-          "#4c6170",
-          "#728695",
-          "#a4b3bc",
-          "#e0e8ea"
+          "#0d0d0e",
+          "#151517",
+          "#1d1d20",
+          "#242427",
+          "#2a2a2e",
+          "#555558",
+          "#8a8a8c",
+          "#bfbfc0"
         ]
       },
-      "text": {
+      "ink": {
         "role": "neutral",
-        "displayName": "Crème",
-        "canonical": "#f6f2e9",
+        "displayName": "Warm Off-White",
+        "canonical": "#f4f1ea",
         "tonalRamp": [
-          "#282721",
-          "#49473e",
-          "#69665a",
-          "#8b8778",
-          "#aaa697",
-          "#cbc7b9",
-          "#e6e2d8",
-          "#f6f2e9"
+          "#494846",
+          "#7a7875",
+          "#aba9a4",
+          "#cfcdc7",
+          "#f4f1ea",
+          "#f6f4ee",
+          "#f9f7f3",
+          "#fcfbf9"
         ]
       },
-      "muted": {
+      "ink-muted": {
         "role": "neutral",
-        "displayName": "Brume froide",
-        "canonical": "#b3c0c5",
+        "displayName": "Faded Ink",
+        "canonical": "#b7b3aa",
         "tonalRamp": [
-          "#14242b",
-          "#263c45",
-          "#39545d",
-          "#526e76",
-          "#748e95",
-          "#94aab0",
-          "#b3c0c5",
-          "#e5ecee"
+          "#373633",
+          "#5c5a55",
+          "#807d77",
+          "#9c9890",
+          "#b7b3aa",
+          "#c5c2bb",
+          "#d7d5d0",
+          "#e9e8e6"
         ]
       },
-      "owned": {
+      "live": {
         "role": "primary",
-        "displayName": "Vert séance",
-        "canonical": "#72de9a",
+        "displayName": "Carton Yellow",
+        "canonical": "#f2c230",
         "tonalRamp": [
-          "#102919",
-          "#1d4b3c",
-          "#28694c",
-          "#3d8b60",
-          "#57b87b",
-          "#72de9a",
-          "#a0f0bc",
-          "#ddf9e6"
+          "#493a0e",
+          "#796118",
+          "#a98822",
+          "#cea529",
+          "#f2c230",
+          "#f5ce59",
+          "#f8dd8d",
+          "#fbedc1"
         ]
       },
-      "other": {
+      "live-ink": {
+        "role": "neutral",
+        "displayName": "Carton Ink",
+        "canonical": "#0b0b0d",
+        "tonalRamp": [
+          "#030304",
+          "#060606",
+          "#080809",
+          "#09090b",
+          "#0b0b0d",
+          "#3c3c3d",
+          "#79797a",
+          "#b6b6b6"
+        ]
+      },
+      "velvet-text": {
         "role": "secondary",
-        "displayName": "Bleu autres offres",
-        "canonical": "#7eb8d6",
+        "displayName": "Velvet Red, text",
+        "canonical": "#f04a5e",
         "tonalRamp": [
-          "#122632",
-          "#204052",
-          "#315a70",
-          "#487b98",
-          "#619ebc",
-          "#7eb8d6",
-          "#b6d9e9",
-          "#e7f3f7"
+          "#48161c",
+          "#78252f",
+          "#a83442",
+          "#cc3f50",
+          "#f04a5e",
+          "#f36e7e",
+          "#f79ba6",
+          "#fac9cf"
         ]
       },
-      "unavailable": {
-        "role": "tertiary",
-        "displayName": "Or pâle indisponible",
-        "canonical": "#e5c68a",
+      "velvet-fill": {
+        "role": "secondary",
+        "displayName": "Velvet Red, fill",
+        "canonical": "#8d1a28",
         "tonalRamp": [
-          "#2e2719",
-          "#4e4128",
-          "#6d5a36",
-          "#8f7548",
-          "#b59661",
-          "#d1ad75",
-          "#e5c68a",
-          "#f9e9ca"
-        ]
-      },
-      "focus": {
-        "role": "primary",
-        "displayName": "Contour clavier",
-        "canonical": "#b0e9c2",
-        "tonalRamp": [
-          "#143523",
-          "#26513a",
-          "#3c7452",
-          "#599d6c",
-          "#7fc28d",
-          "#b0e9c2",
-          "#d4f3dc",
-          "#edf9ef"
+          "#2a080c",
+          "#460d14",
+          "#63121c",
+          "#781622",
+          "#8d1a28",
+          "#a44853",
+          "#c08189",
+          "#ddbabe"
         ]
       }
     },
     "typographyMeta": {
       "display": {
-        "displayName": "Titre éditorial",
-        "purpose": "La promesse de la page et le choix du soir."
+        "displayName": "Title card",
+        "purpose": "Stacked uppercase film titles and the home question; last line may be yellow."
+      },
+      "headline": {
+        "displayName": "Section heading",
+        "purpose": "Settings sections and home steps."
       },
       "body": {
-        "displayName": "Texte fonctionnel",
-        "purpose": "Collections, filtres, métadonnées et états."
+        "displayName": "Body",
+        "purpose": "Default text; synopsis 19px at 56ch."
+      },
+      "figure": {
+        "displayName": "Light figure",
+        "purpose": "Duration, rating, counts; weight 400, tabular."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field names and figure captions; velvet red over figures."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Uppercase action text."
       }
     },
-    "shadows": [
-      {
-        "name": "dialog",
-        "value": "0 24px 70px #0009",
-        "purpose": "Détacher la sélection des plateformes du catalogue."
-      }
-    ],
+    "shadows": [],
     "motion": [
       {
-        "name": "poster-hover",
-        "value": "250ms cubic-bezier(0.2, 0.7, 0.2, 1)",
-        "purpose": "Souligner l’interactivité d’une affiche."
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Expo-out for wipe, rise, slide and screening."
       },
       {
-        "name": "dice-roll",
-        "value": "450ms ease-out",
-        "purpose": "Accompagner un tirage; désactivé si l’utilisateur préfère moins d’animation."
+        "name": "cut",
+        "value": "90ms steps(2)",
+        "purpose": "State changes on background, color and border."
+      },
+      {
+        "name": "wipe",
+        "value": "clip-path inset(0 100% 0 0) to inset(0), 520ms, 110ms stagger",
+        "purpose": "Title lines reveal left to right."
+      },
+      {
+        "name": "rise",
+        "value": "clip-path inset(100% 0 0 0) to inset(0), 560-620ms, 70ms stagger",
+        "purpose": "Blocks, grid items and home posters arrive from the bottom."
+      },
+      {
+        "name": "slide",
+        "value": "transform 700ms ease-out",
+        "purpose": "Poster travels to center during a draw and back to the left."
+      },
+      {
+        "name": "draw-sequence",
+        "value": "room dims 240ms; poster swap 70ms, x1.13 per step until >=330ms; 1000ms hold with 3px yellow frame (offset 8px); lights return; title wipes",
+        "purpose": "The draw."
+      },
+      {
+        "name": "screening-mode",
+        "value": "black layer fade 220ms; poster scale .86 to 1 in 380ms; bar rise 16px in 360ms",
+        "purpose": "Lights out for Regarder ce film."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation and transition none; hidden start state only under prefers-reduced-motion: no-preference",
+        "purpose": "Accessibility floor."
       }
     ],
     "breakpoints": [
       {
-        "name": "desktop-compact",
-        "value": "1150px"
-      },
-      {
-        "name": "tablet",
-        "value": "880px"
-      },
-      {
         "name": "mobile",
-        "value": "620px"
+        "value": "720px"
+      },
+      {
+        "name": "stack",
+        "value": "900px"
       }
     ]
   },
   "components": [
     {
-      "name": "Bouton principal",
+      "name": "Primary Button",
       "kind": "button",
-      "refersTo": "primary-button",
-      "description": "Action de confirmation ou de tirage, en vert séance.",
-      "html": "<button class=\"ds-primary-button\">Trouver un film</button>",
-      "css": ".ds-primary-button{border:0;border-radius:5px;background:var(--green,#72de9a);color:#102919;font-size:12px;font-weight:800;padding:11px 16px;cursor:pointer}.ds-primary-button:hover{background:#a0f0bc}.ds-primary-button:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}.ds-primary-button:active{background:#57b87b}"
+      "refersTo": "button-primary",
+      "description": "The single yellow action per view.",
+      "html": "<button class=\"ds-btn-primary\">Tirer un film</button>",
+      "css": ".ds-btn-primary{background:#f2c230;color:#0b0b0d;border:0;border-radius:0;min-height:48px;padding:16px 28px;font:700 17px 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:background 90ms steps(2)}.ds-btn-primary:hover{background:#f4f1ea}.ds-btn-primary:active{transform:translateY(2px)}.ds-btn-primary:focus-visible{outline:3px solid #f2c230;outline-offset:3px}"
     },
     {
-      "name": "Bouton de réglage",
+      "name": "Ghost Button",
       "kind": "button",
-      "refersTo": "header-action",
-      "description": "Action secondaire discrète dans l’en-tête.",
-      "html": "<button class=\"ds-header-action\">Mes plateformes</button>",
-      "css": ".ds-header-action{border:1px solid var(--line,#304456);background:#203244;color:#e7edf0;border-radius:6px;padding:9px 13px;font-size:12px;font-weight:700;cursor:pointer}.ds-header-action:hover{background:#2b4052}.ds-header-action:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}"
+      "refersTo": "button-ghost",
+      "description": "Secondary action, outlined; also the relaunch button once a draw has begun.",
+      "html": "<button class=\"ds-btn-ghost\">Relancer</button>",
+      "css": ".ds-btn-ghost{background:none;color:#f4f1ea;border:2px solid #f4f1ea;border-radius:0;min-height:48px;padding:16px 28px;font:700 17px 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:background 90ms steps(2),color 90ms steps(2)}.ds-btn-ghost:hover{background:#f4f1ea;color:#0b0b0d}.ds-btn-ghost:focus-visible{outline:3px solid #f2c230;outline-offset:3px}"
     },
     {
-      "name": "Champ de profil",
+      "name": "Select Field",
       "kind": "input",
-      "refersTo": "profile-input",
-      "description": "Entrée pour trouver les collections publiques d’un utilisateur.",
-      "html": "<label class=\"ds-field\">Nom d’utilisateur Letterboxd<input class=\"ds-profile-input\" placeholder=\"Votre nom d’utilisateur\"></label>",
-      "css": ".ds-field{display:grid;gap:9px;color:var(--text,#f6f2e9);font-size:13px;font-weight:750}.ds-profile-input{min-width:220px;background:#203447;border:1px solid #48545f;border-radius:5px;color:var(--text,#f6f2e9);padding:10px 12px;font-size:13px}.ds-profile-input::placeholder{color:#a0adb7}.ds-profile-input:hover{border-color:#6a7f8c}.ds-profile-input:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}"
+      "refersTo": "field",
+      "description": "Outlined field with a label above.",
+      "html": "<label class=\"ds-label\">Durée max</label><div class=\"ds-field\" tabindex=\"0\"><span>2:30</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" aria-hidden=\"true\" style=\"fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:square\"><path d=\"M3.5 6l4.5 4.5L12.5 6\"/></svg></div>",
+      "css": ".ds-label{display:block;font:700 12px 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif;text-transform:uppercase;letter-spacing:.1em;color:#b7b3aa;margin-bottom:6px}.ds-field{display:flex;justify-content:space-between;align-items:center;min-height:48px;border:2px solid #f4f1ea;border-radius:0;padding:12px 14px;color:#f4f1ea;font:700 16px 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif}.ds-field:focus-visible{outline:3px solid #f2c230;outline-offset:3px}"
     },
     {
-      "name": "Onglet de disponibilité",
-      "kind": "nav",
-      "refersTo": "category-tab",
-      "description": "Filtre de disponibilité avec état sélectionné.",
-      "html": "<nav class=\"ds-category-nav\" aria-label=\"Disponibilité\"><button class=\"ds-category-tab\">Toutes les offres</button><button class=\"ds-category-tab ds-active\" aria-current=\"true\">Mes plateformes <strong>28</strong></button></nav>",
-      "css": ".ds-category-nav{display:flex;gap:8px;background:var(--bg,#0d1724);padding:10px}.ds-category-tab{display:inline-flex;align-items:center;gap:10px;padding:11px 15px;border:1px solid var(--line,#304456);border-radius:999px;background:#142637;color:var(--muted,#b3c0c5);font-size:13px;font-weight:700;cursor:pointer}.ds-category-tab:hover{color:var(--text,#f6f2e9);border-color:#6cb58e}.ds-category-tab.ds-active{background:var(--green,#72de9a);border-color:var(--green,#72de9a);color:#102919}.ds-category-tab strong{font-size:12px;background:#0d4b2f;color:#f6f2e9;border-radius:4px;padding:3px 6px}.ds-category-tab:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}"
-    },
-    {
-      "name": "Affiche de film",
-      "kind": "card",
-      "refersTo": "poster-link",
-      "description": "Affiche en ratio 2:3, titre et durée adjacents.",
-      "html": "<article class=\"ds-film\"><a class=\"ds-poster\" href=\"#film\"><span class=\"ds-poster-fallback\">Le film du soir</span><span class=\"ds-status\" aria-label=\"Disponible sur mes plateformes\"></span></a><a class=\"ds-film-title\" href=\"#film\">Le film du soir</a><span class=\"ds-film-meta\">2026 · 1 h 52</span></article>",
-      "css": ".ds-film{width:150px;background:var(--bg,#0d1724);padding:8px}.ds-poster{display:block;position:relative;aspect-ratio:2/3;overflow:hidden;border-radius:4px;background:#303b45;text-decoration:none;color:#d8e2e5}.ds-poster:hover{filter:brightness(1.11)}.ds-poster:focus-visible,.ds-film-title:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}.ds-poster-fallback{display:flex;align-items:center;justify-content:center;height:100%;padding:14px;text-align:center;background:linear-gradient(145deg,#354451,#1e262e);font-size:20px;font-weight:750}.ds-status{position:absolute;right:9px;bottom:9px;width:10px;height:10px;border:2px solid #151b1e;border-radius:50%;background:var(--green,#72de9a)}.ds-film-title{display:block;margin:10px 0 5px;color:#f0f4f5;text-decoration:none;font-size:13px;font-weight:740}.ds-film-title:hover{color:var(--green,#72de9a)}.ds-film-meta{color:var(--muted,#b3c0c5);font-size:12px}"
-    },
-    {
-      "name": "Puce de plateforme incluse",
+      "name": "Offer Tag",
       "kind": "chip",
-      "refersTo": "provider-chip",
-      "description": "Offre incluse dans un abonnement sélectionné.",
-      "html": "<a class=\"ds-provider-chip\" href=\"#offre\">Prime Video</a>",
-      "css": ".ds-provider-chip{display:inline-flex;background:#1d4b3c;color:#b5efc7;border-radius:3px;padding:4px 6px;font-size:11px;font-weight:700;text-decoration:none}.ds-provider-chip:hover{background:#2f694c;color:#fff}.ds-provider-chip:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}"
+      "refersTo": "tag-offer",
+      "description": "Streaming offer; the dashed variant means À vérifier.",
+      "html": "<span class=\"ds-tag\">Prime Video</span> <span class=\"ds-tag ds-check\">À vérifier : Max</span>",
+      "css": ".ds-tag{display:inline-block;border:2px solid #f4f1ea;border-radius:0;padding:2px 10px;color:#f4f1ea;font:700 14px 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif;text-transform:uppercase}.ds-check{border-style:dashed}"
     },
     {
-      "name": "Collection de profil",
-      "kind": "card",
-      "refersTo": "profile-collection",
-      "description": "Liste publique sélectionnable sous le champ utilisateur.",
-      "html": "<button class=\"ds-profile-collection\"><span class=\"ds-profile-kind\">Liste</span><strong>Films à voir</strong><span>Collection publique</span></button>",
-      "css": ".ds-profile-collection{display:flex;flex-direction:column;gap:5px;min-height:93px;width:210px;padding:11px 12px;text-align:left;background:#213649;border:1px solid #43515c;border-radius:5px;color:var(--text,#f6f2e9);cursor:pointer}.ds-profile-collection:hover{border-color:var(--green,#72de9a);background:#29463e}.ds-profile-collection:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}.ds-profile-kind{color:#9eeeb6;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.ds-profile-collection strong{font-size:13px}.ds-profile-collection span:last-child{color:var(--muted,#b3c0c5);font-size:11px}"
+      "name": "Platform Tile",
+      "kind": "chip",
+      "refersTo": "platform-tile",
+      "description": "Unselected on panel; selected takes the platform brand color.",
+      "html": "<div class=\"ds-tile\" role=\"checkbox\" aria-checked=\"false\" tabindex=\"0\">Netflix</div> <div class=\"ds-tile on\" role=\"checkbox\" aria-checked=\"true\" tabindex=\"0\">Max <span><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" aria-hidden=\"true\" style=\"fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:square\"><path d=\"M3 8.5l3.2 3.2L13 4.8\"/></svg></span></div>",
+      "css": ".ds-tile{display:inline-flex;justify-content:space-between;align-items:center;gap:16px;min-width:180px;min-height:56px;padding:12px 16px;background:#151518;border:2px solid #2a2a2e;border-radius:0;color:#f4f1ea;font:700 17px 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif;cursor:pointer;transition:border-color 90ms steps(2)}.ds-tile:hover{border-color:#f4f1ea}.ds-tile.on{background:#2a47ff;border-color:#2a47ff;color:#fff}.ds-tile:focus-visible{outline:3px solid #f2c230;outline-offset:3px}"
+    },
+    {
+      "name": "Checkbox",
+      "kind": "custom",
+      "refersTo": "field",
+      "description": "24px square, ink fill when on.",
+      "html": "<div class=\"ds-chk\"><b><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" aria-hidden=\"true\" style=\"fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:square\"><path d=\"M3 8.5l3.2 3.2L13 4.8\"/></svg></b>Exclure les films déjà vus</div>",
+      "css": ".ds-chk{display:flex;align-items:center;gap:12px;min-height:44px;font:600 17px 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif;color:#f4f1ea}.ds-chk b{width:24px;height:24px;border:2px solid #f4f1ea;background:#f4f1ea;color:#0b0b0d;display:grid;place-items:center}"
+    },
+    {
+      "name": "Title Block",
+      "kind": "custom",
+      "refersTo": "typography.display",
+      "description": "Stacked uppercase lines; last line yellow; red rule over light figures.",
+      "html": "<div class=\"ds-title\"><span>Le salaire</span><span>de la peur</span><span class=\"y\">1953</span></div><div class=\"ds-time\"><div><span class=\"ds-l\">Durée</span><strong>2:11</strong></div><div><span class=\"ds-l\">Note TMDB</span><strong>8,0</strong></div></div>",
+      "css": ".ds-title span{display:block;font:700 clamp(28px,4.2vw,72px)/1.02 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif;letter-spacing:-.01em;text-transform:uppercase;color:#f4f1ea}.ds-title .y{color:#f2c230}.ds-time{display:flex;gap:32px;margin-top:24px;border-top:2px solid #f04a5e;padding-top:16px;color:#f4f1ea}.ds-time span{display:block}.ds-l{font:700 12px 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#f04a5e}.ds-time strong{font:400 40px/1 'Familjen Grotesk','Helvetica Neue',Arial,sans-serif;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "typography.label",
+      "description": "64px bar, uppercase links, current page underlined in velvet red.",
+      "html": "<header class=\"ds-top\"><a class=\"ds-logo\" href=\"#\">Tonight’s Movie</a><nav><a href=\"#\" aria-current=\"page\">Tirage</a><a href=\"#\">Films</a></nav></header>",
+      "css": ".ds-top{display:flex;align-items:center;gap:32px;height:64px;padding:0 24px;border-bottom:1px solid #2a2a2e;color:#f4f1ea;font-family:'Familjen Grotesk','Helvetica Neue',Arial,sans-serif}.ds-logo{font-weight:700;font-size:18px;text-transform:uppercase;letter-spacing:.02em;text-decoration:none;color:inherit}.ds-top nav{display:flex;gap:24px}.ds-top nav a{font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.06em;text-decoration:none;color:inherit;padding:6px 0;border-bottom:3px solid transparent}.ds-top nav a[aria-current=page]{border-bottom-color:#f04a5e}.ds-top nav a:focus-visible{outline:3px solid #f2c230;outline-offset:3px}"
     }
   ],
   "narrative": {
-    "northStar": "La séance personnelle",
-    "overview": "Tonight’s Movie donne aux films la place principale sur un fond bleu nuit. Le crème rend les textes confortables, et un vert frais signale l’action et les accès déjà inclus dans les abonnements choisis. Le titre éditorial invite à choisir un film; les contrôles compacts servent à préciser ce choix.",
+    "northStar": "The Title Card in a Dark Room",
+    "overview": "The product is a screening room that picks one film. New Wave title cards translated to a dark screen: near-black ground, warm off-white type in heavy uppercase, a single yellow carton for the thing to press, and velvet red for structure. Everything is flat and ruled. There are no rounded cards, no shadows, no gradients. The film poster is the only image and it is the only thing allowed to be tall and loud.\n\nRank is made by weight and case at one body size, like a timetable. Each screen carries one message. Durations and ratings are set light and tabular so they read like a cassette j-card. The room is a state, not a theme: during a draw the lights dim, and in screening mode they go out entirely.",
     "keyCharacteristics": [
-      "Bleu nuit, crème et vert séance",
-      "Affiches dominantes et métadonnées compactes",
-      "Statuts d’accès explicites dans le texte comme dans la couleur"
+      "Near-black ground, off-white ink, yellow for action, red for structure.",
+      "Familjen Grotesk only. Uppercase 700 for titles, light tabular figures for numbers.",
+      "Zero radius. Hard 1 to 2px rules. No shadows, no gradients, no blur.",
+      "Spacing on a fixed 4/8/12/16/24/32/48/64 scale.",
+      "Motion that behaves like film: wipes, cuts, a slide, a dimmed room.",
+      "Uncertainty is drawn, not colored: a dashed outline."
     ],
     "rules": [
       {
-        "name": "Une couleur pour l’accès actuel",
-        "body": "Le vert sert aux actions principales et aux films inclus dans les abonnements sélectionnés; les autres offres utilisent le bleu et l’indisponibilité l’or pâle.",
+        "name": "The One Lit Sign Rule",
+        "body": "Yellow marks what to press and one word to read. If two yellow things compete on a screen, one of them is wrong.",
         "section": "colors"
       },
       {
-        "name": "Le film d’abord",
-        "body": "Les affiches restent libres dans la grille. Les surfaces encadrées sont réservées aux choix et aux réglages.",
-        "section": "components"
+        "name": "The Red Is Structure Rule",
+        "body": "Red draws rules, labels and headings that organize. It never signals an error, a warning or a call to action.",
+        "section": "colors"
       },
       {
-        "name": "Clavier visible",
-        "body": "Chaque contrôle conserve un contour de focus clair; les statuts portent un libellé lisible sans leur couleur.",
-        "section": "components"
+        "name": "The Dashed Doubt Rule",
+        "body": "An uncertain offer (À vérifier) is a dashed 2px off-white outline with its words. Color alone never carries status.",
+        "section": "colors"
+      },
+      {
+        "name": "The Last Word Rule",
+        "body": "In a stacked title, lines are off-white and the final line (the year, or the closing words) may be yellow. One accent per title.",
+        "section": "typography"
+      },
+      {
+        "name": "The Light Figures Rule",
+        "body": "Durations, ratings and counts are weight 400 with tabular figures. Never bold, never proportional.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "No second typeface, no display serif, no system fallback as a design choice.",
+        "section": "typography"
+      },
+      {
+        "name": "The Scale Only Rule",
+        "body": "Every gap and padding is one of the eight steps. Intermediate values (6px label gaps, 14px field padding, 28px button padding) are observed drift, not precedent.",
+        "section": "layout"
+      },
+      {
+        "name": "The Dark Room Rule",
+        "body": "Depth is light, not elevation. To make something matter, dim everything else or frame it in yellow. Never lift it with a shadow.",
+        "section": "elevation"
       }
     ],
     "dos": [
-      "Afficher la collection active et la date des offres.",
-      "Associer icône, texte et état pour chaque plateforme.",
-      "Laisser le tirage aléatoire accessible sans ouvrir ses critères."
+      "Do use Carton Yellow for the single primary action per view and for one accent word in a title.",
+      "Do draw rules with 1px `line` or 2px off-white; use 2px velvet red only over figures.",
+      "Do show every uncertain offer as a dashed off-white outline labeled \"À vérifier\".",
+      "Do set durations, ratings and counts at weight 400 with tabular figures.",
+      "Do draw icons in SVG with one stroke weight and square or round caps, and label icon-only buttons with `aria-label`.",
+      "Do keep a visible 3px yellow focus ring and honor `prefers-reduced-motion` on every animation.",
+      "Do place state on the room: dim, frame, black out."
     ],
     "donts": [
-      "Présenter une location comme un abonnement inclus.",
-      "Imiter le logo ou le système de trois points de Letterboxd.",
-      "Faire dépendre un état uniquement de sa couleur."
+      "Don't use border-radius, box-shadow, gradients or backdrop blur anywhere.",
+      "Don't use red for buttons, errors or warnings.",
+      "Don't convey availability by color alone.",
+      "Don't introduce a second typeface, a bold weight above 700 or proportional figures in numbers.",
+      "Don't use platform brand colors outside selected platform tiles.",
+      "Don't add decorative objects beyond the single popcorn bucket on the home page.",
+      "Don't add emoji or glyph characters as icons."
     ]
   }
 }

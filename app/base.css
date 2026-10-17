@@ -1,19 +1,31 @@
 :root {
   color-scheme: dark;
-  --bg: #0d1724;
-  --panel: #152333;
-  --panel2: #1d3040;
-  --line: #304456;
-  --text: #f6f2e9;
-  --muted: #b3c0c5;
-  --soft: #8fa2ad;
-  --green: #72de9a;
-  --blue: #7eb8d6;
-  --orange: #e5c68a;
-  --focus: #b0e9c2;
-  --heading: Georgia, "Times New Roman", serif;
+  --bg: #0b0b0d;
+  --panel: #151518;
+  --panel2: #1d1d21;
+  --line: #2a2a2e;
+  --text: #f4f1ea;
+  --muted: #b7b3aa;
+  --soft: #8c867b;
+  --live: #f2c230;
+  --live-ink: #0b0b0d;
+  --caution: var(--text);
+  --red: #f04a5e;
+  --red-fill: #8d1a28;
+  --cut: 90ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+  --focus: var(--live);
+  --heading: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
   font-family:
-    Inter,
+    "Familjen Grotesk",
     ui-sans-serif,
     -apple-system,
     BlinkMacSystemFont,
@@ -29,7 +41,7 @@ html {
 }
 body {
   margin: 0;
-  background: radial-gradient(circle at 82% 4%, #1a3540 0, transparent 35rem), var(--bg);
+  background: var(--bg);
   color: var(--text);
   min-width: 320px;
 }
@@ -46,11 +58,11 @@ a {
   text-underline-offset: 3px;
 }
 a:hover {
-  color: var(--green);
+  color: var(--live);
 }
 ::selection {
-  background: #287d58;
-  color: #fff;
+  background: var(--live);
+  color: var(--live-ink);
 }
 :focus-visible {
   outline: 2px solid var(--focus);
@@ -109,9 +121,9 @@ svg {
   flex: 0 0 37px;
   width: 37px;
   height: 37px;
-  border: 1px solid #72de9a;
+  border: 1px solid var(--live);
   border-radius: 10px 10px 10px 3px;
-  color: var(--green);
+  color: var(--live);
   font-size: 14px;
   font-weight: 800;
   letter-spacing: -0.09em;
@@ -121,7 +133,7 @@ svg {
   margin: 0 2px;
 }
 .brand strong {
-  color: var(--green);
+  color: var(--live);
   font-weight: 700;
 }
 .header-caption {
@@ -161,7 +173,7 @@ svg {
 .intro-eyebrow,
 .intro-note-label {
   display: block;
-  color: var(--green);
+  color: var(--live);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -178,7 +190,7 @@ svg {
 }
 .intro h1 em {
   font-style: italic;
-  color: var(--green);
+  color: var(--live);
 }
 .intro p {
   margin: 0;
@@ -196,7 +208,7 @@ svg {
   align-items: center;
   gap: 9px;
   margin-top: 22px;
-  color: var(--green);
+  color: var(--live);
   font-size: 13px;
   font-weight: 750;
   text-decoration: none;
@@ -208,7 +220,7 @@ svg {
   display: block;
   min-width: 250px;
   max-width: 340px;
-  border-left: 2px solid var(--green);
+  border-left: 2px solid var(--live);
   padding: 6px 0 8px 18px;
   color: var(--muted);
   font-size: 13px;
@@ -264,9 +276,9 @@ svg {
   border-color: #6cb58e;
 }
 .category-tab.active {
-  color: #102919;
-  border-color: var(--green);
-  background: var(--green);
+  color: var(--live-ink);
+  border-color: var(--live);
+  background: var(--live);
 }
 .category-tab strong {
   font-size: 12px;
@@ -308,7 +320,7 @@ svg {
 .filter-foot button {
   background: none;
   border: 0;
-  color: var(--green);
+  color: var(--live);
   font-size: 12px;
   font-weight: 700;
   padding: 0;
@@ -364,7 +376,7 @@ svg {
   cursor: pointer;
 }
 .check-row input {
-  accent-color: var(--green);
+  accent-color: var(--live);
   margin: 1px 0 0;
   width: 16px;
   height: 16px;
@@ -584,13 +596,13 @@ svg {
   background: var(--soft);
 }
 .status-dot.mine {
-  background: var(--green);
+  background: var(--live);
 }
 .status-dot.other {
-  background: var(--blue);
+  background: var(--muted);
 }
 .status-dot.none {
-  background: var(--orange);
+  background: var(--caution);
 }
 .film-title {
   display: block;
@@ -603,7 +615,7 @@ svg {
   letter-spacing: -0.01em;
 }
 .film-title:hover {
-  color: var(--green);
+  color: var(--live);
 }
 .film-meta {
   display: flex;
@@ -737,7 +749,7 @@ svg {
   font-size: 13px;
 }
 .empty-state button {
-  background: var(--green);
+  background: var(--live);
   color: #092217;
   border: 0;
   border-radius: 5px;
@@ -842,7 +854,7 @@ dialog::backdrop {
 .settings-item input {
   width: 16px;
   height: 16px;
-  accent-color: var(--green);
+  accent-color: var(--live);
 }
 .settings-item small {
   display: block;
@@ -859,8 +871,8 @@ dialog::backdrop {
 .primary-button {
   border: 0;
   border-radius: 5px;
-  background: var(--green);
-  color: #102919;
+  background: var(--live);
+  color: var(--live-ink);
   font-size: 12px;
   font-weight: 800;
   padding: 11px 16px;

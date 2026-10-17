@@ -38,8 +38,8 @@
 }
 .list-form button,
 .draw-main > button {
-  background: var(--green);
-  color: #102919;
+  background: var(--live);
+  color: var(--live-ink);
   border: 0;
   border-radius: 5px;
   font-size: 12px;
@@ -112,7 +112,7 @@
 }
 .history-list button:hover,
 .history-list button.active {
-  border-color: #72de9a;
+  border-color: var(--live);
   color: #fff;
 }
 .history-area > button {
@@ -231,7 +231,7 @@
   width: 15px;
   height: 15px;
   margin: 0;
-  accent-color: var(--green);
+  accent-color: var(--live);
 }
 .draw-result {
   border-top: 1px solid #37444c;
@@ -277,7 +277,7 @@
   text-decoration: none;
 }
 .draw-pick-copy > a:hover {
-  color: var(--green);
+  color: var(--live);
 }
 .draw-pick-copy p {
   font-size: 12px;

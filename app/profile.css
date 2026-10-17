@@ -22,8 +22,8 @@
   color: #a0adb7;
 }
 .profile-form button {
-  background: var(--green);
-  color: #102919;
+  background: var(--live);
+  color: var(--live-ink);
   border: 0;
   border-radius: 5px;
   font-size: 12px;
@@ -67,7 +67,7 @@
 }
 .profile-collection:hover,
 .profile-collection:focus-visible {
-  border-color: #72de9a;
+  border-color: var(--live);
   background: #29463e;
 }
 .profile-collection strong {
