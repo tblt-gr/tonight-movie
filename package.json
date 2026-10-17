@@ -1,0 +1,48 @@
+{
+  "name": "tonight-movie",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Explore public Letterboxd lists, find where films stream in France, and pick tonight's movie.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tblt-gr/tonight-movie.git"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "git ls-files -z --cached --others --exclude-standard | xargs -0 prettier --ignore-unknown --write",
+    "format:check": "git ls-files -z --cached --others --exclude-standard | xargs -0 prettier --ignore-unknown --check",
+    "test": "vitest run",
+    "prepare": "if [ -f ./scripts/install-git-hooks.sh ]; then sh ./scripts/install-git-hooks.sh || true; fi",
+    "release": "./scripts/release.sh"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.3.1",
+    "cheerio": "1.2.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.59.0",
+    "next": "16.4.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.2",
+    "lefthook": "^2.2.2",
+    "prettier": "^3.9.10",
+    "typescript": "^5.0.0",
+    "vitest": "^5.0.5"
+  }
+}

@@ -1,0 +1,19 @@
+pre-commit:
+  parallel: false
+  commands:
+    eslint:
+      glob: "*.{ts,tsx,mjs}"
+      run: npx --no-install eslint --fix {staged_files}
+      stage_fixed: true
+    prettier:
+      glob: "*.{js,jsx,ts,tsx,mjs,json,css,md,yml,yaml}"
+      exclude:
+        - "package-lock.json"
+        - "dist/films.json"
+      run: npx --no-install prettier --write {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  commands:
+    commitlint:
+      run: npx --no-install commitlint --edit {1}

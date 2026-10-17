@@ -1,0 +1,56 @@
+version: 2
+
+# Keep vulnerability alerts enabled without opening automated version PRs.
+# Automated security PRs are disabled in the repository settings.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Paris
+    open-pull-requests-limit: 0
+    labels: [dependencies, javascript]
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Paris
+    open-pull-requests-limit: 0
+    labels: [dependencies, github_actions]
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Paris
+    open-pull-requests-limit: 0
+    labels: [dependencies, docker]
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      docker:
+        patterns:
+          - "*"

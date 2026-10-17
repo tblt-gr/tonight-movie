@@ -1,0 +1,12 @@
+node_modules
+.next
+.cache
+.git
+__pycache__
+*.pyc
+tests
+.github
+dist/app.js
+dist/films.js
+dist/index.html
+dist/*.css

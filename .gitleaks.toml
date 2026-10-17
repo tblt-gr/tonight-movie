@@ -1,0 +1,6 @@
+# Secret scanning (gitleaks) for pull requests and the nightly full-history scan.
+# Extends the default rule set; add an allowlist only with the literal it accepts.
+title = "Tonight's Movie gitleaks configuration"
+
+[extend]
+useDefault = true
