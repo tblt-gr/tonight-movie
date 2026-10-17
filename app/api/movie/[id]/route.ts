@@ -1,6 +1,6 @@
-import { handle } from "../../../../lib/route";
-import { getMovie } from "../../../../lib/tmdb";
-import { parseMovieId, parseNoParams } from "../../../../lib/validation";
+import { handle } from "@/lib/route";
+import { getMovie } from "@/lib/tmdb";
+import { parseMovieId, parseNoParams } from "@/lib/validation";
 
 export const runtime = "nodejs";
 

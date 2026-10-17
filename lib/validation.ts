@@ -1,4 +1,4 @@
-import { ApiFailure } from "./errors";
+import { ApiFailure } from "@/lib/errors";
 
 export const MAX_PAGE = 500;
 export const MAX_PROVIDERS = 20;

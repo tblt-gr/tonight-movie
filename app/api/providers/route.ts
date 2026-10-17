@@ -1,6 +1,6 @@
-import { handle } from "../../../lib/route";
-import { getProviders } from "../../../lib/tmdb";
-import { parseNoParams } from "../../../lib/validation";
+import { handle } from "@/lib/route";
+import { getProviders } from "@/lib/tmdb";
+import { parseNoParams } from "@/lib/validation";
 
 export const runtime = "nodejs";
 

@@ -1,5 +1,5 @@
-import { ApiFailure } from "./errors";
-import { checkRateLimit, clientKey } from "./rate-limit";
+import { ApiFailure } from "@/lib/errors";
+import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 
 /** Shared wrapper: rate limit first, then run, and turn every failure into a typed error body. */
 export async function handle(request: Request, run: () => Promise<unknown>): Promise<Response> {

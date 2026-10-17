@@ -1,4 +1,4 @@
-import type { Film, Offer, Provider } from "./types";
+import type { Film, Offer, Provider } from "@/lib/types";
 
 export const STREAM_TYPES = new Set(["FLATRATE", "FREE", "ADS"]);
 export const RENT_TYPES = new Set(["RENT", "BUY"]);
