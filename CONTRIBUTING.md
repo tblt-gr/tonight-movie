@@ -50,7 +50,7 @@ fix: handle an empty watchlist
 ci: pin the image scan action
 ```
 
-Pull requests target `main` and are **squash-merged** only, so the pull request title and body become the final commit message. CI validates the title; fill in the pull request template. A pull request is done when:
+Pull requests target `main` and are **squash-merged** only, so the pull request title alone becomes the final commit message (no body); keep the details in the pull request. CI validates the title; fill in the pull request template. A pull request is done when:
 
 - `CI gate` is green and conversations are resolved;
 - tests cover changed import or availability behavior;
