@@ -40,7 +40,7 @@ Docker:
 
 ```bash
 docker build -t tonight-movie .
-docker run --rm -p 3000:3000 -v tonight-movie-data:/data tonight-movie
+docker run --rm -p 3000:3000 -e TMDB_API_KEY=<v4 token> -v tonight-movie-data:/data tonight-movie
 ```
 
 ## What you can do
@@ -79,10 +79,24 @@ A single Next.js App Router application serves the React interface and the impor
 4. `GET /api/jobs/{id}` reports progress, failure or the completed snapshot; the client polls while importing.
 5. Browser local storage holds selected services, recent collection links and draw history.
 
-| Variable   | Scope  | Required | Default                      | Security impact                        |
-| ---------- | ------ | -------- | ---------------------------- | -------------------------------------- |
-| `DATA_DIR` | server | no       | `.cache` (`/data` in Docker) | Holds cached public snapshots for 24 h |
-| `PORT`     | server | no       | `3000`                       | Listening port                         |
+| Variable       | Scope  | Required | Default                      | Security impact                                                           |
+| -------------- | ------ | -------- | ---------------------------- | ------------------------------------------------------------------------- |
+| `TMDB_API_KEY` | server | yes      | none                         | TMDB v3 key or v4 read token; never sent to the browser, logged or echoed |
+| `DATA_DIR`     | server | no       | `.cache` (`/data` in Docker) | Holds cached public snapshots for 24 h                                    |
+| `PORT`         | server | no       | `3000`                       | Listening port                                                            |
+
+### Film data routes
+
+Film data comes from [TMDB](https://developer.themoviedb.org/) through stateless route handlers, so the key stays on the server. Copy `.env.example` to `.env.local` and set `TMDB_API_KEY` to your v4 read access token (<https://www.themoviedb.org/settings/api>). With Docker, pass it at run time: `docker run -e TMDB_API_KEY=… -e TRUSTED_PROXY_HOPS=1 …`. Without it `/api/health` returns 503 with a clear detail and the film routes answer `not_configured`.
+
+| Route                                                     | Purpose                                         |
+| --------------------------------------------------------- | ----------------------------------------------- |
+| `GET /api/search?title=…&year=…`                          | Search by title, optional year                  |
+| `GET /api/movie/{id}`                                     | Details plus French offers                      |
+| `GET /api/providers`                                      | French watch provider list                      |
+| `GET /api/discover?providers=8,119&maxRuntime=120&page=1` | Films streaming on any provider, page up to 500 |
+
+Parameters are validated strictly (unknown ones get a 400) and there is no passthrough to TMDB. Requests use `fr-FR` and `watch_region=FR`; TMDB answers are cached by the Next fetch cache for 24 hours. Errors are typed (`{ "error": { "code", "message" } }`). Each client IP is limited to 60 requests per minute (429 beyond), read from `X-Forwarded-For` as set by your own proxies (`TRUSTED_PROXY_HOPS`); behind no proxy the header is client-controlled, so deploy behind one that overwrites it. Counters live in process memory, so serverless instances do not share them. The Next fetch cache lives in `.next/cache`, not in `DATA_DIR`, and is lost when the container is recreated. Watch-provider data comes from JustWatch through TMDB and must be credited in the footer.
 
 Only HTTPS `letterboxd.com` list or watchlist URLs are fetched, after canonicalization. The job registry is in memory and limited to two active imports, so one instance only. Before broad deployment add persistent jobs, rate limits, observability and an authorized catalogue feed.
 
