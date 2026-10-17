@@ -7,6 +7,9 @@ const MAX_TITLE_LENGTH = 100;
 const FIRST_FILM_YEAR = 1888;
 const MAX_FUTURE_YEARS = 5;
 
+export const DISCOVER_SORTS = ["popularity", "rating", "year"] as const;
+export type DiscoverSort = (typeof DISCOVER_SORTS)[number];
+
 const bad = (message: string) => new ApiFailure("bad_request", 400, message);
 
 function integer(value: string, name: string, min: number, max: number): number {
@@ -52,7 +55,7 @@ export function parseNoParams(searchParams: URLSearchParams) {
 }
 
 export function parseDiscover(searchParams: URLSearchParams) {
-  const get = pick(searchParams, ["providers", "maxRuntime", "page"]);
+  const get = pick(searchParams, ["providers", "maxRuntime", "page", "sort"]);
   const rawProviders = get("providers");
   if (!rawProviders) throw bad("providers is required");
   const parts = rawProviders.split(",");
@@ -64,9 +67,12 @@ export function parseDiscover(searchParams: URLSearchParams) {
   );
   const rawRuntime = get("maxRuntime");
   const rawPage = get("page");
+  const sort = get("sort") ?? "popularity";
+  if (!DISCOVER_SORTS.includes(sort as DiscoverSort)) throw bad("sort is not supported");
   return {
     providers,
     maxRuntime: rawRuntime === null ? null : integer(rawRuntime, "maxRuntime", 1, MAX_RUNTIME),
     page: rawPage === null ? 1 : integer(rawPage, "page", 1, MAX_PAGE),
+    sort: sort as DiscoverSort,
   };
 }

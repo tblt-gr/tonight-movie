@@ -7,7 +7,7 @@ import type {
   ProvidersResponse,
   SearchResponse,
 } from "@/lib/types";
-import { MAX_PAGE } from "@/lib/validation";
+import { MAX_PAGE, type DiscoverSort } from "@/lib/validation";
 
 const TMDB_API = "https://api.themoviedb.org/3";
 const TMDB_SITE = "https://www.themoviedb.org";
@@ -224,10 +224,18 @@ export async function getProviders(): Promise<ProvidersResponse> {
   return { providers: providers.map(({ info }) => info) };
 }
 
+const DISCOVER_ORDER: Record<DiscoverSort, Record<string, string>> = {
+  popularity: { sort_by: "popularity.desc" },
+  // Without a vote floor, films with one perfect vote would top the list.
+  rating: { sort_by: "vote_average.desc", "vote_count.gte": "300" },
+  year: { sort_by: "primary_release_date.desc" },
+};
+
 export async function discoverMovies(
   providers: number[],
   maxRuntime: number | null,
   page: number,
+  sort: DiscoverSort = "popularity",
 ): Promise<DiscoverResponse> {
   const data = await tmdbGet<TmdbPage>("/discover/movie", {
     language: LANGUAGE,
@@ -235,7 +243,7 @@ export async function discoverMovies(
     with_watch_providers: providers.join("|"),
     with_watch_monetization_types: "flatrate|free|ads",
     include_adult: "false",
-    sort_by: "popularity.desc",
+    ...DISCOVER_ORDER[sort],
     page: String(page),
     ...(maxRuntime === null ? {} : { "with_runtime.lte": String(maxRuntime) }),
   });

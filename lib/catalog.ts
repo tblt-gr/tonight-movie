@@ -132,6 +132,12 @@ export function formatMinutes(value: number | null): string {
     : "Durée inconnue";
 }
 
+export function formatRating(value: number | null): string {
+  return value === null
+    ? "Pas encore notée"
+    : `${value.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`;
+}
+
 export function sortFilms(
   films: Film[],
   sort: Sort,
