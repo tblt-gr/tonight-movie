@@ -13,81 +13,105 @@
 <p align="center">
   <a href="#run-locally">Run locally</a> &bull;
   <a href="#what-you-can-do">Features</a> &bull;
+  <a href="#import-your-letterboxd-data">Import</a> &bull;
   <a href="#data-sources">Data sources</a> &bull;
   <a href="#architecture">Architecture</a> &bull;
+  <a href="#deployment">Deployment</a> &bull;
   <a href="#development">Development</a> &bull;
   <a href="#contributing">Contributing</a>
 </p>
 
-Explore public Letterboxd collections, check streaming availability in France, and roll for a film when you cannot decide.
+Pick your streaming services in France, and Tonight’s Movie draws one film you can watch right now: poster, duration, rating, synopsis and the services that offer it. The interface is in French.
 
-The app starts with a bundled snapshot of 126 enriched films. Enter a Letterboxd username to discover accessible public lists, liked lists and a public watchlist, or paste any public list URL. No Tonight’s Movie account is required.
+You can optionally import your own Letterboxd export (watchlist, lists, liked and watched films) to draw among your films. The app never scrapes Letterboxd and never asks for Letterboxd credentials. There is no Tonight’s Movie account and no database: your services, your imported data and your draw history stay in your browser.
 
-**Status: alpha.** Single-instance MVP built on unofficial public endpoints; see [limits](#data-and-deployment-limits).
+**Status: alpha.** See [limits](#limits).
 
 ## Run locally
 
-Requires Node.js 22 or newer (Node 20.9+ is supported by the dependencies).
+Requires Node.js 22 or newer (Node 20.9+ is supported by the dependencies) and a free TMDB account for the API key.
 
-```bash
-npm ci
-npm run dev
-```
+1. Create a TMDB API read access token: sign in at <https://www.themoviedb.org/settings/api> and copy the **API Read Access Token** (the long v4 token, not the short v3 API key).
+2. Install and configure:
 
-Open <http://localhost:3000>. If port 3000 is occupied, use `PORT=3047 npm run dev`.
+   ```bash
+   npm ci
+   cp .env.example .env.local
+   ```
 
-Docker:
+   Then set `TMDB_API_KEY` in `.env.local` to your token.
+
+3. Start the app:
+
+   ```bash
+   npm run dev
+   ```
+
+Open <http://localhost:3000>. If port 3000 is occupied, use `PORT=3047 npm run dev`. `GET /api/health` returns `200` when the key is configured and `503` with a clear detail when it is not.
+
+### Docker
 
 ```bash
 docker build -t tonight-movie .
-docker run --rm -p 3000:3000 -e TMDB_API_KEY=<v4 token> -v tonight-movie-data:/data tonight-movie
+docker run --rm -p 3000:3000 -e TMDB_API_KEY=<v4 token> -e TRUSTED_PROXY_HOPS=1 tonight-movie
 ```
+
+The container keeps no data on disk, so it needs no volume. Pass the key at run time; never bake it into the image.
+
+### Configuration
+
+Copy `.env.example` to `.env.local` (local) or set the variables in your host (Docker, Vercel). They are server-only: never prefix them with `NEXT_PUBLIC_` and never commit a real value.
+
+| Variable             | Required | Default | Purpose                                                                                                                                                                 |
+| -------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TMDB_API_KEY`       | yes      | none    | TMDB v4 read access token. Never sent to the browser, logged or echoed.                                                                                                 |
+| `TRUSTED_PROXY_HOPS` | no       | `1`     | Number of trusted reverse proxies in front of the app, used to read the client IP from `X-Forwarded-For` for rate limiting. `0` ignores the header (one shared bucket). |
+| `PORT`               | no       | `3000`  | Listening port.                                                                                                                                                         |
 
 ## What you can do
 
-- Find collections from a public username, import a public list URL, return to recent lists, and share a collection with `?user=<username>&list=<encoded URL>`.
-- Select your subscriptions in **Mes plateformes**. The initial selection is Prime Video, Max via Prime, M6+ and France TV via Prime. Other Prime channels are separate services.
-- Browse posters or a compact list; filter by availability, service, title, duration and minimum Letterboxd rating; sort by rating, duration, platform, title, year or original list order.
-- Roll for a random film from your selected services. Optional criteria include genre, duration, rating, service and scope. The last five draws are avoided when possible.
-- Reveal rental and purchase offers explicitly. They are never treated as included in a Prime subscription.
+- Choose your streaming services among the French providers known to TMDB. At least one is required.
+- Optionally import a Letterboxd export. An (i) guide in the app explains the steps; they are repeated [below](#import-your-letterboxd-data).
+- Draw one film at random from a source (your watchlist, an imported list, your liked films, or all films on your services) with a maximum duration and an option to leave out films you have already seen. Draw again as often as you like; the last draws are avoided when possible.
+- Browse and filter films manually from the link under the result.
 
-Availability groups are **on your services**, **other French services**, and **no verified subscription or free offer**. Uncertain matches appear separately as **À vérifier**. A missing offer does not prove that a film is unavailable everywhere.
+Pages: `/` (presentation, skipped once services are chosen), `/reglages` (services and import), `/tirage` (the draw) and `/films` (browse and filter).
 
-Settings, recent lists and draw history stay in the browser’s local storage. Imported snapshots are cached on the server for 24 hours. The server handles at most two imports at a time; it is designed as a single instance MVP.
+Streaming means `FLATRATE`, `FREE` and `ADS` offers. A missing or uncertain offer is shown as **À vérifier**: it does not prove that a film is unavailable.
 
-## Data and deployment limits
+## Import your Letterboxd data
 
-The importer reads public Letterboxd pages for collections, film details, runtimes, ratings and genres. It searches JustWatch’s French catalogue for posters and streaming offers. These public endpoints may change or reject automated requests, including requests for otherwise public pages. Private Letterboxd collections are not accessible. Availability is dated in the UI and can change after collection.
+Letterboxd does not connect to Tonight’s Movie. You download your own data, then drop it into the import block on `/reglages`:
 
-The present JustWatch GraphQL access is a prototype dependency, not a contracted data feed. A public service needs a licensed source and a more robust identifier based matching system before broad deployment. See [Data sources](#data-sources) and [Architecture](#architecture).
+1. Sign in to letterboxd.com from a computer.
+2. Open your profile, then **Settings**.
+3. Go to the **Import & Export** tab.
+4. Click **Export your data**.
+5. Download the `.zip` archive Letterboxd provides.
+6. Back in Tonight’s Movie, drop the archive into the import block without extracting it. A single `.csv` file such as `watchlist.csv` also works.
+
+The file is read in your browser and is never uploaded to a server. Only the film titles, years and list memberships are kept, in your browser’s local storage; film details are then looked up on TMDB by title and year. Only a confident match can be drawn; a film whose match is uncertain is flagged **À vérifier** instead.
 
 ## Data sources
 
-The server reads public Letterboxd collection pages for film order, titles and years, and film pages for duration, average rating, genres and the TMDB identifier when available. It then searches JustWatch’s French catalogue for a poster, provider icons, offer type and viewing link, comparing title and year before assigning offers to a film. The result is a dated snapshot, not a live guarantee.
+[TMDB](https://www.themoviedb.org/) is the single data source for film data and French watch providers. Watch-provider data comes from [JustWatch](https://www.justwatch.com/) through TMDB. Requests use `fr-FR` and `watch_region=FR`. No other service is called: there is no scraping and no Letterboxd request.
 
-`FLATRATE`, `FREE` and `ADS` are streaming offers. `RENT` and `BUY` appear only when the visitor enables them and never count as a subscription already owned. Prime Video and each Prime Video Channel are separate provider IDs. An uncertain match is marked **À vérifier**.
+`FLATRATE`, `FREE` and `ADS` are streaming offers. `RENT` and `BUY` appear only when the visitor enables them and never count as a subscription already owned. Prime Video and each Prime Video Channel are separate provider IDs.
 
-Both sources are public HTML and an undocumented GraphQL endpoint that can change or return HTTP 403. A widely hosted service needs a licensed source such as [JustWatch’s partner API](https://apis.justwatch.com/docs/api/) or [TMDB watch providers](https://developer.themoviedb.org/reference/movie-watch-providers). The app never asks for Letterboxd credentials.
+### Attribution
+
+The app footer reads:
+
+> Données des films fournies par TMDB et disponibilités par JustWatch. Tonight’s Movie n’est ni soutenu ni certifié par TMDB ou JustWatch.
+
+In English: film data is provided by TMDB and availability by JustWatch. This product uses the TMDB API but is not endorsed or certified by TMDB or JustWatch. Tonight’s Movie is also independent of Letterboxd. Keep this attribution in the footer of any deployment.
 
 ## Architecture
 
-A single Next.js App Router application serves the React interface and the import API from one Node.js process, with no database.
+A single Next.js App Router application serves the React interface and a few stateless route handlers from one Node.js process. There is no database and nothing is stored on the server.
 
-1. The home page loads the bundled 126-film starter snapshot from `dist/films.json`.
-2. `GET /api/profile?username=…` discovers public created and liked lists plus an accessible watchlist.
-3. `POST /api/import` validates and canonicalizes a Letterboxd list or watchlist URL. A fresh cached snapshot returns immediately; otherwise a background import starts and a job ID is returned.
-4. `GET /api/jobs/{id}` reports progress, failure or the completed snapshot; the client polls while importing.
-5. Browser local storage holds selected services, recent collection links and draw history.
-
-| Variable       | Scope  | Required | Default                      | Security impact                                                           |
-| -------------- | ------ | -------- | ---------------------------- | ------------------------------------------------------------------------- |
-| `TMDB_API_KEY` | server | yes      | none                         | TMDB v3 key or v4 read token; never sent to the browser, logged or echoed |
-| `DATA_DIR`     | server | no       | `.cache` (`/data` in Docker) | Holds cached public snapshots for 24 h                                    |
-| `PORT`         | server | no       | `3000`                       | Listening port                                                            |
-
-### Film data routes
-
-Film data comes from [TMDB](https://developer.themoviedb.org/) through stateless route handlers, so the key stays on the server. Copy `.env.example` to `.env.local` and set `TMDB_API_KEY` to your v4 read access token (<https://www.themoviedb.org/settings/api>). With Docker, pass it at run time: `docker run -e TMDB_API_KEY=… -e TRUSTED_PROXY_HOPS=1 …`. Without it `/api/health` returns 503 with a clear detail and the film routes answer `not_configured`.
+- The browser parses the Letterboxd export (`lib/import/`), keeps services, lists, films and draw history in local storage (`lib/storage/`), and runs the draw (`lib/draw.ts`).
+- The route handlers are a thin, validated proxy to TMDB, so the key stays on the server:
 
 | Route                                                     | Purpose                                         |
 | --------------------------------------------------------- | ----------------------------------------------- |
@@ -95,10 +119,24 @@ Film data comes from [TMDB](https://developer.themoviedb.org/) through stateless
 | `GET /api/movie/{id}`                                     | Details plus French offers                      |
 | `GET /api/providers`                                      | French watch provider list                      |
 | `GET /api/discover?providers=8,119&maxRuntime=120&page=1` | Films streaming on any provider, page up to 500 |
+| `GET /api/health`                                         | `200`, or `503` when `TMDB_API_KEY` is missing  |
 
-Parameters are validated strictly (unknown ones get a 400) and there is no passthrough to TMDB. Requests use `fr-FR` and `watch_region=FR`; TMDB answers are cached by the Next fetch cache for 24 hours. Errors are typed (`{ "error": { "code", "message" } }`). Each client IP is limited to 60 requests per minute (429 beyond), read from `X-Forwarded-For` as set by your own proxies (`TRUSTED_PROXY_HOPS`); behind no proxy the header is client-controlled, so deploy behind one that overwrites it. Counters live in process memory, so serverless instances do not share them. The Next fetch cache lives in `.next/cache`, not in `DATA_DIR`, and is lost when the container is recreated. Watch-provider data comes from JustWatch through TMDB and must be credited in the footer.
+Parameters are validated strictly (unknown ones get a 400) and there is no passthrough to TMDB. Errors are typed (`{ "error": { "code", "message" } }`). TMDB answers are cached by the Next fetch cache for 24 hours; that cache lives in `.next/cache` and holds public film data only. Each client IP is limited to 60 requests per minute (429 beyond), read from `X-Forwarded-For` as set by your own proxies (`TRUSTED_PROXY_HOPS`); behind no proxy the header is client-controlled, so deploy behind one that overwrites it. Counters live in process memory, so several instances do not share them.
 
-Only HTTPS `letterboxd.com` list or watchlist URLs are fetched, after canonicalization. The job registry is in memory and limited to two active imports, so one instance only. Before broad deployment add persistent jobs, rate limits, observability and an authorized catalogue feed.
+## Deployment
+
+The app is stateless, so it runs anywhere Node.js 22 runs. `next.config.ts` builds a standalone server, which is what the [Dockerfile](Dockerfile) ships (non-root user, port 3000).
+
+**Docker or any Node host:** set `TMDB_API_KEY`, put the app behind a reverse proxy that overwrites `X-Forwarded-For`, and set `TRUSTED_PROXY_HOPS` to the number of proxies. No volume is required.
+
+**Vercel (optional):** import the repository, add `TMDB_API_KEY` as an environment variable, and deploy. There is no server storage to provision. Vercel sets `X-Forwarded-For` itself, so the default `TRUSTED_PROXY_HOPS=1` fits. Rate-limit counters are per serverless instance, so the limit is best effort there.
+
+## Limits
+
+- Availability comes from TMDB and JustWatch, can change at any time, and may be missing or wrong. A missing offer is **À vérifier**, never proof that a film is unavailable.
+- Matching an imported film to TMDB uses title and year; ambiguous titles can be matched wrongly or not at all.
+- Rate limiting is per process. Before broad public use, add a shared limiter and observability.
+- Your data lives in one browser: clearing site data or switching browser starts from scratch, and you import again.
 
 ## Development
 
@@ -111,12 +149,12 @@ npm run build
 npm audit --omit=dev --audit-level=high
 ```
 
-The project uses Next.js App Router, React, TypeScript and Radix Dialog. UI code is in `components/`, server import logic in `lib/`, and route handlers in `app/api/`. The starter collection is `dist/films.json`.
+The project uses Next.js App Router, React, TypeScript and Radix Dialog. UI code is in `components/`, import, storage, matching and draw logic in `lib/`, and route handlers in `app/api/`. Tests are in `tests/` (Vitest).
 
-Project notes: [product](PRODUCT.md) · [design](.impeccable/DESIGN.md).
+Project notes: [product](PRODUCT.md) · [design](.impeccable/DESIGN.md) · [security](SECURITY.md).
 
 ## Contributing
 
 Contributions are welcome; pull requests are squash-merged into `main` and must pass the `CI gate`. Read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Report security issues through [SECURITY.md](SECURITY.md). Licensed under [MIT](LICENSE).
 
-Tonight’s Movie is independent of Letterboxd and JustWatch. Film metadata belongs to its respective sources.
+Tonight’s Movie is independent of Letterboxd, TMDB and JustWatch. Film metadata belongs to its respective sources.

@@ -22,7 +22,7 @@ body:
     id: reproduction
     attributes:
       label: Reproduction steps
-      description: Include the Letterboxd list or username if relevant, and the browser.
+      description: Say whether you imported a Letterboxd export (never attach it), and include the browser.
     validations:
       required: true
   - type: input
