@@ -121,7 +121,7 @@ A single Next.js App Router application serves the React interface and a few sta
 | `GET /api/discover?providers=8,119&maxRuntime=120&page=1` | Films streaming on any provider, page up to 500 |
 | `GET /api/health`                                         | `200`, or `503` when `TMDB_API_KEY` is missing  |
 
-Parameters are validated strictly (unknown ones get a 400) and there is no passthrough to TMDB. Errors are typed (`{ "error": { "code", "message" } }`). TMDB answers are cached by the Next fetch cache for 24 hours; that cache lives in `.next/cache` and holds public film data only. Each client IP is limited to 60 requests per minute (429 beyond), read from `X-Forwarded-For` as set by your own proxies (`TRUSTED_PROXY_HOPS`); behind no proxy the header is client-controlled, so deploy behind one that overwrites it. Counters live in process memory, so several instances do not share them.
+Parameters are validated strictly (unknown ones get a 400) and there is no passthrough to TMDB. Errors are typed (`{ "error": { "code", "message" } }`). TMDB answers are cached by the Next fetch cache for 24 hours; that cache lives in `.next/cache` and holds public film data only. Each client IP is limited to 600 requests per minute by default, set by `RATE_LIMIT_PER_MINUTE` (429 beyond), read from `X-Forwarded-For` as set by your own proxies (`TRUSTED_PROXY_HOPS`); behind no proxy the header is client-controlled, so deploy behind one that overwrites it. Counters live in process memory, so several instances do not share them.
 
 ## Deployment
 

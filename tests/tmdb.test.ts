@@ -343,6 +343,8 @@ describe("errors", () => {
 });
 
 describe("rate limit", () => {
+  beforeEach(() => vi.stubEnv("RATE_LIMIT_PER_MINUTE", "60"));
+
   it("returns 429 beyond the limit, per client", async () => {
     vi.stubEnv("TMDB_API_KEY", "");
     for (let i = 0; i < 60; i++) {
@@ -371,6 +373,13 @@ describe("rate limit", () => {
     expect(from("6.6.6.6, 203.0.113.7, 10.0.0.1")).toBe("203.0.113.7");
     vi.stubEnv("TRUSTED_PROXY_HOPS", "0");
     expect(from("6.6.6.6")).toBe("shared");
+  });
+
+  it("allows 600 requests per minute by default and ignores an invalid override", () => {
+    const now = Date.now();
+    vi.stubEnv("RATE_LIMIT_PER_MINUTE", "abc");
+    for (let i = 0; i < 600; i++) expect(checkRateLimit("b", now)).toBeNull();
+    expect(checkRateLimit("b", now)).not.toBeNull();
   });
 
   it("expires a window", () => {
