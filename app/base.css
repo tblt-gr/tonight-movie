@@ -201,19 +201,60 @@ svg {
   margin: 0;
   color: var(--muted);
 }
-.services-search {
+.multiselect {
+  position: relative;
   display: grid;
   gap: var(--s2);
-  max-width: 480px;
+  max-width: 560px;
 }
-.services-search label {
+.multiselect-label {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
-.services-search input {
+.multiselect-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.multiselect-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--s1) var(--s1) var(--s1) var(--s2);
+  background: var(--live);
+  color: var(--live-ink);
+  font-weight: 700;
+}
+.multiselect-remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 2px solid var(--live-ink);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.multiselect-remove:hover {
+  background: var(--live-ink);
+  color: var(--live);
+}
+.multiselect-remove svg {
+  width: 16px;
+  height: 16px;
+}
+.multiselect-input {
   height: 48px;
   padding: var(--s3) var(--s4);
   border: 2px solid var(--text);
@@ -222,58 +263,69 @@ svg {
   color: var(--text);
   font-weight: 700;
 }
-.services-list {
+.multiselect-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  margin-top: var(--s1);
+  max-height: 320px;
+  overflow-y: auto;
+  border: 2px solid var(--text);
+  background: var(--bg);
+}
+.multiselect-popup[hidden] {
+  display: none;
+}
+.multiselect-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--s2);
 }
-.service-tile {
+.multiselect-option {
   display: flex;
   align-items: center;
   gap: var(--s3);
   min-height: 56px;
-  padding: var(--s3) var(--s4);
-  border: 2px solid var(--line);
-  background: var(--panel);
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--line);
   font-weight: 700;
   cursor: pointer;
-  transition: border-color var(--cut) steps(2);
 }
-.service-tile:hover {
-  border-color: var(--text);
+.multiselect-option[aria-selected="true"] {
+  background: var(--panel);
 }
-.service-tile img,
-.service-logo-empty {
+.multiselect-option[data-active] {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+.multiselect-chip img,
+.multiselect-option img,
+.multiselect-logo-empty {
   flex: none;
   width: 32px;
   height: 32px;
   background: var(--panel2);
 }
-.service-name {
+.multiselect-name {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.service-tick {
+.multiselect-tick {
   flex: none;
   width: 20px;
   height: 20px;
   visibility: hidden;
 }
-input:checked + .service-tile {
-  background: var(--live);
-  border-color: var(--live);
-  color: var(--live-ink);
-}
-input:checked + .service-tile .service-tick {
+.multiselect-option[aria-selected="true"] .multiselect-tick {
   visibility: visible;
+  color: var(--live);
 }
-input:focus-visible + .service-tile {
-  outline: 3px solid var(--focus);
-  outline-offset: 3px;
+.multiselect-empty {
+  margin: 0;
+  padding: var(--s4);
 }
 .services-error {
   margin: 0;

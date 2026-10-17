@@ -3,7 +3,6 @@ import {
   NO_SERVICE_ERROR,
   filterProviders,
   normalizeSearch,
-  selectedFirst,
   validateServices,
 } from "@/lib/services";
 import { loadSettings, resetSettings, updateSettings } from "@/lib/storage/settings";
@@ -44,17 +43,6 @@ describe("filterProviders", () => {
 describe("normalizeSearch", () => {
   it("strips accents, case and surrounding spaces", () => {
     expect(normalizeSearch("  Été ")).toBe("ete");
-  });
-});
-
-describe("selectedFirst", () => {
-  it("puts selected providers on top and keeps the TMDB order inside each group", () => {
-    const ordered = selectedFirst(providers, new Set(["234", "119"]));
-    expect(ordered.map((p) => p.id)).toEqual(["119", "234", "8", "381", "1899"]);
-  });
-
-  it("leaves the order alone when nothing is selected", () => {
-    expect(selectedFirst(providers, new Set())).toEqual(providers);
   });
 });
 

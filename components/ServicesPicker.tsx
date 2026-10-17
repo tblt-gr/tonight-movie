@@ -1,9 +1,9 @@
 "use client";
 
-import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { filterProviders, selectedFirst, validateServices } from "@/lib/services";
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { MultiSelect } from "@/components/MultiSelect";
+import { validateServices } from "@/lib/services";
 import { resetAll } from "@/lib/storage";
 import { loadSettings, updateSettings } from "@/lib/storage/settings";
 import type { ProviderInfo, ProvidersResponse } from "@/lib/types";
@@ -19,7 +19,6 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
   const [selected, setSelected] = useState<ReadonlySet<string>>(
     () => new Set(loadSettings().services),
   );
-  const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
@@ -38,18 +37,9 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
     return () => controller.abort();
   }, [attempt]);
 
-  const visible = useMemo(
-    () => filterProviders(selectedFirst(providers, selected), query),
-    [providers, selected, query],
-  );
-
-  function toggle(id: string) {
+  function change(next: ReadonlySet<string>) {
     setError(null);
-    setSelected((current) => {
-      const next = new Set(current);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
+    setSelected(next);
   }
 
   function submit(event: FormEvent) {
@@ -85,19 +75,9 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
         <fieldset className="services-group" aria-describedby={error ? `${ids}-error` : undefined}>
           <legend className="services-title">Vos services de streaming</legend>
           <p className="services-hint">
-            Cochez les abonnements que vous avez. Le tirage ne propose que des films disponibles
+            Choisissez les abonnements que vous avez. Le tirage ne propose que des films disponibles
             chez eux.
           </p>
-          <div className="services-search">
-            <label htmlFor={`${ids}-search`}>Rechercher un service</label>
-            <input
-              id={`${ids}-search`}
-              type="search"
-              autoComplete="off"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
           {status === "ready" && (
             <p className="services-count" role="status">
               {summary}
@@ -112,38 +92,15 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
               </button>
             </div>
           )}
-          {status === "ready" && visible.length === 0 && (
-            <p role="status" className="services-message">
-              Aucun service ne correspond à « {query.trim()} ».
-            </p>
-          )}
-          {status === "ready" && visible.length > 0 && (
-            <ul className="services-list">
-              {visible.map((provider) => {
-                const inputId = `${ids}-${provider.id}`;
-                return (
-                  <li key={provider.id}>
-                    <input
-                      id={inputId}
-                      className="sr-only"
-                      type="checkbox"
-                      checked={selected.has(provider.id)}
-                      onChange={() => toggle(provider.id)}
-                    />
-                    <label htmlFor={inputId} className="service-tile">
-                      {provider.logo ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- TMDB serves sized logos.
-                        <img src={provider.logo} alt="" width={32} height={32} loading="lazy" />
-                      ) : (
-                        <span className="service-logo-empty" aria-hidden="true" />
-                      )}
-                      <span className="service-name">{provider.name}</span>
-                      <Check className="service-tick" aria-hidden="true" />
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
+          {status === "ready" && (
+            <MultiSelect
+              label="Rechercher un service"
+              options={providers}
+              selected={selected}
+              onChange={change}
+              emptyMessage={(query) => `Aucun service ne correspond à « ${query} ».`}
+              removeLabel={(name) => `Retirer ${name}`}
+            />
           )}
         </fieldset>
         {error && (
