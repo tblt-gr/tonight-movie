@@ -15,8 +15,7 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
-    PORT=3000 \
-    DATA_DIR=/data
+    PORT=3000
 # The runtime needs only the node binary: drop the bundled package managers
 # (their vendored dependencies carry CVEs) and apply Debian security fixes.
 RUN rm -rf /usr/local/lib/node_modules /opt/yarn-* \
@@ -27,9 +26,7 @@ RUN rm -rf /usr/local/lib/node_modules /opt/yarn-* \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/dist/films.json ./dist/films.json
-RUN mkdir -p /data/lists /data/profiles && chown -R node:node /data /app
+RUN chown -R node:node /app
 USER node
 EXPOSE 3000
-VOLUME /data
 CMD ["node", "server.js"]
