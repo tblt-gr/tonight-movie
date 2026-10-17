@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { availabilityOn } from "@/lib/catalog";
-import { SERVICES_SOURCE_ID, drawFilm, effectiveSources, tmdbKey, type DrawDeps } from "@/lib/draw";
+import {
+  CONCURRENCY,
+  MAX_CANDIDATES,
+  MAX_MISSES,
+  SERVICES_SOURCE_ID,
+  TARGET_AVAILABLE,
+  drawFilm,
+  effectiveSources,
+  tmdbKey,
+  type DrawDeps,
+} from "@/lib/draw";
 import type { StoredFilm } from "@/lib/storage/schema";
 import type { MovieDetails, Offer } from "@/lib/types";
 
@@ -50,6 +60,12 @@ const settings = {
   maxDuration: null,
   excludeSeen: true,
   recentDraws: [] as string[],
+};
+
+/** Returns 0 for the first `calls` draws (the shuffle), then `value` (the final pick). */
+const randomAfter = (calls: number, value: number) => {
+  let count = 0;
+  return () => (count++ < calls ? 0 : value);
 };
 
 function makeDeps(catalog: Record<number, MovieDetails>, patch: Partial<DrawDeps> = {}) {
@@ -142,7 +158,7 @@ describe("drawFilm from lists", () => {
     for (const value of [0, 0.4, 0.99]) {
       const result = await drawFilm(
         { settings: { ...settings, sources: ["watchlist", "own"] }, films, lists },
-        { ...deps, random: () => value },
+        { ...deps, random: randomAfter(1, value) },
       );
       if (result.status === "found") found.add(result.key);
     }
@@ -263,12 +279,13 @@ describe("drawFilm from lists", () => {
     expect(result).toMatchObject({ status: "found", key: "k2" });
   });
 
-  it("gives up after the maximum attempts without throwing", async () => {
-    const films = Array.from({ length: 30 }, (_, index) => stored(index + 1));
+  it("stops after repeated TMDB errors without throwing", async () => {
+    const films = Array.from({ length: 100 }, (_, index) => stored(index + 1));
     const { deps, calls } = makeDeps({});
     const result = await drawFilm({ settings, films, lists }, deps);
-    expect(result).toMatchObject({ status: "none", attempts: 20 });
-    expect(calls.details).toHaveLength(20);
+    expect(result.status).toBe("none");
+    expect(calls.details.length).toBeGreaterThanOrEqual(MAX_MISSES);
+    expect(calls.details.length).toBeLessThan(MAX_MISSES + CONCURRENCY);
   });
 
   it("does not draw the last five films again", async () => {
@@ -318,7 +335,9 @@ describe("drawFilm from all films on my services", () => {
       deps,
     );
     expect(calls[0]).toEqual([[8, 119], 120, 500]);
-    expect(result).toMatchObject({ status: "found", key: tmdbKey(8) });
+    expect(result.status === "found" && [tmdbKey(7), tmdbKey(8)]).toContain(
+      result.status === "found" ? result.key : "",
+    );
   });
 
   it("narrows the page range once TMDB reports fewer pages", async () => {
@@ -398,24 +417,115 @@ describe("drawFilm from all films on my services", () => {
   });
 
   it("combines with a list source", async () => {
-    const { deps } = makeDeps(
+    const { deps, calls } = makeDeps(
       { 1: details(1), 9: details(9) },
       {
         discover: async (_p, _m, page) => ({ page, totalPages: 1, results: [details(9)] }),
       },
     );
-    const keys = new Set<string>();
-    for (const value of [0.1, 0.9]) {
-      const result = await drawFilm(
-        {
-          settings: { ...settings, sources: ["watchlist", SERVICES_SOURCE_ID] },
-          films: [stored(1)],
-          lists,
+    const result = await drawFilm(
+      {
+        settings: { ...settings, sources: ["watchlist", SERVICES_SOURCE_ID] },
+        films: [stored(1)],
+        lists,
+      },
+      { ...deps, random: () => 0.9 },
+    );
+    expect(result.status).toBe("found");
+    expect(calls.details.sort()).toEqual([1, 9]);
+  });
+});
+
+describe("drawFilm scanning", () => {
+  const bigList = (count: number) => Array.from({ length: count }, (_, index) => stored(index + 1));
+  const seeded = () => {
+    let seed = 42;
+    return () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+  };
+
+  it("finds the few available films of a big list", async () => {
+    const catalog: Record<number, MovieDetails> = {};
+    for (let id = 1; id <= 300; id += 1) {
+      catalog[id] = details(id, { offers: [offer(id % 100 === 0 ? "8" : "9")] });
+    }
+    for (const random of [seeded(), () => 0, () => 0.99]) {
+      const { deps } = makeDeps(catalog, { random });
+      const result = await drawFilm({ settings, films: bigList(300), lists }, deps);
+      expect(result.status).toBe("found");
+      if (result.status === "found") expect(result.film.tmdbId % 100).toBe(0);
+    }
+  });
+
+  it("never judges more than the concurrency cap at once", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const { deps } = makeDeps(
+      {},
+      {
+        getDetails: async (id) => {
+          inFlight += 1;
+          peak = Math.max(peak, inFlight);
+          await new Promise((resolve) => setTimeout(resolve, 1));
+          inFlight -= 1;
+          return details(id, { offers: [offer("9")] });
         },
-        { ...deps, random: () => value },
-      );
+      },
+    );
+    await drawFilm({ settings, films: bigList(60), lists }, deps);
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(CONCURRENCY);
+  });
+
+  it("stops scanning once enough available films are collected", async () => {
+    const catalog = Object.fromEntries(
+      bigList(100).map((film) => [film.tmdbId!, details(film.tmdbId!)]),
+    );
+    const { deps, calls } = makeDeps(catalog);
+    const result = await drawFilm({ settings, films: bigList(100), lists }, deps);
+    expect(result.status).toBe("found");
+    expect(calls.details.length).toBeGreaterThanOrEqual(TARGET_AVAILABLE);
+    expect(calls.details.length).toBeLessThan(TARGET_AVAILABLE + CONCURRENCY);
+  });
+
+  it("caps the candidates judged per draw", async () => {
+    const catalog = Object.fromEntries(
+      bigList(500).map((film) => [film.tmdbId!, details(film.tmdbId!, { offers: [offer("9")] })]),
+    );
+    const { deps, calls } = makeDeps(catalog);
+    const result = await drawFilm({ settings, films: bigList(500), lists }, deps);
+    expect(result).toMatchObject({ status: "none", reason: "nothing-available" });
+    expect(calls.details).toHaveLength(MAX_CANDIDATES);
+  });
+
+  it("draws at random among the collected films", async () => {
+    const catalog = Object.fromEntries(
+      bigList(3).map((film) => [film.tmdbId!, details(film.tmdbId!)]),
+    );
+    const keys = new Set<string>();
+    for (const value of [0, 0.4, 0.99]) {
+      const { deps } = makeDeps(catalog, { random: randomAfter(2, value) });
+      const result = await drawFilm({ settings, films: bigList(3), lists }, deps);
       if (result.status === "found") keys.add(result.key);
     }
-    expect(keys).toEqual(new Set(["k1", tmdbKey(9)]));
+    expect(keys.size).toBe(3);
+  });
+
+  it("does not repeat a film that is both in the list and on the services", async () => {
+    const { deps, calls } = makeDeps(
+      { 1: details(1) },
+      { discover: async (_p, _m, page) => ({ page, totalPages: 1, results: [details(1)] }) },
+    );
+    await drawFilm(
+      {
+        settings: { ...settings, sources: ["watchlist", SERVICES_SOURCE_ID] },
+        films: [stored(1)],
+        lists,
+      },
+      { ...deps, random: () => 0.9 },
+    );
+    expect(calls.details).toEqual([1]);
   });
 });

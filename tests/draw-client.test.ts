@@ -31,6 +31,30 @@ describe("createDrawClient", () => {
     expect(up.isOutage()).toBe(false);
   });
 
+  it("waits out a 429 and retries, honoring Retry-After", async () => {
+    let calls = 0;
+    const sleep = vi.fn<(ms: number) => Promise<void>>(async () => undefined);
+    const fetcher = vi.fn(() => {
+      calls += 1;
+      return calls < 3
+        ? Promise.resolve(new Response("{}", { status: 429, headers: { "Retry-After": "4" } }))
+        : json({ tmdbId: 1 });
+    });
+    const client = createDrawClient(asFetch(fetcher), { sleep });
+    await expect(client.deps.getDetails(1)).resolves.toMatchObject({ tmdbId: 1 });
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(sleep).toHaveBeenNthCalledWith(1, 4000);
+    expect(client.isOutage()).toBe(false);
+  });
+
+  it("gives up on a 429 that never clears", async () => {
+    const sleep = vi.fn<(ms: number) => Promise<void>>(async () => undefined);
+    const fetcher = vi.fn(() => json({}, 429));
+    const client = createDrawClient(asFetch(fetcher), { sleep });
+    await expect(client.deps.getDetails(1)).rejects.toThrow("429");
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
   it("is not an outage before any call", () => {
     expect(createDrawClient(asFetch(() => json({}))).isOutage()).toBe(false);
   });
