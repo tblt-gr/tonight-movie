@@ -2,3 +2,6 @@ hook.cache.json
 hook.pending.json
 config.local.json
 questions/
+mocks/
+review/
+build/
