@@ -1,7 +1,7 @@
 import { isIP } from "node:net";
 
 const WINDOW_MS = 60_000;
-const LIMIT = 60;
+const DEFAULT_LIMIT = 600;
 const MAX_TRACKED = 10_000;
 const OVERFLOW_KEY = "overflow";
 
@@ -57,6 +57,11 @@ export function clientKey(request: Request): string {
   return "unknown";
 }
 
+function limitPerWindow(): number {
+  const configured = Number(process.env.RATE_LIMIT_PER_MINUTE);
+  return Number.isInteger(configured) && configured > 0 ? configured : DEFAULT_LIMIT;
+}
+
 /** Returns the seconds to wait when the caller is over the limit, otherwise `null`. */
 export function checkRateLimit(key: string, now = Date.now()): number | null {
   if (counters.size >= MAX_TRACKED && now - lastSweep >= WINDOW_MS) {
@@ -73,7 +78,7 @@ export function checkRateLimit(key: string, now = Date.now()): number | null {
     return null;
   }
   current.count += 1;
-  return current.count > LIMIT ? Math.ceil((current.resetAt - now) / 1000) : null;
+  return current.count > limitPerWindow() ? Math.ceil((current.resetAt - now) / 1000) : null;
 }
 
 export function resetRateLimit() {
