@@ -30,6 +30,7 @@ const OFFER_TYPES = [
 type TmdbMovie = {
   id?: number;
   title?: string;
+  original_title?: string;
   release_date?: string;
   poster_path?: string | null;
   vote_average?: number;
@@ -121,6 +122,7 @@ function summarize(movie: TmdbMovie): MovieSummary | null {
   return {
     tmdbId: movie.id,
     title: movie.title,
+    originalTitle: movie.original_title || null,
     year: Number.isFinite(year) ? year : null,
     poster: imageUrl(movie.poster_path, "poster"),
     rating: movie.vote_count && typeof movie.vote_average === "number" ? movie.vote_average : null,

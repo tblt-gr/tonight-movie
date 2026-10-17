@@ -41,6 +41,8 @@ export type ApiError = { error: { code: ApiErrorCode; message: string } };
 export type MovieSummary = {
   tmdbId: number;
   title: string;
+  /** Original-language title, `null` when TMDB has none. */
+  originalTitle: string | null;
   year: number | null;
   poster: string | null;
   /** TMDB average on a 0–10 scale, `null` while the film has no votes. */
