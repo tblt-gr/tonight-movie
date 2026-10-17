@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET as discover } from "../app/api/discover/route";
-import { GET as health } from "../app/api/health/route";
-import { GET as movie } from "../app/api/movie/[id]/route";
-import { GET as providers } from "../app/api/providers/route";
-import { GET as search } from "../app/api/search/route";
-import { checkRateLimit, clientKey, resetRateLimit } from "../lib/rate-limit";
-import { imageUrl, mapMovie, mapOffers } from "../lib/tmdb";
+import { GET as discover } from "@/app/api/discover/route";
+import { GET as health } from "@/app/api/health/route";
+import { GET as movie } from "@/app/api/movie/[id]/route";
+import { GET as providers } from "@/app/api/providers/route";
+import { GET as search } from "@/app/api/search/route";
+import { checkRateLimit, clientKey, resetRateLimit } from "@/lib/rate-limit";
+import { imageUrl, mapMovie, mapOffers } from "@/lib/tmdb";
 
 const KEY = "header.payload.signature-do-not-leak";
 const fetchMock = vi.fn();

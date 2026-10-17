@@ -1,4 +1,4 @@
-import { isTmdbConfigured, MISSING_KEY_MESSAGE } from "../../../lib/tmdb";
+import { isTmdbConfigured, MISSING_KEY_MESSAGE } from "@/lib/tmdb";
 
 export const runtime = "nodejs";
 

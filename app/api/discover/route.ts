@@ -1,6 +1,6 @@
-import { handle } from "../../../lib/route";
-import { discoverMovies } from "../../../lib/tmdb";
-import { parseDiscover } from "../../../lib/validation";
+import { handle } from "@/lib/route";
+import { discoverMovies } from "@/lib/tmdb";
+import { parseDiscover } from "@/lib/validation";
 
 export const runtime = "nodejs";
 

@@ -1,4 +1,4 @@
-import { ApiFailure } from "./errors";
+import { ApiFailure } from "@/lib/errors";
 import type {
   DiscoverResponse,
   MovieDetails,
@@ -6,8 +6,8 @@ import type {
   Offer,
   ProvidersResponse,
   SearchResponse,
-} from "./types";
-import { MAX_PAGE } from "./validation";
+} from "@/lib/types";
+import { MAX_PAGE } from "@/lib/validation";
 
 const TMDB_API = "https://api.themoviedb.org/3";
 const TMDB_SITE = "https://www.themoviedb.org";

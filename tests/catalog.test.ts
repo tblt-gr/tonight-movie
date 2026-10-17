@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { categoryOf, isOwned, relevantOffers } from "../lib/catalog";
-import type { Film } from "../lib/types";
+import { categoryOf, isOwned, relevantOffers } from "@/lib/catalog";
+import type { Film } from "@/lib/types";
 
 const film: Film = {
   rank: 1,
