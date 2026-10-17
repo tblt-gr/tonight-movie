@@ -17,6 +17,8 @@ export type ResolveOptions = {
   baseDelayMs?: number;
   sleep?: (ms: number) => Promise<void>;
   signal?: AbortSignal;
+  /** Called after each film is settled, whether or not the search succeeded. */
+  onProgress?: (done: number, total: number) => void;
 };
 
 const DEFAULTS = { concurrency: 3, retries: 2, baseDelayMs: 500 };
@@ -71,6 +73,7 @@ export async function resolveFilms(
   }
 
   let next = 0;
+  let done = 0;
   async function worker() {
     while (next < pending.length && !options.signal?.aborted) {
       const film = pending[next++];
@@ -87,6 +90,7 @@ export async function resolveFilms(
       } catch {
         // Left unresolved on purpose: only a verdict is recorded.
       }
+      options.onProgress?.(++done, pending.length);
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, pending.length) }, worker));

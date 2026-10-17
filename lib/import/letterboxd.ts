@@ -21,7 +21,7 @@ export const DEFAULT_LIMITS: ImportLimits = {
   maxEntries: 5_000,
 };
 
-export type ImportErrorCode = "unrecognized" | "too_large" | "too_many_rows" | "corrupt";
+export type ImportErrorCode = "empty" | "unrecognized" | "too_large" | "too_many_rows" | "corrupt";
 
 export class ImportError extends Error {
   constructor(
@@ -33,7 +33,8 @@ export class ImportError extends Error {
   }
 }
 
-const MESSAGES: Record<ImportErrorCode, string> = {
+export const IMPORT_MESSAGES: Record<ImportErrorCode, string> = {
+  empty: "Ce fichier est vide.",
   unrecognized:
     "Ce fichier n’est pas reconnu. Importez l’export complet de Letterboxd (.zip) ou un fichier watchlist.csv.",
   too_large: "Ce fichier est trop volumineux pour être importé.",
@@ -42,7 +43,7 @@ const MESSAGES: Record<ImportErrorCode, string> = {
 };
 
 const fail = (code: ImportErrorCode): never => {
-  throw new ImportError(code, MESSAGES[code]);
+  throw new ImportError(code, IMPORT_MESSAGES[code]);
 };
 
 export type ImportedFilm = {
@@ -215,7 +216,7 @@ async function readZip(bytes: Uint8Array, limits: ImportLimits): Promise<Source[
     if (failure) return;
     entries += 1;
     if (entries > limits.maxEntries) {
-      failure = new ImportError("too_large", MESSAGES.too_large);
+      failure = new ImportError("too_large", IMPORT_MESSAGES.too_large);
       return;
     }
     const target = classifyEntry(file.name);
@@ -225,12 +226,12 @@ async function readZip(bytes: Uint8Array, limits: ImportLimits): Promise<Source[
     file.ondata = (error, chunk, final) => {
       if (failure) return;
       if (error) {
-        failure = new ImportError("corrupt", MESSAGES.corrupt);
+        failure = new ImportError("corrupt", IMPORT_MESSAGES.corrupt);
         return;
       }
       inflated += chunk.length;
       if (inflated > maxInflated) {
-        failure = new ImportError("too_large", MESSAGES.too_large);
+        failure = new ImportError("too_large", IMPORT_MESSAGES.too_large);
         file.terminate();
         return;
       }
@@ -250,7 +251,7 @@ async function readZip(bytes: Uint8Array, limits: ImportLimits): Promise<Source[
       await yieldToBrowser();
     }
   } catch {
-    failure ??= new ImportError("corrupt", MESSAGES.corrupt);
+    failure ??= new ImportError("corrupt", IMPORT_MESSAGES.corrupt);
   }
   if (failure) throw failure;
   return sources;
@@ -266,7 +267,7 @@ export async function parseLetterboxdExport(
   fileName: string,
   limits: ImportLimits = DEFAULT_LIMITS,
 ): Promise<ImportResult> {
-  if (bytes.length === 0) return fail("unrecognized");
+  if (bytes.length === 0) return fail("empty");
   if (bytes.length > limits.maxFileBytes) return fail("too_large");
   const collector = new Collector(limits);
   if (isZip(bytes)) {

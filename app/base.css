@@ -319,6 +319,154 @@ input:focus-visible + .service-tile {
   color: var(--text);
   font-weight: 700;
 }
+.import {
+  display: grid;
+  gap: var(--s4);
+  margin-top: var(--s7);
+  padding-top: var(--s5);
+  border-top: 2px solid var(--text);
+}
+.import-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+.import h2,
+.import h3 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.import p {
+  margin: 0;
+  color: var(--muted);
+}
+.icon-button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--text);
+  background: transparent;
+  color: var(--text);
+  transition: background-color var(--cut) steps(2);
+}
+.icon-button:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+.dropzone {
+  border: 2px dashed var(--text);
+  background: var(--panel);
+  transition: background-color var(--cut) steps(2);
+}
+.dropzone.is-dragging {
+  background: var(--live);
+  border-color: var(--live);
+  color: var(--live-ink);
+}
+.dropzone:has(input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.dropzone-label {
+  display: grid;
+  justify-items: center;
+  gap: var(--s2);
+  padding: var(--s6) var(--s4);
+  text-align: center;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dropzone-label svg {
+  width: 28px;
+  height: 28px;
+}
+.dropzone-action {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.import .import-privacy {
+  font-size: 15px;
+}
+.import-status {
+  display: grid;
+  gap: var(--s2);
+}
+.import-status:empty {
+  display: none;
+}
+.import-status progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--live);
+}
+.import-summary {
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4);
+  border: 2px solid var(--live);
+}
+.import-summary ul {
+  margin: 0;
+  padding-left: var(--s5);
+}
+.import-summary p {
+  color: var(--text);
+}
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.8);
+}
+.dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: var(--s4);
+  justify-items: start;
+  width: min(560px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: var(--s5);
+  border: 2px solid var(--text);
+  background: var(--bg);
+}
+.dialog-title {
+  margin: 0;
+  padding-right: var(--s7);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+.dialog-text {
+  margin: 0;
+  color: var(--muted);
+}
+.dialog-steps {
+  margin: 0;
+  padding-left: var(--s5);
+  display: grid;
+  gap: var(--s2);
+}
+.dialog-x {
+  position: absolute;
+  top: var(--s3);
+  right: var(--s3);
+}
 .site-footer {
   border-top: 1px solid var(--line);
   padding-block: var(--s5);
@@ -334,7 +482,8 @@ input:focus-visible + .service-tile {
     width: calc(100% - 32px);
   }
   .services > .button,
-  .reset .button {
+  .reset .button,
+  .dialog > .button {
     justify-self: stretch;
   }
 }

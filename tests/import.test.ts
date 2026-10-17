@@ -171,13 +171,24 @@ describe("parseLetterboxdExport", () => {
     for (const [bytes, name] of [
       [strToU8("hello world"), "notes.txt"],
       [strToU8("a,b\n1,2\n"), "other.csv"],
-      [new Uint8Array(), "empty.csv"],
       [new Uint8Array([0xff, 0xfe, 0x00, 0x80]), "binary.csv"],
     ] as const) {
       const error = await rejection(parseLetterboxdExport(bytes, name));
       expect(error.code).toBe("unrecognized");
       expect(error.message).toContain("Letterboxd");
     }
+  });
+
+  it("rejects an empty file with its own message", async () => {
+    const error = await rejection(parseLetterboxdExport(new Uint8Array(), "empty.csv"));
+    expect(error.code).toBe("empty");
+    expect(error.message).toBe("Ce fichier est vide.");
+  });
+
+  it("rejects an empty file with its own message", async () => {
+    const error = await rejection(parseLetterboxdExport(new Uint8Array(), "empty.csv"));
+    expect(error.code).toBe("empty");
+    expect(error.message).toBe("Ce fichier est vide.");
   });
 
   it("rejects a corrupt archive", async () => {
