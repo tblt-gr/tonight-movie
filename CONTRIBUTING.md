@@ -10,10 +10,11 @@ Requires Node.js 22 (20.9+ is supported by the dependencies).
 
 ```bash
 npm ci
+cp .env.example .env.local   # then set TMDB_API_KEY
 npm run dev
 ```
 
-`npm ci` also runs `scripts/install-git-hooks.sh` (the `prepare` script), which enables the [local hooks](#local-hooks). Open <http://localhost:3000>; use `PORT=3047 npm run dev` if the port is busy.
+The film routes need a free TMDB API read access token in `TMDB_API_KEY`; see [Run locally](README.md#run-locally) for how to get one. `npm ci` also runs `scripts/install-git-hooks.sh` (the `prepare` script), which enables the [local hooks](#local-hooks). Open <http://localhost:3000>; use `PORT=3047 npm run dev` if the port is busy.
 
 ## Checks
 
@@ -30,9 +31,9 @@ npm audit --omit=dev --audit-level=high
 
 CI runs the same commands, plus a Conventional Commits check on the pull request title, a secret scan and a container image scan, and aggregates them in a required `CI gate` job.
 
-Add tests for import parsing or availability rules when behavior changes; avoid snapshot tests that merely mirror markup. Use the existing design tokens in `app/base.css` and reusable components in `components/`. Preserve keyboard access, focus visibility, labels and reduced motion behavior. Do not commit API secrets, user data, personal Letterboxd identifiers or cached imports. Do not imply that a failed availability lookup proves a film is unavailable.
+Add tests for import parsing or availability rules when behavior changes; avoid snapshot tests that merely mirror markup. Use the existing design tokens in `app/base.css` and reusable components in `components/`. Preserve keyboard access, focus visibility, labels and reduced motion behavior. Do not commit API secrets, user data, personal Letterboxd identifiers or Letterboxd exports. Do not imply that a failed availability lookup proves a film is unavailable.
 
-External data integrations require a documented source, usage rights, country coverage, update policy and attribution. See the data sources section of the [README](README.md#data-sources).
+External data integrations require a documented source, usage rights, country coverage, update policy and attribution. TMDB is the single data source, and the app never scrapes a third party site. See the data sources section of the [README](README.md#data-sources).
 
 ## Branches
 

@@ -27,7 +27,7 @@ Closes #
 - [ ] Tests cover changed import parsing or availability rules
 - [ ] A missing or uncertain offer is never presented as proof of unavailability
 - [ ] Keyboard access, visible focus, labels and reduced motion are preserved for UI changes
-- [ ] No secrets, user data, personal Letterboxd identifiers or cached imports are committed
+- [ ] No secrets, user data, personal Letterboxd identifiers or Letterboxd exports are committed
 - [ ] Relevant documentation is updated
 - [ ] No unrelated change is mixed into this PR
 
