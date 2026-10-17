@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useId, useReducer, useRef, useState } from "react";
-import { formatMinutes } from "@/lib/catalog";
+import { FilmOffers } from "@/components/FilmOffers";
+import { FilmPoster } from "@/components/FilmPoster";
+import { formatMinutes, formatRating } from "@/lib/catalog";
 import { drawFilm, effectiveSources } from "@/lib/draw";
 import { collectSwapPosters, createDrawClient } from "@/lib/draw-client";
 import {
@@ -11,7 +13,6 @@ import {
   durationLabel,
   durationOptions,
   noneMessage,
-  offersToShow,
   sourceOptions,
   swapDelays,
 } from "@/lib/draw-state";
@@ -39,15 +40,6 @@ function preload(src: string) {
 }
 
 type Slot = { poster: string | null; framed: boolean };
-
-function Poster({ film }: { film: Pick<MovieDetails, "title" | "poster"> }) {
-  return film.poster ? (
-    // eslint-disable-next-line @next/next/no-img-element -- TMDB serves sized posters.
-    <img src={film.poster} alt={`Affiche de ${film.title}`} width={342} height={513} />
-  ) : (
-    <span className="poster-missing">{film.title}</span>
-  );
-}
 
 export function DrawMachine() {
   const ids = useId();
@@ -175,7 +167,7 @@ export function DrawMachine() {
               <span className="poster-missing">Tirage en cours</span>
             )
           ) : state.phase === "result" ? (
-            <Poster film={state.film} />
+            <FilmPoster title={state.film.title} poster={state.film.poster} />
           ) : (
             <span className="poster-missing">Votre film du soir</span>
           )}
@@ -301,8 +293,6 @@ function Result({
   headingRef: React.RefObject<HTMLHeadingElement | null>;
   onRedraw: () => void;
 }) {
-  const offers = offersToShow(film, services);
-  const verified = film.availabilityStatus === "verified" && offers.length > 0;
   return (
     <article className="result">
       <h2 tabIndex={-1} ref={headingRef}>
@@ -316,50 +306,11 @@ function Result({
         </div>
         <div>
           <dt>Note TMDB</dt>
-          <dd>
-            {film.rating === null
-              ? "Pas encore notée"
-              : `${film.rating.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`}
-          </dd>
+          <dd>{formatRating(film.rating)}</dd>
         </div>
       </dl>
       <p className="result-synopsis">{film.overview || "Synopsis indisponible."}</p>
-      <section aria-label="Où le regarder">
-        {verified ? (
-          <ul className="result-offers">
-            {offers.map((offer) => {
-              const href = offer.url ?? film.offersUrl;
-              return (
-                <li key={offer.id}>
-                  {href ? (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`Regarder sur ${offer.name} (nouvel onglet)`}
-                    >
-                      {offer.name}
-                    </a>
-                  ) : (
-                    <span>{offer.name}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="tag-check">
-            <span className="tag">À vérifier</span>{" "}
-            {film.offersUrl ? (
-              <a href={film.offersUrl} target="_blank" rel="noopener noreferrer">
-                Voir la disponibilité sur TMDB (nouvel onglet)
-              </a>
-            ) : (
-              "La disponibilité n’est pas confirmée."
-            )}
-          </p>
-        )}
-      </section>
+      <FilmOffers film={film} services={services} />
       <button type="button" className="button primary" onClick={onRedraw}>
         Relancer
       </button>
