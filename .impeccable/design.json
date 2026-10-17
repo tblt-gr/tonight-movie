@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-17T13:57:35Z",
+  "title": "Design System: Tonight’s Movie",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Bleu nuit",
+        "canonical": "#0d1724",
+        "tonalRamp": [
+          "#08111c",
+          "#0d1724",
+          "#152333",
+          "#1d3040",
+          "#304456",
+          "#536a79",
+          "#8fa2ad",
+          "#dce5e6"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panneau nocturne",
+        "canonical": "#152333",
+        "tonalRamp": [
+          "#091320",
+          "#0d1724",
+          "#152333",
+          "#1d3040",
+          "#304456",
+          "#536a79",
+          "#8fa2ad",
+          "#dce5e6"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Trait ardoise",
+        "canonical": "#304456",
+        "tonalRamp": [
+          "#0d1724",
+          "#152333",
+          "#223646",
+          "#304456",
+          "#4c6170",
+          "#728695",
+          "#a4b3bc",
+          "#e0e8ea"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Crème",
+        "canonical": "#f6f2e9",
+        "tonalRamp": [
+          "#282721",
+          "#49473e",
+          "#69665a",
+          "#8b8778",
+          "#aaa697",
+          "#cbc7b9",
+          "#e6e2d8",
+          "#f6f2e9"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Brume froide",
+        "canonical": "#b3c0c5",
+        "tonalRamp": [
+          "#14242b",
+          "#263c45",
+          "#39545d",
+          "#526e76",
+          "#748e95",
+          "#94aab0",
+          "#b3c0c5",
+          "#e5ecee"
+        ]
+      },
+      "owned": {
+        "role": "primary",
+        "displayName": "Vert séance",
+        "canonical": "#72de9a",
+        "tonalRamp": [
+          "#102919",
+          "#1d4b3c",
+          "#28694c",
+          "#3d8b60",
+          "#57b87b",
+          "#72de9a",
+          "#a0f0bc",
+          "#ddf9e6"
+        ]
+      },
+      "other": {
+        "role": "secondary",
+        "displayName": "Bleu autres offres",
+        "canonical": "#7eb8d6",
+        "tonalRamp": [
+          "#122632",
+          "#204052",
+          "#315a70",
+          "#487b98",
+          "#619ebc",
+          "#7eb8d6",
+          "#b6d9e9",
+          "#e7f3f7"
+        ]
+      },
+      "unavailable": {
+        "role": "tertiary",
+        "displayName": "Or pâle indisponible",
+        "canonical": "#e5c68a",
+        "tonalRamp": [
+          "#2e2719",
+          "#4e4128",
+          "#6d5a36",
+          "#8f7548",
+          "#b59661",
+          "#d1ad75",
+          "#e5c68a",
+          "#f9e9ca"
+        ]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Contour clavier",
+        "canonical": "#b0e9c2",
+        "tonalRamp": [
+          "#143523",
+          "#26513a",
+          "#3c7452",
+          "#599d6c",
+          "#7fc28d",
+          "#b0e9c2",
+          "#d4f3dc",
+          "#edf9ef"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Titre éditorial",
+        "purpose": "La promesse de la page et le choix du soir."
+      },
+      "body": {
+        "displayName": "Texte fonctionnel",
+        "purpose": "Collections, filtres, métadonnées et états."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog",
+        "value": "0 24px 70px #0009",
+        "purpose": "Détacher la sélection des plateformes du catalogue."
+      }
+    ],
+    "motion": [
+      {
+        "name": "poster-hover",
+        "value": "250ms cubic-bezier(0.2, 0.7, 0.2, 1)",
+        "purpose": "Souligner l’interactivité d’une affiche."
+      },
+      {
+        "name": "dice-roll",
+        "value": "450ms ease-out",
+        "purpose": "Accompagner un tirage; désactivé si l’utilisateur préfère moins d’animation."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "desktop-compact",
+        "value": "1150px"
+      },
+      {
+        "name": "tablet",
+        "value": "880px"
+      },
+      {
+        "name": "mobile",
+        "value": "620px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "primary-button",
+      "description": "Action de confirmation ou de tirage, en vert séance.",
+      "html": "<button class=\"ds-primary-button\">Trouver un film</button>",
+      "css": ".ds-primary-button{border:0;border-radius:5px;background:var(--green,#72de9a);color:#102919;font-size:12px;font-weight:800;padding:11px 16px;cursor:pointer}.ds-primary-button:hover{background:#a0f0bc}.ds-primary-button:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}.ds-primary-button:active{background:#57b87b}"
+    },
+    {
+      "name": "Bouton de réglage",
+      "kind": "button",
+      "refersTo": "header-action",
+      "description": "Action secondaire discrète dans l’en-tête.",
+      "html": "<button class=\"ds-header-action\">Mes plateformes</button>",
+      "css": ".ds-header-action{border:1px solid var(--line,#304456);background:#203244;color:#e7edf0;border-radius:6px;padding:9px 13px;font-size:12px;font-weight:700;cursor:pointer}.ds-header-action:hover{background:#2b4052}.ds-header-action:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}"
+    },
+    {
+      "name": "Champ de profil",
+      "kind": "input",
+      "refersTo": "profile-input",
+      "description": "Entrée pour trouver les collections publiques d’un utilisateur.",
+      "html": "<label class=\"ds-field\">Nom d’utilisateur Letterboxd<input class=\"ds-profile-input\" placeholder=\"Votre nom d’utilisateur\"></label>",
+      "css": ".ds-field{display:grid;gap:9px;color:var(--text,#f6f2e9);font-size:13px;font-weight:750}.ds-profile-input{min-width:220px;background:#203447;border:1px solid #48545f;border-radius:5px;color:var(--text,#f6f2e9);padding:10px 12px;font-size:13px}.ds-profile-input::placeholder{color:#a0adb7}.ds-profile-input:hover{border-color:#6a7f8c}.ds-profile-input:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}"
+    },
+    {
+      "name": "Onglet de disponibilité",
+      "kind": "nav",
+      "refersTo": "category-tab",
+      "description": "Filtre de disponibilité avec état sélectionné.",
+      "html": "<nav class=\"ds-category-nav\" aria-label=\"Disponibilité\"><button class=\"ds-category-tab\">Toutes les offres</button><button class=\"ds-category-tab ds-active\" aria-current=\"true\">Mes plateformes <strong>28</strong></button></nav>",
+      "css": ".ds-category-nav{display:flex;gap:8px;background:var(--bg,#0d1724);padding:10px}.ds-category-tab{display:inline-flex;align-items:center;gap:10px;padding:11px 15px;border:1px solid var(--line,#304456);border-radius:999px;background:#142637;color:var(--muted,#b3c0c5);font-size:13px;font-weight:700;cursor:pointer}.ds-category-tab:hover{color:var(--text,#f6f2e9);border-color:#6cb58e}.ds-category-tab.ds-active{background:var(--green,#72de9a);border-color:var(--green,#72de9a);color:#102919}.ds-category-tab strong{font-size:12px;background:#0d4b2f;color:#f6f2e9;border-radius:4px;padding:3px 6px}.ds-category-tab:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}"
+    },
+    {
+      "name": "Affiche de film",
+      "kind": "card",
+      "refersTo": "poster-link",
+      "description": "Affiche en ratio 2:3, titre et durée adjacents.",
+      "html": "<article class=\"ds-film\"><a class=\"ds-poster\" href=\"#film\"><span class=\"ds-poster-fallback\">Le film du soir</span><span class=\"ds-status\" aria-label=\"Disponible sur mes plateformes\"></span></a><a class=\"ds-film-title\" href=\"#film\">Le film du soir</a><span class=\"ds-film-meta\">2026 · 1 h 52</span></article>",
+      "css": ".ds-film{width:150px;background:var(--bg,#0d1724);padding:8px}.ds-poster{display:block;position:relative;aspect-ratio:2/3;overflow:hidden;border-radius:4px;background:#303b45;text-decoration:none;color:#d8e2e5}.ds-poster:hover{filter:brightness(1.11)}.ds-poster:focus-visible,.ds-film-title:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}.ds-poster-fallback{display:flex;align-items:center;justify-content:center;height:100%;padding:14px;text-align:center;background:linear-gradient(145deg,#354451,#1e262e);font-size:20px;font-weight:750}.ds-status{position:absolute;right:9px;bottom:9px;width:10px;height:10px;border:2px solid #151b1e;border-radius:50%;background:var(--green,#72de9a)}.ds-film-title{display:block;margin:10px 0 5px;color:#f0f4f5;text-decoration:none;font-size:13px;font-weight:740}.ds-film-title:hover{color:var(--green,#72de9a)}.ds-film-meta{color:var(--muted,#b3c0c5);font-size:12px}"
+    },
+    {
+      "name": "Puce de plateforme incluse",
+      "kind": "chip",
+      "refersTo": "provider-chip",
+      "description": "Offre incluse dans un abonnement sélectionné.",
+      "html": "<a class=\"ds-provider-chip\" href=\"#offre\">Prime Video</a>",
+      "css": ".ds-provider-chip{display:inline-flex;background:#1d4b3c;color:#b5efc7;border-radius:3px;padding:4px 6px;font-size:11px;font-weight:700;text-decoration:none}.ds-provider-chip:hover{background:#2f694c;color:#fff}.ds-provider-chip:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}"
+    },
+    {
+      "name": "Collection de profil",
+      "kind": "card",
+      "refersTo": "profile-collection",
+      "description": "Liste publique sélectionnable sous le champ utilisateur.",
+      "html": "<button class=\"ds-profile-collection\"><span class=\"ds-profile-kind\">Liste</span><strong>Films à voir</strong><span>Collection publique</span></button>",
+      "css": ".ds-profile-collection{display:flex;flex-direction:column;gap:5px;min-height:93px;width:210px;padding:11px 12px;text-align:left;background:#213649;border:1px solid #43515c;border-radius:5px;color:var(--text,#f6f2e9);cursor:pointer}.ds-profile-collection:hover{border-color:var(--green,#72de9a);background:#29463e}.ds-profile-collection:focus-visible{outline:2px solid var(--focus,#b0e9c2);outline-offset:3px}.ds-profile-kind{color:#9eeeb6;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.ds-profile-collection strong{font-size:13px}.ds-profile-collection span:last-child{color:var(--muted,#b3c0c5);font-size:11px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "La séance personnelle",
+    "overview": "Tonight’s Movie donne aux films la place principale sur un fond bleu nuit. Le crème rend les textes confortables, et un vert frais signale l’action et les accès déjà inclus dans les abonnements choisis. Le titre éditorial invite à choisir un film; les contrôles compacts servent à préciser ce choix.",
+    "keyCharacteristics": [
+      "Bleu nuit, crème et vert séance",
+      "Affiches dominantes et métadonnées compactes",
+      "Statuts d’accès explicites dans le texte comme dans la couleur"
+    ],
+    "rules": [
+      {
+        "name": "Une couleur pour l’accès actuel",
+        "body": "Le vert sert aux actions principales et aux films inclus dans les abonnements sélectionnés; les autres offres utilisent le bleu et l’indisponibilité l’or pâle.",
+        "section": "colors"
+      },
+      {
+        "name": "Le film d’abord",
+        "body": "Les affiches restent libres dans la grille. Les surfaces encadrées sont réservées aux choix et aux réglages.",
+        "section": "components"
+      },
+      {
+        "name": "Clavier visible",
+        "body": "Chaque contrôle conserve un contour de focus clair; les statuts portent un libellé lisible sans leur couleur.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Afficher la collection active et la date des offres.",
+      "Associer icône, texte et état pour chaque plateforme.",
+      "Laisser le tirage aléatoire accessible sans ouvrir ses critères."
+    ],
+    "donts": [
+      "Présenter une location comme un abonnement inclus.",
+      "Imiter le logo ou le système de trois points de Letterboxd.",
+      "Faire dépendre un état uniquement de sa couleur."
+    ]
+  }
+}
