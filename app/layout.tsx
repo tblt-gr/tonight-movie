@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@fontsource-variable/familjen-grotesk/wght.css";
 import "./base.css";
+import { HIDE_BEFORE_PAINT } from "@/components/HomeRedirect";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 
@@ -14,6 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="fr">
       <body>
+        <script dangerouslySetInnerHTML={{ __html: HIDE_BEFORE_PAINT }} />
         <SiteHeader />
         <main className="shell page">{children}</main>
         <SiteFooter />
