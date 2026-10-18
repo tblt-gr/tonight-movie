@@ -78,15 +78,37 @@ describe("matchFilm", () => {
     });
   });
 
-  it("is low when the year is off by one", async () => {
-    const search = catalog(movie(3, "Stalker", 1979));
-    expect(await matchFilm({ title: "Stalker", year: 1980 }, search)).toEqual({
+  it("is high when the only film with that title is a year off", async () => {
+    const stalker = catalog(movie(3, "Stalker", 1979));
+    expect(await matchFilm({ title: "Stalker", year: 1980 }, stalker)).toEqual({
       tmdbId: 3,
+      confidence: "high",
+    });
+    expect(await matchFilm({ title: "Stalker", year: 1978 }, stalker)).toEqual({
+      tmdbId: 3,
+      confidence: "high",
+    });
+    // Letterboxd dates Casablanca 1942 (first screening), TMDB 1943 (release).
+    const casablanca = catalog(movie(289, "Casablanca", 1943), movie(1139604, "Casablanca", 2023));
+    expect(await matchFilm({ title: "Casablanca", year: 1942 }, casablanca)).toEqual({
+      tmdbId: 289,
+      confidence: "high",
+    });
+  });
+
+  it("is low when several films with that title are within a year", async () => {
+    const search = catalog(movie(40, "Twins", 1979), movie(41, "Twins", 1981));
+    expect(await matchFilm({ title: "Twins", year: 1980 }, search)).toEqual({
+      tmdbId: 40,
       confidence: "low",
     });
-    expect(await matchFilm({ title: "Stalker", year: 1978 }, search)).toEqual({
-      tmdbId: 3,
-      confidence: "low",
+  });
+
+  it("is none when a year off only resembles an alternative title", async () => {
+    const search = catalog(movie(1, "Le Fabuleux Destin d’Amélie Poulain", 2001));
+    expect(await matchFilm({ title: "Amélie", year: 2002 }, search)).toEqual({
+      tmdbId: null,
+      confidence: "none",
     });
   });
 
