@@ -34,9 +34,9 @@ const titleMatches = (movie: MovieSummary, wanted: string) => names(movie).inclu
 
 /**
  * Matches one imported film to a TMDB film.
- * - high: normalized title and year are equal;
- * - low: year off by one, only an alternative title matched, or a film without year with
- *   several candidates;
+ * - high: normalized title and year are equal, or one film bears that title within a year;
+ * - low: several films bear that title within a year, only an alternative title matched, or a
+ *   film without year with several candidates;
  * - none: TMDB found nothing.
  * Search errors propagate: a failure is not a verdict.
  */
@@ -57,12 +57,14 @@ export async function matchFilm(film: FilmToMatch, search: SearchFn): Promise<Ma
   const exact = sameYear.find((movie) => titleMatches(movie, wanted));
   if (exact) return { tmdbId: exact.tmdbId, confidence: "high" };
 
-  // The year filter hides a neighbouring year, so look again without it.
-  const around = (await search(film.title, null)).find(
+  // The year filter hides a neighbouring year, so look again without it. Sources disagree by a
+  // year on many films (premiere against release), so a lone title match is trusted.
+  const around = (await search(film.title, null)).filter(
     (movie) =>
       movie.year !== null && Math.abs(movie.year - year) === 1 && titleMatches(movie, wanted),
   );
-  return low(around ?? sameYear[0]);
+  if (around.length === 1) return { tmdbId: around[0].tmdbId, confidence: "high" };
+  return low(around[0] ?? sameYear[0]);
 }
 
 /** Stored as the `confidence` number of a film record; `null` there means unresolved. */
