@@ -3,16 +3,16 @@ import type { Dictionary } from "@/lib/i18n/dictionaries/fr";
 export const en: Dictionary = {
   locale: "en-US",
   meta: {
-    siteTitle: "Tonight’s Movie — find your movie for tonight",
+    siteTitle: "Tonight’s Movie - find your movie for tonight",
     siteDescription:
       "Pick your streaming services in France and let chance choose tonight’s movie.",
-    homeTitle: "Tonight’s Movie — One movie for tonight",
+    homeTitle: "Tonight’s Movie - One movie for tonight",
     homeDescription:
       "Not sure what to watch tonight? Tell us your streaming services in France and let chance pick a movie you can start right now.",
-    about: "About — Tonight’s Movie",
-    films: "Films — Tonight’s Movie",
-    settings: "Settings — Tonight’s Movie",
-    draw: "Draw — Tonight’s Movie",
+    about: "About - Tonight’s Movie",
+    films: "Films - Tonight’s Movie",
+    settings: "Settings - Tonight’s Movie",
+    draw: "Draw - Tonight’s Movie",
   },
   nav: {
     pages: "Pages",
