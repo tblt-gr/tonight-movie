@@ -557,9 +557,22 @@ svg {
   color: var(--muted);
   font-size: 14px;
 }
+.site-footer-inner {
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
+}
 .site-footer p {
   margin: 0;
   max-width: 72ch;
+}
+.tmdb-logo {
+  display: block;
+}
+.tmdb-logo img {
+  display: block;
+  width: 180px;
+  height: auto;
 }
 .draw-stage {
   display: grid;
