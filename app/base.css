@@ -100,11 +100,23 @@ svg {
   justify-content: space-between;
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
   text-decoration: none;
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.brand img {
+  width: auto;
+  height: 28px;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.brand-accent {
+  color: var(--live);
 }
 .site-nav {
   display: flex;
@@ -1369,6 +1381,26 @@ html[data-home-redirect] .home-steps {
     gap: var(--s4);
     margin-left: var(--s4);
   }
+  .brand,
+  .site-nav a,
+  .about-link {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .brand img {
+    height: 22px;
+  }
+  .about-link {
+    margin-left: var(--s3);
+  }
+  .about-link + .gear {
+    margin-left: 0;
+  }
+  .gear {
+    width: 36px;
+    margin-right: -8px;
+  }
   .draw-trigger,
   .result > .button,
   .draw-outcome > .button {
@@ -1425,6 +1457,20 @@ html[data-home-redirect] .home-steps {
   .home-steps {
     grid-template-columns: minmax(0, 1fr);
     margin-top: var(--s7);
+  }
+}
+@media (max-width: 400px) {
+  .brand,
+  .site-nav a,
+  .about-link {
+    font-size: 11px;
+  }
+  .site-nav {
+    gap: var(--s3);
+    margin-left: var(--s3);
+  }
+  .brand img {
+    height: 20px;
   }
 }
 @media (prefers-reduced-motion: no-preference) {
