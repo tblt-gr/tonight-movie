@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -15,7 +16,10 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="shell">
         <Link className="brand" href="/">
-          Tonight’s Movie
+          <Image src="/popcorn.png" alt="" width={22} height={29} draggable={false} />
+          <span>
+            Tonight’s <span className="brand-accent">Movie</span>
+          </span>
         </Link>
         {!home && (
           <nav className="site-nav" aria-label="Pages">
