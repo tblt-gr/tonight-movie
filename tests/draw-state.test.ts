@@ -172,6 +172,15 @@ describe("offerHref", () => {
     expect(offerHref(film, { id: "999", url: null })).toBe("https://tmdb.example/film");
     expect(offerHref({ ...film, offersUrl: null }, { id: "999", url: null })).toBeNull();
   });
+
+  it("searches HBO Max, also through its Prime Video Channel, instead of falling back to TMDB", () => {
+    expect(offerHref(film, { id: "1899", url: null })).toBe(
+      "https://play.hbomax.com/search?q=Heat%20%26%20Dust",
+    );
+    expect(offerHref(film, { id: "1825", url: null })).toBe(
+      "https://www.primevideo.com/search?phrase=Heat%20%26%20Dust",
+    );
+  });
 });
 
 describe("offerGroups", () => {

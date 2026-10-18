@@ -12,6 +12,8 @@ const SEARCH: Record<string, string> = {
   "192": "https://www.youtube.com/results?search_query=",
   "188": "https://www.youtube.com/results?search_query=",
   "11": "https://mubi.com/fr/search/films?query=",
+  "1899": "https://play.hbomax.com/search?q=",
+  "1825": "https://www.primevideo.com/search?phrase=",
 };
 
 /**
