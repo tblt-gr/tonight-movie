@@ -62,11 +62,12 @@ The container keeps no data on disk, so it needs no volume. Pass the key at run 
 
 Copy `.env.example` to `.env.local` (local) or set the variables in your host (Docker, Vercel). They are server-only: never prefix them with `NEXT_PUBLIC_` and never commit a real value.
 
-| Variable             | Required | Default | Purpose                                                                                                                                                                 |
-| -------------------- | -------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TMDB_API_KEY`       | yes      | none    | TMDB v4 read access token. Never sent to the browser, logged or echoed.                                                                                                 |
-| `TRUSTED_PROXY_HOPS` | no       | `1`     | Number of trusted reverse proxies in front of the app, used to read the client IP from `X-Forwarded-For` for rate limiting. `0` ignores the header (one shared bucket). |
-| `PORT`               | no       | `3000`  | Listening port.                                                                                                                                                         |
+| Variable             | Required | Default | Purpose                                                                                                                                                                                                        |
+| -------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TMDB_API_KEY`       | yes      | none    | TMDB v4 read access token. Never sent to the browser, logged or echoed.                                                                                                                                        |
+| `WATCHMODE_API_KEY`  | no       | none    | [Watchmode](https://api.watchmode.com/) key for direct links to the streaming services. Without it, or past the quota, links fall back to each service's search page, then to TMDB. Never sent to the browser. |
+| `TRUSTED_PROXY_HOPS` | no       | `1`     | Number of trusted reverse proxies in front of the app, used to read the client IP from `X-Forwarded-For` for rate limiting. `0` ignores the header (one shared bucket).                                        |
+| `PORT`               | no       | `3000`  | Listening port.                                                                                                                                                                                                |
 
 ## What you can do
 
@@ -94,7 +95,7 @@ The file is read in your browser and is never uploaded to a server. Only the fil
 
 ## Data sources
 
-[TMDB](https://www.themoviedb.org/) is the single data source for film data and French watch providers. Watch-provider data comes from [JustWatch](https://www.justwatch.com/) through TMDB. Requests use `fr-FR` and `watch_region=FR`. No other service is called: there is no scraping and no Letterboxd request.
+[TMDB](https://www.themoviedb.org/) is the single data source for film data and French watch providers. Watch-provider data comes from [JustWatch](https://www.justwatch.com/) through TMDB. Requests use `fr-FR` and `watch_region=FR`. The only other service is the optional [Watchmode](https://api.watchmode.com/) API, called server-side for one film at a time to get direct links to the streaming services (free plan: non-commercial use, attribution required, cached data refreshed within 30 days). There is no scraping and no Letterboxd request.
 
 `FLATRATE`, `FREE` and `ADS` are streaming offers. `RENT` and `BUY` appear only when the visitor enables them and never count as a subscription already owned. Prime Video and each Prime Video Channel are separate provider IDs.
 

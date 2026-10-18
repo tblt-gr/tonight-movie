@@ -19,6 +19,13 @@ export default function AboutPage() {
             des films sont fournies par TMDB, les disponibilités par JustWatch ; Tonight’s Movie
             n’est pas soutenu par JustWatch.
           </p>
+          <p>
+            Les liens directs vers les plateformes viennent de l’API{" "}
+            <a href="https://api.watchmode.com/" target="_blank" rel="noopener noreferrer">
+              Watchmode
+            </a>{" "}
+            (nouvel onglet) lorsqu’elle est configurée.
+          </p>
           <p>Tonight’s Movie est également indépendant de Letterboxd.</p>
         </section>
       </div>

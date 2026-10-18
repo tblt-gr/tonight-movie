@@ -9,6 +9,7 @@ import {
   roomLight,
   sourceOptions,
   swapDelays,
+  hasStreamingOffer,
   watchLinks,
   type DrawState,
 } from "@/lib/draw-state";
@@ -148,17 +149,47 @@ describe("watchLinks", () => {
         availabilityStatus: "verified",
         offersUrl: "https://tmdb.example/film",
         offers: [
-          offer("8", "https://watch.example/8"),
+          offer("77", "https://watch.example/8"),
           offer("9", null),
-          offer("8", "https://ads.example", "ADS"),
+          offer("77", "https://ads.example", "ADS"),
         ],
       } as unknown as MovieDetails,
-      new Set(["8"]),
+      new Set(["77"]),
     );
     expect(links).toEqual({
       verified: true,
-      links: [{ id: "8", name: "8", href: "https://watch.example/8" }],
+      links: [{ id: "77", name: "77", href: "https://watch.example/8", icon: null }],
     });
+  });
+
+  it("prefers a direct link to the film over the search page", () => {
+    const { links } = watchLinks(
+      {
+        title: "Heat",
+        availabilityStatus: "verified",
+        offersUrl: null,
+        offers: [offer("8", null)],
+      } as unknown as MovieDetails,
+      new Set(["8"]),
+      { "8": "https://www.netflix.com/title/1" },
+    );
+    expect(links[0].href).toBe("https://www.netflix.com/title/1");
+  });
+
+  it("links a known service to its own search page for the title", () => {
+    const { links } = watchLinks(
+      {
+        title: "Heat & Dust",
+        availabilityStatus: "verified",
+        offersUrl: "https://tmdb.example/film",
+        offers: [offer("8", null), offer("999", null)],
+      } as unknown as MovieDetails,
+      new Set(["8", "999"]),
+    );
+    expect(links.map((link) => link.href)).toEqual([
+      "https://www.netflix.com/search?q=Heat%20%26%20Dust",
+      "https://tmdb.example/film",
+    ]);
   });
 
   it("stays unverified when the offer is missing or has nowhere to press play", () => {
@@ -169,7 +200,7 @@ describe("watchLinks", () => {
           offersUrl: "https://tmdb.example/film",
           offers: [],
         } as unknown as MovieDetails,
-        new Set(["8"]),
+        new Set(["77"]),
       ),
     ).toEqual({ verified: false, links: [] });
     expect(
@@ -177,9 +208,9 @@ describe("watchLinks", () => {
         {
           availabilityStatus: "verified",
           offersUrl: null,
-          offers: [offer("8", null)],
+          offers: [offer("77", null)],
         } as unknown as MovieDetails,
-        new Set(["8"]),
+        new Set(["77"]),
       ),
     ).toEqual({ verified: false, links: [] });
   });
@@ -200,5 +231,20 @@ describe("offersToShow", () => {
       new Set(["8"]),
     );
     expect(shown.map((item) => item.id)).toEqual(["8"]);
+  });
+});
+
+describe("hasStreamingOffer", () => {
+  const film = (status: string, type: string) =>
+    ({
+      availabilityStatus: status,
+      offers: [{ id: "77", name: "77", icon: null, type, url: null }],
+    }) as unknown as MovieDetails;
+
+  it("is true only for a confirmed streaming offer on the visitor's services", () => {
+    expect(hasStreamingOffer(film("verified", "FLATRATE"), new Set(["77"]))).toBe(true);
+    expect(hasStreamingOffer(film("verified", "FLATRATE"), new Set(["8"]))).toBe(false);
+    expect(hasStreamingOffer(film("verified", "RENT"), new Set(["77"]))).toBe(false);
+    expect(hasStreamingOffer(film("unknown", "FLATRATE"), new Set(["77"]))).toBe(false);
   });
 });

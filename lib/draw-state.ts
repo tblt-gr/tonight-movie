@@ -1,6 +1,7 @@
 import { STREAM_TYPES } from "@/lib/catalog";
 import { SERVICES_SOURCE_ID, tmdbKey, type DrawInput, type NoneReason } from "@/lib/draw";
 import type { Settings, StoredFilm, StoredList } from "@/lib/storage/schema";
+import { providerSearchUrl } from "@/lib/provider-links";
 import type { MovieDetails, Offer } from "@/lib/types";
 
 export type DrawState =
@@ -133,23 +134,41 @@ export function offersToShow(film: Pick<MovieDetails, "offers">, services: Reado
   return [...shown.values()];
 }
 
-export type WatchLink = { id: string; name: string; href: string };
+/** True when a confirmed streaming offer on the visitor's services could get a direct link. */
+export function hasStreamingOffer(
+  film: Pick<MovieDetails, "offers" | "availabilityStatus">,
+  services: ReadonlySet<string>,
+): boolean {
+  return film.availabilityStatus === "verified" && offersToShow(film, services).length > 0;
+}
+
+export type WatchLink = { id: string; name: string; href: string; icon: string | null };
+
+/** A direct link to the film, else the provider's search page, else the offer's link, else TMDB. */
+export function offerHref(
+  film: Pick<MovieDetails, "title" | "offersUrl">,
+  offer: Pick<Offer, "id" | "url">,
+  direct: Readonly<Record<string, string>> = {},
+): string | null {
+  return direct[offer.id] ?? providerSearchUrl(offer.id, film.title) ?? offer.url ?? film.offersUrl;
+}
 
 /**
  * Where to press play: one link per streaming service of the visitor. An empty `links` list
  * is an unconfirmed offer, shown as À vérifier, never as proof that the film is unavailable.
  */
 export function watchLinks(
-  film: Pick<MovieDetails, "offers" | "availabilityStatus" | "offersUrl">,
+  film: Pick<MovieDetails, "title" | "offers" | "availabilityStatus" | "offersUrl">,
   services: ReadonlySet<string>,
+  direct: Readonly<Record<string, string>> = {},
 ): { verified: boolean; links: WatchLink[] } {
   const offers = offersToShow(film, services);
   if (film.availabilityStatus !== "verified" || offers.length === 0) {
     return { verified: false, links: [] };
   }
   const links = offers.flatMap((offer) => {
-    const href = offer.url ?? film.offersUrl;
-    return href ? [{ id: offer.id, name: offer.name, href }] : [];
+    const href = offerHref(film, offer, direct);
+    return href ? [{ id: offer.id, name: offer.name, href, icon: offer.icon }] : [];
   });
   if (links.length === 0) return { verified: false, links: [] };
   return { verified: true, links };

@@ -1,14 +1,22 @@
-import { offersToShow } from "@/lib/draw-state";
+"use client";
+
+import { ProviderLink } from "@/components/ProviderLink";
+import { useWatchLinks } from "@/lib/use-watch-links";
+import { hasStreamingOffer, offerHref, offersToShow } from "@/lib/draw-state";
 import type { MovieDetails } from "@/lib/types";
 
 /** Where to watch a film on the visitor's services, or À vérifier when that is not confirmed. */
 export function FilmOffers({
   film,
   services,
+  directLinks = false,
 }: {
-  film: Pick<MovieDetails, "offers" | "availabilityStatus" | "offersUrl">;
+  film: Pick<MovieDetails, "tmdbId" | "title" | "offers" | "availabilityStatus" | "offersUrl">;
   services: ReadonlySet<string>;
+  /** Looks up direct links to the services: costs API credits, so only for an opened film sheet. */
+  directLinks?: boolean;
 }) {
+  const direct = useWatchLinks(film.tmdbId, directLinks && hasStreamingOffer(film, services));
   const offers = offersToShow(film, services);
   const verified = film.availabilityStatus === "verified" && offers.length > 0;
   return (
@@ -16,18 +24,11 @@ export function FilmOffers({
       {verified ? (
         <ul className="result-offers">
           {offers.map((offer) => {
-            const href = offer.url ?? film.offersUrl;
+            const href = offerHref(film, offer, direct);
             return (
               <li key={offer.id}>
                 {href ? (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Regarder sur ${offer.name} (nouvel onglet)`}
-                  >
-                    {offer.name}
-                  </a>
+                  <ProviderLink id={offer.id} name={offer.name} icon={offer.icon} href={href} />
                 ) : (
                   <span>{offer.name}</span>
                 )}

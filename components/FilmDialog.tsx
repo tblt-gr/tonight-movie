@@ -83,7 +83,7 @@ export function FilmDialog({
                     : "Synopsis indisponible.")}
             </Dialog.Description>
             {detail ? (
-              <FilmOffers film={detail} services={services} />
+              <FilmOffers film={detail} services={services} directLinks />
             ) : (
               !waiting && (
                 <p className="tag-check">

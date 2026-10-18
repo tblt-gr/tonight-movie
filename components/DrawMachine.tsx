@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useId, useReducer, useRef, useState } from "react";
 import { FilmOffers } from "@/components/FilmOffers";
+import { useWatchLinks } from "@/lib/use-watch-links";
+import { ProviderLink } from "@/components/ProviderLink";
 import { FilmPoster } from "@/components/FilmPoster";
 import { formatMinutes, formatRating } from "@/lib/catalog";
 import { drawFilm, effectiveSources } from "@/lib/draw";
@@ -12,6 +14,7 @@ import {
   drawReducer,
   durationLabel,
   durationOptions,
+  hasStreamingOffer,
   noneMessage,
   roomLight,
   sourceOptions,
@@ -430,7 +433,8 @@ function Screening({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const lightsRef = useRef<HTMLButtonElement>(null);
-  const where = watchLinks(film, services);
+  const direct = useWatchLinks(film.tmdbId, hasStreamingOffer(film, services));
+  const where = watchLinks(film, services, direct);
 
   useEffect(() => {
     const inertRoots = [
@@ -485,15 +489,14 @@ function Screening({
         {where.verified ? (
           <div className="cinema-links">
             {where.links.map((link, index) => (
-              <a
+              <ProviderLink
                 key={link.id}
-                className={index === 0 ? "button primary" : "button"}
+                id={link.id}
+                name={link.name}
+                icon={link.icon}
                 href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {index === 0 ? `Regarder sur ${link.name}` : link.name}
-              </a>
+                label={index === 0 ? `Regarder sur ${link.name}` : undefined}
+              />
             ))}
           </div>
         ) : (
