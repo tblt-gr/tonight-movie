@@ -1,11 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  NO_SERVICE_ERROR,
-  filterProviders,
-  normalizeSearch,
-  summarizeNames,
-  validateServices,
-} from "@/lib/services";
+import { filterProviders, normalizeSearch, summarizeNames, validateServices } from "@/lib/services";
 import { loadSettings, resetSettings, updateSettings } from "@/lib/storage/settings";
 import type { ProviderInfo } from "@/lib/types";
 
@@ -57,8 +51,8 @@ describe("normalizeSearch", () => {
 
 describe("validateServices", () => {
   it("requires at least one service", () => {
-    expect(validateServices(new Set())).toBe(NO_SERVICE_ERROR);
-    expect(validateServices([])).toBe(NO_SERVICE_ERROR);
+    expect(validateServices(new Set())).toBe("none");
+    expect(validateServices([])).toBe("none");
     expect(validateServices(new Set(["8"]))).toBeNull();
   });
 });

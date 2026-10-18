@@ -169,6 +169,48 @@ describe("routes", () => {
     expect(url.searchParams.get("append_to_response")).toBe("watch/providers");
   });
 
+  it("asks TMDB for English text on request and keeps genres under their stored name", async () => {
+    reply({
+      id: 603,
+      title: "The Matrix",
+      release_date: "1999-03-30",
+      genres: [
+        { id: 878, name: "Science Fiction" },
+        { id: 35, name: "Comedy" },
+        { id: 99999, name: "Brand New Genre" },
+      ],
+    });
+    const response = await movie(req("/api/movie/603?lang=en"), movieParams("603"));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(new URL(fetchMock.mock.calls[0][0]).searchParams.get("language")).toBe("en-US");
+    // The stored name is the French one, so settings and URLs keep working in either language.
+    expect(body.genres).toEqual(["Science-Fiction", "Comédie", "Brand New Genre"]);
+  });
+
+  it.each([
+    ["/api/movie/603?lang=de"],
+    ["/api/providers?lang="],
+    ["/api/discover?providers=8&lang=xx"],
+  ])("rejects an unsupported language: %s", async (path) => {
+    const handler = path.startsWith("/api/movie")
+      ? (request: Request) => movie(request, movieParams("603"))
+      : path.startsWith("/api/providers")
+        ? providers
+        : discover;
+    expect((await handler(req(path))).status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("passes the language to the provider list and to discover", async () => {
+    reply({ results: [] });
+    await providers(req("/api/providers?lang=en"));
+    expect(new URL(fetchMock.mock.calls[0][0]).searchParams.get("language")).toBe("en-US");
+    reply({ page: 1, total_pages: 1, results: [] });
+    await discover(req("/api/discover?providers=8&lang=en"));
+    expect(new URL(fetchMock.mock.calls[1][0]).searchParams.get("language")).toBe("en-US");
+  });
+
   it("searches in French and English and keeps the English title", async () => {
     reply({ results: [{ id: 1, title: "Le Salaire de la peur", release_date: "1953-04-22" }] });
     reply({

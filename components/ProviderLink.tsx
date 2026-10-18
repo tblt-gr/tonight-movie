@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { useI18n } from "@/components/I18nProvider";
 import { brandFor } from "@/lib/brand-color";
 import type { Brand } from "@/lib/provider-colors";
 
@@ -20,6 +21,7 @@ export function ProviderLink({
   label?: string;
   className?: string;
 }) {
+  const { t } = useI18n();
   const [brand, setBrand] = useState<Brand | null>(null);
   useEffect(() => {
     let alive = true;
@@ -34,7 +36,7 @@ export function ProviderLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`${label ?? `Regarder sur ${name}`} (nouvel onglet)`}
+      aria-label={`${label ?? t.offers.watchOn(name)} (${t.common.newTab})`}
       style={
         brand
           ? ({ "--chip": brand.background, "--chip-ink": brand.ink } as CSSProperties)

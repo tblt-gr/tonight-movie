@@ -1,4 +1,6 @@
 import { ApiFailure } from "@/lib/errors";
+import { DEFAULT_LOCALE, TMDB_LANGUAGE, type Locale } from "@/lib/i18n/config";
+import { GENRES } from "@/lib/genres";
 import type {
   DiscoverFilters,
   DiscoverResponse,
@@ -13,8 +15,8 @@ import { MAX_PAGE, type DiscoverSort } from "@/lib/validation";
 const TMDB_API = "https://api.themoviedb.org/3";
 const TMDB_SITE = "https://www.themoviedb.org";
 const TMDB_IMAGES = "https://image.tmdb.org/t/p/";
-const LANGUAGE = "fr-FR";
-const ENGLISH = "en-US";
+const LANGUAGE = TMDB_LANGUAGE.fr;
+const ENGLISH = TMDB_LANGUAGE.en;
 const REGION = "FR";
 const REVALIDATE_SECONDS = 24 * 60 * 60;
 const TIMEOUT_MS = 8_000;
@@ -40,7 +42,7 @@ type TmdbMovie = {
   adult?: boolean;
   overview?: string;
   runtime?: number | null;
-  genres?: { name?: string }[];
+  genres?: { id?: number; name?: string }[];
   "watch/providers"?: { results?: Record<string, TmdbRegionProviders | undefined> };
 };
 
@@ -183,6 +185,15 @@ function tmdbPageUrl(link: string | undefined): string | null {
   }
 }
 
+/**
+ * The stored name of a genre. Settings and URLs spell genres in French whatever the language
+ * of the page, so a known id maps onto that name and only the label is translated.
+ */
+function genreKey(genre: { id?: number; name?: string }): string | null {
+  const known = GENRES.find((candidate) => candidate.id === genre.id);
+  return known?.name ?? genre.name ?? null;
+}
+
 export function mapMovie(movie: TmdbMovie): MovieDetails | null {
   const summary = summarize(movie);
   if (!summary) return null;
@@ -192,7 +203,7 @@ export function mapMovie(movie: TmdbMovie): MovieDetails | null {
     ...summary,
     overview: movie.overview?.trim() || null,
     runtime: movie.runtime || null,
-    genres: (movie.genres ?? []).flatMap((genre) => genre.name ?? []),
+    genres: (movie.genres ?? []).flatMap((genre) => genreKey(genre) ?? []),
     offers,
     availabilityStatus: offers.length > 0 ? "verified" : "unknown",
     offersUrl: offers.length > 0 ? tmdbPageUrl(region?.link) : null,
@@ -234,10 +245,10 @@ export async function searchMovies(title: string, year: number | null): Promise<
   return { results };
 }
 
-export async function getMovie(id: number): Promise<MovieDetails> {
+export async function getMovie(id: number, lang: Locale = DEFAULT_LOCALE): Promise<MovieDetails> {
   const movie = await tmdbGet<TmdbMovie>(
     `/movie/${id}`,
-    { language: LANGUAGE, append_to_response: "watch/providers" },
+    { language: TMDB_LANGUAGE[lang], append_to_response: "watch/providers" },
     { notFound: true },
   );
   // include_adult only filters search and discover, not a direct lookup.
@@ -248,10 +259,10 @@ export async function getMovie(id: number): Promise<MovieDetails> {
   return details;
 }
 
-export async function getProviders(): Promise<ProvidersResponse> {
+export async function getProviders(lang: Locale = DEFAULT_LOCALE): Promise<ProvidersResponse> {
   const data = await tmdbGet<{
     results?: (TmdbProvider & { display_priorities?: Record<string, number> })[];
-  }>("/watch/providers/movie", { language: LANGUAGE, watch_region: REGION });
+  }>("/watch/providers/movie", { language: TMDB_LANGUAGE[lang], watch_region: REGION });
   const providers = (data.results ?? [])
     .flatMap((provider) =>
       typeof provider.provider_id === "number" && provider.provider_name
@@ -286,9 +297,10 @@ export async function discoverMovies(
   page: number,
   sort: DiscoverSort = "popularity",
   filters: Partial<DiscoverFilters> = {},
+  lang: Locale = DEFAULT_LOCALE,
 ): Promise<DiscoverResponse> {
   const data = await tmdbGet<TmdbPage>("/discover/movie", {
-    language: LANGUAGE,
+    language: TMDB_LANGUAGE[lang],
     watch_region: REGION,
     with_watch_providers: providers.join("|"),
     with_watch_monetization_types: "flatrate|free|ads",
@@ -317,9 +329,12 @@ export async function discoverMovies(
  * documentaries are left out and a vote floor drops obscure titles: the home page shows
  * these to every visitor.
  */
-export async function popularOnProvider(providerId: number): Promise<MovieSummary[]> {
+export async function popularOnProvider(
+  providerId: number,
+  lang: Locale = DEFAULT_LOCALE,
+): Promise<MovieSummary[]> {
   const data = await tmdbGet<TmdbPage>("/discover/movie", {
-    language: LANGUAGE,
+    language: TMDB_LANGUAGE[lang],
     watch_region: REGION,
     with_watch_providers: String(providerId),
     with_watch_monetization_types: "flatrate",

@@ -165,7 +165,13 @@ svg {
   width: 180px;
   height: auto;
 }
-.about-link + .gear {
+.header-links {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  margin-left: auto;
+}
+.header-links + .gear {
   margin-left: var(--s4);
 }
 .gear:hover {
@@ -1584,10 +1590,10 @@ html[data-home-redirect] .home-steps {
   .brand img {
     height: 22px;
   }
-  .about-link {
-    margin-left: var(--s3);
+  .header-links {
+    gap: var(--s3);
   }
-  .about-link + .gear {
+  .header-links + .gear {
     margin-left: 0;
   }
   .gear {

@@ -7,6 +7,7 @@ import { Accordion } from "@/components/Accordion";
 import { DrawFilters } from "@/components/DrawFilters";
 import { FilmOffers } from "@/components/FilmOffers";
 import { FilmPoster } from "@/components/FilmPoster";
+import { useI18n } from "@/components/I18nProvider";
 import { formatMinutes, formatRating } from "@/lib/catalog";
 import { drawFilm, effectiveSources } from "@/lib/draw";
 import { collectSwapPosters, createDrawClient } from "@/lib/draw-client";
@@ -56,6 +57,7 @@ type Slot = { poster: string | null; framed: boolean };
 
 export function DrawMachine() {
   const ids = useId();
+  const { lang, t } = useI18n();
   const [state, dispatch] = useReducer(drawReducer, { phase: "idle" });
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [lists, setLists] = useState<StoredList[]>([]);
@@ -129,7 +131,7 @@ export function DrawMachine() {
         savedLists,
         state.phase === "result" ? state.film : null,
       );
-      const client = createDrawClient();
+      const client = createDrawClient(undefined, undefined, lang);
       const drawingPromise = drawFilm(input, client.deps);
       let scanned = false;
       void drawingPromise.then(() => {
@@ -187,13 +189,10 @@ export function DrawMachine() {
 
   const announcement = {
     idle: "",
-    drawing: "Tirage en cours…",
-    result:
-      state.phase === "result"
-        ? `Film tiré : ${state.film.title}${state.film.year ? `, ${state.film.year}` : ""}.`
-        : "",
-    none: state.phase === "none" ? noneMessage(state.reason).reason : "",
-    error: "Le tirage a échoué.",
+    drawing: t.draw.drawingStatus,
+    result: state.phase === "result" ? t.draw.found(state.film.title, state.film.year) : "",
+    none: state.phase === "none" ? noneMessage(state.reason, t).reason : "",
+    error: t.draw.failed,
   }[state.phase];
 
   return (
@@ -210,10 +209,14 @@ export function DrawMachine() {
               // eslint-disable-next-line @next/next/no-img-element -- TMDB serves sized posters.
               <img src={slot.poster} alt="" width={342} height={513} />
             ) : (
-              <span className="poster-missing">Tirage en cours</span>
+              <span className="poster-missing">{t.draw.drawing}</span>
             )
           ) : state.phase === "result" ? (
-            <FilmPoster title={state.film.title} poster={state.film.poster} />
+            <FilmPoster
+              title={state.film.title}
+              poster={state.film.poster}
+              alt={t.common.posterOf(state.film.title)}
+            />
           ) : null}
         </div>
 
@@ -224,29 +227,27 @@ export function DrawMachine() {
           {state.phase === "none" && (
             <div className="draw-outcome">
               <h1 tabIndex={-1} ref={headingRef} className="title-stack none-frame">
-                <span>Rien à proposer</span>
+                <span>{t.draw.noneTitle}</span>
               </h1>
-              <p>{noneMessage(state.reason).reason}</p>
-              <p>{noneMessage(state.reason).hint}</p>
+              <p>{noneMessage(state.reason, t).reason}</p>
+              <p>{noneMessage(state.reason, t).hint}</p>
             </div>
           )}
           {state.phase === "error" && (
             <div className="draw-outcome">
               <h1 tabIndex={-1} ref={headingRef} className="title-stack">
-                <span>Tirage impossible</span>
+                <span>{t.draw.errorTitle}</span>
               </h1>
-              <p>Impossible de joindre TMDB pour le moment. Vérifiez votre connexion.</p>
+              <p>{t.common.unreachable}</p>
             </div>
           )}
           {(state.phase === "idle" || drawing) && (
             <div className="draw-outcome">
               <h1 className="title-stack is-in">
-                <span>Qu’est-ce qu’on</span>
-                <span className="title-accent">regarde ce soir ?</span>
+                <span>{t.draw.idleTitle[0]}</span>
+                <span className="title-accent">{t.draw.idleTitle[1]}</span>
               </h1>
-              <p className="draw-lead">
-                Un film, tiré au sort parmi ceux que vous pouvez regarder ce soir.
-              </p>
+              <p className="draw-lead">{t.draw.lead}</p>
               <button
                 type="button"
                 className={`button primary draw-trigger${drawing ? " is-away" : ""}`}
@@ -254,7 +255,7 @@ export function DrawMachine() {
                 aria-hidden={drawing ? "true" : undefined}
                 onClick={() => void run()}
               >
-                Tirer un film
+                {t.draw.trigger}
               </button>
             </div>
           )}
@@ -267,11 +268,11 @@ export function DrawMachine() {
       <div
         className="draw-player"
         role="group"
-        aria-label="Réglages du tirage"
+        aria-label={t.draw.player}
         data-pending={loaded ? undefined : ""}
       >
         <div className="filter">
-          <label htmlFor={`${ids}-source`}>Source</label>
+          <label htmlFor={`${ids}-source`}>{t.draw.source}</label>
           <select
             className="select"
             id={`${ids}-source`}
@@ -280,10 +281,10 @@ export function DrawMachine() {
           >
             {sourceValue === MANY_SOURCES && (
               <option value={MANY_SOURCES} disabled>
-                Plusieurs sources
+                {t.draw.manySources}
               </option>
             )}
-            {sourceOptions(lists).map((option) => (
+            {sourceOptions(lists, t).map((option) => (
               <option key={option.id} value={option.id}>
                 {option.name}
               </option>
@@ -297,12 +298,12 @@ export function DrawMachine() {
           aria-controls={`${ids}-more`}
           onClick={() => setMoreOpen((open) => !open)}
         >
-          Filtres avancés{activeFilters > 0 ? ` (${activeFilters})` : ""}
+          {t.draw.filters(activeFilters)}
           <ChevronDown aria-hidden="true" />
         </button>
         {state.phase !== "idle" && !drawing && (
           <button type="button" className="button primary draw-go" onClick={() => void run()}>
-            Relancer
+            {t.draw.redraw}
           </button>
         )}
         {moreOpen && (
@@ -328,6 +329,7 @@ function Result({
   services: ReadonlySet<string>;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
 }) {
+  const { t, href } = useI18n();
   return (
     <article className="result">
       <h1 tabIndex={-1} ref={headingRef} className="title-stack is-in">
@@ -336,12 +338,12 @@ function Result({
       </h1>
       <dl className="result-figures">
         <div>
-          <dt>Durée</dt>
-          <dd>{formatMinutes(film.runtime)}</dd>
+          <dt>{t.common.duration}</dt>
+          <dd>{formatMinutes(film.runtime, t)}</dd>
         </div>
         <div>
-          <dt>Note TMDB</dt>
-          <dd>{formatRating(film.rating)}</dd>
+          <dt>{t.common.tmdbRating}</dt>
+          <dd>{formatRating(film.rating, t)}</dd>
         </div>
       </dl>
       <FilmOffers
@@ -349,13 +351,13 @@ function Result({
         services={services}
         directLinks
         between={
-          <Accordion key={film.tmdbId} title="Synopsis" defaultOpen>
-            <p className="result-synopsis">{film.overview || "Synopsis indisponible."}</p>
+          <Accordion key={film.tmdbId} title={t.draw.synopsis} defaultOpen>
+            <p className="result-synopsis">{film.overview || t.draw.noSynopsis}</p>
           </Accordion>
         }
       />
       <p className="result-escape">
-        Pas ce qui vous convient ? <Link href="/films">Parcourir les films</Link>
+        {t.draw.escape} <Link href={href("films")}>{t.draw.escapeLink}</Link>
       </p>
     </article>
   );

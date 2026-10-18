@@ -1,3 +1,4 @@
+import type { Dictionary } from "@/lib/i18n";
 import type { Film, Offer, Provider } from "@/lib/types";
 
 export const STREAM_TYPES = new Set(["FLATRATE", "FREE", "ADS"]);
@@ -126,16 +127,14 @@ export function providerMap(
   return result;
 }
 
-export function formatMinutes(value: number | null): string {
-  return value && value > 0
-    ? `${Math.floor(value / 60)} h ${String(value % 60).padStart(2, "0")}`
-    : "Durée inconnue";
+export function formatMinutes(value: number | null, t: Dictionary): string {
+  return value && value > 0 ? t.format.runtime(value) : t.format.runtimeUnknown;
 }
 
-export function formatRating(value: number | null): string {
+export function formatRating(value: number | null, t: Dictionary): string {
   return value === null
-    ? "Pas encore notée"
-    : `${value.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`;
+    ? t.format.ratingUnknown
+    : `${value.toLocaleString(t.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`;
 }
 
 export function sortFilms(

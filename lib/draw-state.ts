@@ -1,5 +1,7 @@
 import { RENT_TYPES, STREAM_TYPES } from "@/lib/catalog";
 import { SERVICES_SOURCE_ID, tmdbKey, type DrawInput, type NoneReason } from "@/lib/draw";
+import type { Dictionary } from "@/lib/i18n";
+import { LIKED_ID, WATCHLIST_ID } from "@/lib/import/apply";
 import type { Settings, StoredFilm, StoredList } from "@/lib/storage/schema";
 import { providerSearchUrl } from "@/lib/provider-links";
 import type { MovieDetails, Offer } from "@/lib/types";
@@ -74,12 +76,17 @@ export function buildDrawInput(
   return { settings: { ...settings, recentDraws }, films, lists };
 }
 
-export const SERVICES_SOURCE_LABEL = "Tous les films de mes services";
+/** The name of a list: the two built-in ones follow the language, the others keep their name. */
+export function listLabel(list: Pick<StoredList, "id" | "name">, t: Dictionary): string {
+  if (list.id === WATCHLIST_ID) return t.lists.watchlist;
+  if (list.id === LIKED_ID) return t.lists.liked;
+  return list.name;
+}
 
-export function sourceOptions(lists: StoredList[]) {
+export function sourceOptions(lists: StoredList[], t: Dictionary) {
   return [
-    { id: SERVICES_SOURCE_ID, name: SERVICES_SOURCE_LABEL },
-    ...lists.map((list) => ({ id: list.id, name: list.name })),
+    { id: SERVICES_SOURCE_ID, name: t.draw.allServices },
+    ...lists.map((list) => ({ id: list.id, name: listLabel(list, t) })),
   ];
 }
 
@@ -94,8 +101,8 @@ export function durationOptions(current: number | null): number[] {
   return [...all].sort((a, b) => a - b);
 }
 
-export function durationLabel(minutes: number) {
-  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} maximum`;
+export function durationLabel(minutes: number, t: Dictionary) {
+  return t.format.runtimeMax(minutes);
 }
 
 /** Scale shared by the minimum and maximum runtime sliders; either end means "no limit". */
@@ -148,38 +155,12 @@ export function countActiveFilters(
   ].filter(Boolean).length;
 }
 
-export function hoursLabel(minutes: number) {
-  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}`;
+export function hoursLabel(minutes: number, t: Dictionary) {
+  return t.format.runtime(minutes);
 }
 
-export function noneMessage(reason: NoneReason): { reason: string; hint: string } {
-  switch (reason) {
-    case "no-candidates":
-      return {
-        reason: "Cette source ne contient aucun film à tirer.",
-        hint: "Choisissez une autre source dans les réglages du tirage.",
-      };
-    case "nothing-available":
-      return {
-        reason: "Aucun film de cette source n’est disponible sur vos services.",
-        hint: "Essayez une autre source, ou ajoutez des services dans les réglages.",
-      };
-    case "all-seen":
-      return {
-        reason: "Vous avez déjà vu les films trouvés.",
-        hint: "Décochez « Masquer les films déjà vus » dans les filtres avancés ou changez de source.",
-      };
-    case "all-too-long":
-      return {
-        reason: "Aucun film trouvé ne tient dans cette durée.",
-        hint: "Allongez la durée maximale ou changez de source.",
-      };
-    case "no-match":
-      return {
-        reason: "Aucun film trouvé ne correspond à vos filtres.",
-        hint: "Assouplissez les filtres avancés ou changez de source.",
-      };
-  }
+export function noneMessage(reason: NoneReason, t: Dictionary): { reason: string; hint: string } {
+  return t.draw.none[reason];
 }
 
 /** Streaming offers on the visitor's services, one per service. */

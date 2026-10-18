@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SERVICES_SOURCE_ID, tmdbKey } from "@/lib/draw";
+import { getDictionary } from "@/lib/i18n";
 import {
   buildDrawInput,
   countActiveFilters,
@@ -102,13 +103,28 @@ describe("buildDrawInput", () => {
 });
 
 describe("options", () => {
+  const lists = [
+    { id: "watchlist", name: "Watchlist", importedAt: 1 },
+    { id: "liked", name: "Films aimés", importedAt: 2 },
+    { id: "own", name: "Ma liste", importedAt: 3 },
+  ];
+
   it("lists the services source then every imported list", () => {
-    expect(
-      sourceOptions([
-        { id: "watchlist", name: "Watchlist", importedAt: 1 },
-        { id: "own", name: "Ma liste", importedAt: 2 },
-      ]).map((option) => option.id),
-    ).toEqual([SERVICES_SOURCE_ID, "watchlist", "own"]);
+    expect(sourceOptions(lists, getDictionary("fr")).map((option) => option.id)).toEqual([
+      SERVICES_SOURCE_ID,
+      "watchlist",
+      "liked",
+      "own",
+    ]);
+  });
+
+  it("names the built-in lists in the language of the page and keeps the others", () => {
+    expect(sourceOptions(lists, getDictionary("en")).map((option) => option.name)).toEqual([
+      "All the films on my services",
+      "Watchlist",
+      "Liked films",
+      "Ma liste",
+    ]);
   });
 
   it("keeps a saved duration that is not a preset, in order", () => {
@@ -122,11 +138,12 @@ describe("noneMessage", () => {
   it("explains each reason and points to a way forward", () => {
     const reasons = ["no-candidates", "nothing-available", "all-seen", "all-too-long"] as const;
     for (const reason of reasons) {
-      const message = noneMessage(reason);
+      const message = noneMessage(reason, getDictionary("fr"));
       expect(message.reason.length).toBeGreaterThan(0);
       expect(message.hint.length).toBeGreaterThan(0);
     }
-    expect(noneMessage("all-too-long").hint).toMatch(/durée/i);
+    expect(noneMessage("all-too-long", getDictionary("fr")).hint).toMatch(/durée/i);
+    expect(noneMessage("all-too-long", getDictionary("en")).hint).toMatch(/runtime/i);
   });
 });
 

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Accordion } from "@/components/Accordion";
+import { useI18n } from "@/components/I18nProvider";
 import { ProviderLink } from "@/components/ProviderLink";
 import { hasOffers, offerGroups, offerHref } from "@/lib/draw-state";
 import { useWatchLinks } from "@/lib/use-watch-links";
@@ -64,6 +65,7 @@ export function FilmOffers({
   /** Rendered between the visitor's services and the other ways to watch. */
   between?: ReactNode;
 }) {
+  const { t } = useI18n();
   const direct = useWatchLinks(film.tmdbId, directLinks && hasOffers(film));
   const verified = film.availabilityStatus === "verified";
   const groups = offerGroups(film, services);
@@ -71,52 +73,42 @@ export function FilmOffers({
   const other = verified ? groups.other : [];
   const rental = verified ? groups.rental : [];
   return (
-    <section aria-label="Où le regarder" className="offers">
+    <section aria-label={t.offers.label} className="offers">
       {owned.length > 0 ? (
         <div className="offers-owned">
-          <h2 className="offers-title">Mes plateformes</h2>
-          <OfferList
-            film={film}
-            offers={owned}
-            direct={direct}
-            label={(name) => `Regarder sur ${name}`}
-          />
+          <h2 className="offers-title">{t.offers.mine}</h2>
+          <OfferList film={film} offers={owned} direct={direct} label={t.offers.watchOn} />
         </div>
       ) : (
         <p className="tag-check">
-          <span className="tag">À vérifier</span>{" "}
+          <span className="tag">{t.common.toCheck}</span>{" "}
           {film.offersUrl ? (
             <a href={film.offersUrl} target="_blank" rel="noopener noreferrer">
-              Voir la disponibilité sur TMDB (nouvel onglet)
+              {t.offers.checkOnTmdb} ({t.common.newTab})
             </a>
           ) : (
-            "La disponibilité n’est pas confirmée."
+            t.offers.unconfirmed
           )}
         </p>
       )}
       <div className="offers-more">
         {between}
         {(other.length > 0 || rental.length > 0) && (
-          <Accordion title="Disponible également sur" count={other.length + rental.length}>
+          <Accordion title={t.offers.also} count={other.length + rental.length}>
             {other.length > 0 && (
               <div className="offers-group">
-                <h3 className="offers-title">Aussi en streaming sur</h3>
-                <OfferList
-                  film={film}
-                  offers={other}
-                  direct={direct}
-                  label={(name) => `Regarder sur ${name}`}
-                />
+                <h3 className="offers-title">{t.offers.alsoStreaming}</h3>
+                <OfferList film={film} offers={other} direct={direct} label={t.offers.watchOn} />
               </div>
             )}
             {rental.length > 0 && (
               <div className="offers-group">
-                <h3 className="offers-title">Louer ou acheter sur</h3>
+                <h3 className="offers-title">{t.offers.rentOrBuy}</h3>
                 <OfferList
                   film={film}
                   offers={rental}
                   direct={direct}
-                  label={(name) => `Louer ou acheter sur ${name}`}
+                  label={t.offers.rentOrBuyOn}
                 />
               </div>
             )}

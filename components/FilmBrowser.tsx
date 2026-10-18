@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { FilmCard, type CardFilm } from "@/components/FilmCard";
 import { FilmDialog } from "@/components/FilmDialog";
+import { useI18n } from "@/components/I18nProvider";
 import { MultiSelect } from "@/components/MultiSelect";
 import { RangeField } from "@/components/RangeField";
 import {
@@ -58,14 +59,6 @@ import type { DiscoverSort } from "@/lib/validation";
 import { MAX_PROVIDERS } from "@/lib/validation";
 import type { MovieSummary, ProviderInfo } from "@/lib/types";
 
-const SORT_LABELS: Record<BrowseSort, string> = {
-  rank: "Ordre de la source",
-  rating: "Note",
-  runtime: "Durée",
-  title: "Titre",
-  year: "Année",
-};
-
 const DISCOVER_SORT: Record<BrowseSort, DiscoverSort> = {
   rank: "popularity",
   rating: "rating",
@@ -85,6 +78,7 @@ const EMPTY_PLAN: ListPlan = { shown: [], pending: [], done: false, exhausted: f
 
 export function FilmBrowser() {
   const ids = useId();
+  const { lang, t, href } = useI18n();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   // The URL is the source of truth on arrival; afterwards state leads and the URL follows,
@@ -140,16 +134,19 @@ export function FilmBrowser() {
     }
     void refresh();
     const stop = onReset(() => void refresh());
-    const controller = new AbortController();
-    fetchProviders(controller.signal)
-      .then(setProviderInfo)
-      .catch(() => undefined);
     return () => {
       alive = false;
       stop();
-      controller.abort();
     };
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchProviders(controller.signal, lang)
+      .then(setProviderInfo)
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [lang]);
 
   const sources = effectiveSources(filters.source ? [filters.source] : settings.sources, lists);
   const listIds = useMemo(
@@ -232,7 +229,7 @@ export function FilmBrowser() {
           async (film) => {
             const tmdbId = film.tmdbId!;
             try {
-              detailsRef.current.set(tmdbId, await fetchDetails(tmdbId, signal));
+              detailsRef.current.set(tmdbId, await fetchDetails(tmdbId, signal, lang));
             } catch {
               if (!signal.aborted) detailsRef.current.set(tmdbId, "failed");
             }
@@ -242,7 +239,7 @@ export function FilmBrowser() {
       }
     })();
     return () => controller.abort();
-  }, [ready, mode, listFilms, filters, services, limit]);
+  }, [ready, mode, listFilms, filters, services, limit, lang]);
 
   // The global source: TMDB discover pages, then the details of each page for chips and duration.
   const providers = useMemo(() => {
@@ -287,6 +284,7 @@ export function FilmBrowser() {
             discoverSort,
             discoverFilters,
             signal,
+            lang,
           );
         } catch {
           if (!signal.aborted) {
@@ -310,7 +308,7 @@ export function FilmBrowser() {
           4,
           async (movie) => {
             try {
-              detailsRef.current.set(movie.tmdbId, await fetchDetails(movie.tmdbId, signal));
+              detailsRef.current.set(movie.tmdbId, await fetchDetails(movie.tmdbId, signal, lang));
             } catch {
               return;
             }
@@ -332,6 +330,7 @@ export function FilmBrowser() {
     discoverSort,
     discoverFilters,
     retry,
+    lang,
   ]);
 
   const cardOffers = (detail: Parameters<typeof offersToShow>[0] | undefined) =>
@@ -372,9 +371,9 @@ export function FilmBrowser() {
   }, [mode, plan, filters.sort, filters.hideSeen, global, globalKey, films, services]);
 
   const serviceOptions: ProviderInfo[] = [
-    ...(mode === "lists" ? [{ id: SERVICE_ANY, name: "Peu importe", logo: null }] : []),
+    ...(mode === "lists" ? [{ id: SERVICE_ANY, name: t.browse.anyService, logo: null }] : []),
     ...settings.services.map(
-      (id) => providerInfo.get(id) ?? { id, name: `Service ${id}`, logo: null },
+      (id) => providerInfo.get(id) ?? { id, name: t.browse.serviceFallback(id), logo: null },
     ),
   ];
   const serviceSelected = useMemo(
@@ -383,7 +382,7 @@ export function FilmBrowser() {
     [filters.services, settings.services, providerInfo, mode],
   );
   const chosenNames = serviceOptions.filter((o) => serviceSelected.has(o.id)).map((o) => o.name);
-  const servicesSummary = summarizeNames(chosenNames, "Tous mes services");
+  const servicesSummary = summarizeNames(chosenNames, t.browse.allMine);
   const years = yearScale();
   const sourceValue = sources.length === 1 ? sources[0] : "many";
   const advancedCount =
@@ -437,22 +436,22 @@ export function FilmBrowser() {
     ? ""
     : busy
       ? cards.length === 0
-        ? "Recherche des films en cours…"
-        : `${cards.length} films affichés, recherche de la suite en cours…`
+        ? t.browse.searching
+        : t.browse.shownMore(cards.length)
       : empty
         ? ""
-        : `${cards.length} film${cards.length > 1 ? "s" : ""} affiché${cards.length > 1 ? "s" : ""}.`;
+        : t.browse.shown(cards.length);
 
   return (
     <>
       <p className="browse-source">
-        <Link href="/tirage">Retour au tirage</Link>
+        <Link href={href("draw")}>{t.browse.back}</Link>
       </p>
 
       {ready && (
         <div className="filters" role="search">
           <div className="filter">
-            <label htmlFor={`${ids}-source`}>Source</label>
+            <label htmlFor={`${ids}-source`}>{t.draw.source}</label>
             <select
               className="select"
               id={`${ids}-source`}
@@ -461,10 +460,10 @@ export function FilmBrowser() {
             >
               {sourceValue === "many" && (
                 <option value="many" disabled>
-                  Plusieurs sources
+                  {t.draw.manySources}
                 </option>
               )}
-              {sourceOptions(lists).map((option) => (
+              {sourceOptions(lists, t).map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.name}
                 </option>
@@ -473,7 +472,7 @@ export function FilmBrowser() {
           </div>
           {mode === "lists" && (
             <div className="filter">
-              <label htmlFor={`${ids}-q`}>Titre</label>
+              <label htmlFor={`${ids}-q`}>{t.browse.queryLabel}</label>
               <input
                 id={`${ids}-q`}
                 type="search"
@@ -489,17 +488,17 @@ export function FilmBrowser() {
           )}
           <div className="filter filter-services">
             <MultiSelect
-              label="Services"
+              label={t.browse.services}
               options={serviceOptions}
               selected={serviceSelected}
               onChange={(next) => update({ services: [...next] })}
-              emptyMessage={(query) => `Aucun service ne correspond à « ${query} ».`}
-              removeLabel={(name) => `Retirer ${name}`}
+              emptyMessage={t.services.empty}
+              removeLabel={t.services.remove}
               summary={servicesSummary}
             />
           </div>
           <div className="filter">
-            <label htmlFor={`${ids}-sort`}>Tri</label>
+            <label htmlFor={`${ids}-sort`}>{t.browse.sort}</label>
             <select
               className="select"
               id={`${ids}-sort`}
@@ -508,18 +507,20 @@ export function FilmBrowser() {
             >
               {sortOptions.map((sort) => (
                 <option key={sort} value={sort}>
-                  {mode === "services" && sort === "rank" ? "Popularité" : SORT_LABELS[sort]}
+                  {mode === "services" && sort === "rank"
+                    ? t.browse.sorts.popularity
+                    : t.browse.sorts[sort]}
                 </option>
               ))}
             </select>
           </div>
-          <div className="view-toggle" role="group" aria-label="Affichage">
+          <div className="view-toggle" role="group" aria-label={t.browse.view}>
             <button
               type="button"
               className="button"
               aria-pressed={filters.view === "grid"}
-              aria-label="Grille"
-              title="Grille"
+              aria-label={t.browse.grid}
+              title={t.browse.grid}
               onClick={() => update({ view: "grid" })}
             >
               <LayoutGrid aria-hidden="true" />
@@ -528,8 +529,8 @@ export function FilmBrowser() {
               type="button"
               className="button"
               aria-pressed={filters.view === "list"}
-              aria-label="Liste"
-              title="Liste"
+              aria-label={t.browse.list}
+              title={t.browse.list}
               onClick={() => update({ view: "list" })}
             >
               <List aria-hidden="true" />
@@ -542,7 +543,7 @@ export function FilmBrowser() {
             aria-controls={`${ids}-advanced`}
             onClick={() => setAdvancedOpen((open) => !open)}
           >
-            Filtres avancés{advancedCount > 0 ? ` (${advancedCount})` : ""}
+            {t.draw.filters(advancedCount)}
             <ChevronDown aria-hidden="true" />
           </button>
           {advancedOpen && (
@@ -550,10 +551,10 @@ export function FilmBrowser() {
               className="browse-filters-panel"
               id={`${ids}-advanced`}
               role="group"
-              aria-label="Filtres avancés"
+              aria-label={t.filters.advanced}
             >
               <div className="filter">
-                <label htmlFor={`${ids}-duration`}>Durée maximale</label>
+                <label htmlFor={`${ids}-duration`}>{t.filters.maxDuration}</label>
                 <select
                   className="select"
                   id={`${ids}-duration`}
@@ -562,10 +563,10 @@ export function FilmBrowser() {
                     update({ maxDuration: event.target.value ? Number(event.target.value) : null })
                   }
                 >
-                  <option value="">Sans limite</option>
+                  <option value="">{t.filters.maxDurationNone}</option>
                   {durationOptions(filters.maxDuration).map((minutes) => (
                     <option key={minutes} value={minutes}>
-                      {durationLabel(minutes)}
+                      {durationLabel(minutes, t)}
                     </option>
                   ))}
                 </select>
@@ -578,12 +579,16 @@ export function FilmBrowser() {
                     checked={filters.hideSeen}
                     onChange={(event) => update({ hideSeen: event.target.checked })}
                   />
-                  <label htmlFor={`${ids}-seen`}>Masquer les films déjà vus</label>
+                  <label htmlFor={`${ids}-seen`}>{t.common.hideSeen}</label>
                 </div>
               )}
               <RangeField
-                label="Durée minimale"
-                display={filters.minDuration === null ? "Aucune" : hoursLabel(filters.minDuration)}
+                label={t.filters.minDuration}
+                display={
+                  filters.minDuration === null
+                    ? t.filters.minDurationNone
+                    : hoursLabel(filters.minDuration, t)
+                }
                 value={positionOf(
                   filters.minDuration,
                   DURATION_SCALE.min,
@@ -594,9 +599,11 @@ export function FilmBrowser() {
                 onChange={(value) => moveDuration("minDuration", value)}
               />
               <RangeField
-                label="Note TMDB minimale"
+                label={t.filters.minRating}
                 display={
-                  filters.minRating === null ? "Toutes" : `${filters.minRating.toFixed(1)} / 10`
+                  filters.minRating === null
+                    ? t.filters.minRatingNone
+                    : `${filters.minRating.toLocaleString(t.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`
                 }
                 value={positionOf(
                   filters.minRating,
@@ -608,21 +615,21 @@ export function FilmBrowser() {
                 onChange={(value) => update({ minRating: limitAt(value, RATING_SCALE.min) })}
               />
               <RangeField
-                label="Sortie à partir de"
-                display={filters.minYear === null ? "Toutes" : String(filters.minYear)}
+                label={t.filters.minYear}
+                display={filters.minYear === null ? t.filters.minYearNone : String(filters.minYear)}
                 value={positionOf(filters.minYear, years.min, years.min, years.max)}
                 {...years}
                 onChange={(value) => moveYear("minYear", value)}
               />
               <RangeField
-                label="Sortie jusqu’en"
-                display={filters.maxYear === null ? "Aujourd’hui" : String(filters.maxYear)}
+                label={t.filters.maxYear}
+                display={filters.maxYear === null ? t.filters.maxYearNone : String(filters.maxYear)}
                 value={positionOf(filters.maxYear, years.max, years.min, years.max)}
                 {...years}
                 onChange={(value) => moveYear("maxYear", value)}
               />
               <fieldset className="genre-field">
-                <legend>Genres</legend>
+                <legend>{t.filters.genres}</legend>
                 <div className="genre-chips">
                   {GENRES.map((genre) => (
                     <label key={genre.id} className="genre-chip">
@@ -637,7 +644,7 @@ export function FilmBrowser() {
                           })
                         }
                       />
-                      <span>{genre.name}</span>
+                      <span>{t.genres[genre.name] ?? genre.name}</span>
                     </label>
                   ))}
                 </div>
@@ -651,26 +658,26 @@ export function FilmBrowser() {
                   update({ ...DEFAULT_FILTERS, source: filters.source, view: filters.view });
                 }}
               >
-                Réinitialiser les filtres
+                {t.filters.reset}
               </button>
             </div>
           )}
         </div>
       )}
 
-      <h2 className="sr-only">Résultats</h2>
+      <h2 className="sr-only">{t.browse.results}</h2>
       <p role="status" className={`browse-status${failed ? " sr-only" : ""}`}>
         {status}
       </p>
       {mode === "lists" && (filters.sort === "rating" || filters.sort === "runtime") && more && (
-        <p className="browse-hint">Ce tri s’applique aux films déjà chargés.</p>
+        <p className="browse-hint">{t.browse.sortHint}</p>
       )}
 
       {failed && (
         <div className="browse-empty" role="alert">
-          <p>Impossible de joindre TMDB pour le moment. Vérifiez votre connexion.</p>
+          <p>{t.common.unreachable}</p>
           <button type="button" className="button primary" onClick={() => setRetry((n) => n + 1)}>
-            Réessayer
+            {t.common.retry}
           </button>
         </div>
       )}
@@ -679,8 +686,8 @@ export function FilmBrowser() {
         <div className="browse-empty">
           <p>
             {mode === "lists" && listFilms.length === 0
-              ? "Cette source ne contient aucun film."
-              : "Aucun film ne correspond à ces filtres."}
+              ? t.browse.emptySource
+              : t.browse.emptyFilters}
           </p>
           {filtersChanged && (
             <button
@@ -691,7 +698,7 @@ export function FilmBrowser() {
                 update({ ...DEFAULT_FILTERS, source: filters.source, view: filters.view });
               }}
             >
-              Réinitialiser les filtres
+              {t.filters.reset}
             </button>
           )}
         </div>
@@ -721,7 +728,7 @@ export function FilmBrowser() {
             if (!busy) setPaging({ key: filterKey, limit: limit + PAGE_SIZE });
           }}
         >
-          {busy ? "Chargement…" : "Afficher plus de films"}
+          {busy ? t.browse.loading : t.browse.more}
         </button>
       )}
 

@@ -1,48 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { FilmPoster } from "@/components/FilmPoster";
 import { HomeRedirect } from "@/components/HomeRedirect";
 import { REEL_PROVIDERS, pickReel } from "@/lib/home-reel";
+import { hasLocale, localizedPath, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n";
 import { getProviders, popularOnProvider } from "@/lib/tmdb";
 
-export const metadata: Metadata = {
-  title: "Tonight’s Movie — Un seul film pour ce soir",
-  description:
-    "Vous ne savez pas quoi regarder ce soir ? Indiquez vos plateformes en France et laissez le hasard choisir un film que vous pouvez lancer maintenant.",
-};
+type Props = { params: Promise<{ lang: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { lang } = await params;
+  if (!hasLocale(lang)) return {};
+  const { meta } = getDictionary(lang);
+  return { title: meta.homeTitle, description: meta.homeDescription };
+}
 
 /** The reel is rebuilt from TMDB at most once a day, like the data behind it. */
 export const revalidate = 86400;
 
-const steps = [
-  {
-    title: "Vos services",
-    text: "Sélectionnez les plateformes auxquelles vous êtes abonné. Une seule suffit.",
-    optional: false,
-  },
-  {
-    title: "Votre film",
-    text: "Un film tiré au sort, avec l’affiche, la durée, la note TMDB et les plateformes qui le proposent. Pas convaincu ? Relancez.",
-    optional: false,
-  },
-  {
-    title: "Letterboxd, en option",
-    text: "Importez votre export pour tirer aussi parmi votre watchlist et vos listes. Le fichier reste dans votre navigateur.",
-    optional: true,
-  },
-];
-
-const REEL = [
-  { title: "Le Mépris", tone: "tone-3" },
-  { title: "Le salaire de la peur", tone: "tone-1" },
-  { title: "Playtime", tone: "tone-2" },
-];
+const REEL_TONES = ["tone-3", "tone-1", "tone-2"];
 
 /** One popular film per provider, or `null` when TMDB cannot supply all of them. */
-async function loadReel() {
+async function loadReel(lang: Locale) {
   const [popular, providers] = await Promise.all([
-    Promise.allSettled(REEL_PROVIDERS.map(({ id }) => popularOnProvider(id))),
-    getProviders().catch(() => null),
+    Promise.allSettled(REEL_PROVIDERS.map(({ id }) => popularOnProvider(id, lang))),
+    getProviders(lang).catch(() => null),
   ]);
   const logos = new Map(providers?.providers.map((provider) => [provider.id, provider.logo]));
   const reel = pickReel(
@@ -52,25 +36,25 @@ async function loadReel() {
   return reel.map((film) => ({ ...film, logo: logos.get(String(film.providerId)) ?? null }));
 }
 
-export default async function HomePage() {
-  const reel = await loadReel();
+export default async function HomePage({ params }: Props) {
+  const { lang } = await params;
+  if (!hasLocale(lang)) notFound();
+  const t = getDictionary(lang);
+  const reel = await loadReel(lang);
   return (
     <>
       <HomeRedirect />
       <section className="home-hero" aria-labelledby="home-title">
         <div className="home-copy">
           <h1 id="home-title">
-            <span>Vous ne savez pas</span>
-            <span>quoi regarder</span>
-            <span className="home-accent">ce soir ?</span>
+            <span>{t.home.title[0]}</span>
+            <span>{t.home.title[1]}</span>
+            <span className="home-accent">{t.home.title[2]}</span>
           </h1>
-          <p className="home-lead">
-            Un seul film, tiré au sort parmi ceux que vos abonnements vous permettent de regarder ce
-            soir. Fini le défilement sans fin.
-          </p>
+          <p className="home-lead">{t.home.lead}</p>
           <div className="home-cta">
-            <Link className="button primary" href="/reglages">
-              Choisir mes services
+            <Link className="button primary" href={localizedPath(lang, "settings")}>
+              {t.home.cta}
             </Link>
           </div>
         </div>
@@ -78,7 +62,11 @@ export default async function HomePage() {
           {reel
             ? reel.map((film) => (
                 <div key={film.tmdbId} className="poster-card has-poster">
-                  <FilmPoster title={film.title} poster={film.poster} />
+                  <FilmPoster
+                    title={film.title}
+                    poster={film.poster}
+                    alt={t.common.posterOf(film.title)}
+                  />
                   <span className="poster-provider">
                     {film.logo ? (
                       // eslint-disable-next-line @next/next/no-img-element -- Official TMDB logo, served as is.
@@ -89,15 +77,15 @@ export default async function HomePage() {
                   </span>
                 </div>
               ))
-            : REEL.map((poster) => (
-                <div key={poster.title} className={`poster-card ${poster.tone}`}>
-                  <b>{poster.title}</b>
+            : t.home.reel.map((title, index) => (
+                <div key={title} className={`poster-card ${REEL_TONES[index]}`}>
+                  <b>{title}</b>
                 </div>
               ))}
         </div>
       </section>
-      <ol className="home-steps" aria-label="Comment ça marche">
-        {steps.map((step) => (
+      <ol className="home-steps" aria-label={t.home.stepsLabel}>
+        {t.home.steps.map((step) => (
           <li key={step.title} className={step.optional ? "is-optional" : undefined}>
             <h2>{step.title}</h2>
             <p>{step.text}</p>

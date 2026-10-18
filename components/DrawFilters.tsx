@@ -1,3 +1,4 @@
+import { useI18n } from "@/components/I18nProvider";
 import { RangeField } from "@/components/RangeField";
 import {
   DURATION_SCALE,
@@ -22,6 +23,7 @@ type Props = {
 
 /** The fine draw filters, in a panel the visitor opens from the settings bar. */
 export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props) {
+  const { t } = useI18n();
   const duration = DURATION_SCALE;
   const years = yearScale();
 
@@ -57,38 +59,50 @@ export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props)
   }
 
   return (
-    <div className="draw-filters" id={id} role="group" aria-label="Filtres avancés">
+    <div className="draw-filters" id={id} role="group" aria-label={t.filters.advanced}>
       <RangeField
-        label="Durée minimale"
-        display={settings.minDuration === null ? "Aucune" : hoursLabel(settings.minDuration)}
+        label={t.filters.minDuration}
+        display={
+          settings.minDuration === null
+            ? t.filters.minDurationNone
+            : hoursLabel(settings.minDuration, t)
+        }
         value={positionOf(settings.minDuration, duration.min, duration.min, duration.max)}
         {...duration}
         onChange={(value) => moveDuration("minDuration", value)}
       />
       <RangeField
-        label="Durée maximale"
-        display={settings.maxDuration === null ? "Sans limite" : hoursLabel(settings.maxDuration)}
+        label={t.filters.maxDuration}
+        display={
+          settings.maxDuration === null
+            ? t.filters.maxDurationNone
+            : hoursLabel(settings.maxDuration, t)
+        }
         value={positionOf(settings.maxDuration, duration.max, duration.min, duration.max)}
         {...duration}
         onChange={(value) => moveDuration("maxDuration", value)}
       />
       <RangeField
-        label="Note TMDB minimale"
-        display={settings.minRating === null ? "Toutes" : `${settings.minRating.toFixed(1)} / 10`}
+        label={t.filters.minRating}
+        display={
+          settings.minRating === null
+            ? t.filters.minRatingNone
+            : `${settings.minRating.toLocaleString(t.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`
+        }
         value={positionOf(settings.minRating, RATING_SCALE.min, RATING_SCALE.min, RATING_SCALE.max)}
         {...RATING_SCALE}
         onChange={(value) => onChange({ minRating: limitAt(value, RATING_SCALE.min) })}
       />
       <RangeField
-        label="Sortie à partir de"
-        display={settings.minYear === null ? "Toutes" : String(settings.minYear)}
+        label={t.filters.minYear}
+        display={settings.minYear === null ? t.filters.minYearNone : String(settings.minYear)}
         value={positionOf(settings.minYear, years.min, years.min, years.max)}
         {...years}
         onChange={(value) => moveYear("minYear", value)}
       />
       <RangeField
-        label="Sortie jusqu’en"
-        display={settings.maxYear === null ? "Aujourd’hui" : String(settings.maxYear)}
+        label={t.filters.maxYear}
+        display={settings.maxYear === null ? t.filters.maxYearNone : String(settings.maxYear)}
         value={positionOf(settings.maxYear, years.max, years.min, years.max)}
         {...years}
         onChange={(value) => moveYear("maxYear", value)}
@@ -101,11 +115,11 @@ export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props)
             checked={settings.excludeSeen}
             onChange={(event) => onChange({ excludeSeen: event.target.checked })}
           />
-          <label htmlFor={`${id}-seen`}>Masquer les films déjà vus</label>
+          <label htmlFor={`${id}-seen`}>{t.common.hideSeen}</label>
         </div>
       )}
       <fieldset className="genre-field">
-        <legend>Genres</legend>
+        <legend>{t.filters.genres}</legend>
         <div className="genre-chips">
           {GENRES.map((genre) => (
             <label key={genre.id} className="genre-chip">
@@ -114,13 +128,13 @@ export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props)
                 checked={settings.genres.includes(genre.name)}
                 onChange={(event) => toggleGenre(genre.name, event.target.checked)}
               />
-              <span>{genre.name}</span>
+              <span>{t.genres[genre.name] ?? genre.name}</span>
             </label>
           ))}
         </div>
       </fieldset>
       <button type="button" className="button draw-filters-reset" onClick={onReset}>
-        Réinitialiser les filtres
+        {t.filters.reset}
       </button>
     </div>
   );

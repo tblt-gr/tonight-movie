@@ -21,7 +21,7 @@
   <a href="#contributing">Contributing</a>
 </p>
 
-Pick your streaming services in France, and Tonight’s Movie draws one film you can watch right now: poster, duration, rating, synopsis and the services that offer it. The interface is in French.
+Pick your streaming services in France, and Tonight’s Movie draws one film you can watch right now: poster, duration, rating, synopsis and the services that offer it. The interface is in French and in English.
 
 You can optionally import your own Letterboxd export (watchlist, lists, liked and watched films) to draw among your films. The app never scrapes Letterboxd and never asks for Letterboxd credentials. There is no Tonight’s Movie account and no database: your services, your imported data and your draw history stay in your browser.
 
@@ -76,13 +76,15 @@ Copy `.env.example` to `.env.local` (local) or set the variables in your host (D
 - Draw one film at random from a source (your watchlist, an imported list, your liked films, or all films on your services) with a maximum duration and an option to leave out films you have already seen. Draw again as often as you like; the last draws are avoided when possible.
 - Browse and filter films manually from the link under the result.
 
-Pages: `/` (presentation, skipped once services are chosen), `/reglages` (services and import), `/tirage` (the draw) and `/films` (browse and filter).
+Pages: `/` (presentation, skipped once services are chosen), `/reglages` (services and import), `/tirage` (the draw), `/films` (browse and filter) and `/a-propos` (credits).
+
+The English version lives under `/en` with translated segments: `/en`, `/en/settings`, `/en/draw`, `/en/films` and `/en/about`. French has no prefix. The header links to the same page in the other language, query string included; the choice is never stored, the URL is the language. Services, imported lists and draw settings are shared by both languages. Text lives in `lib/i18n/dictionaries/` (`fr.ts` sets the shape, `en.ts` must match it), and `proxy.ts` rewrites the public URLs onto the pages in `app/[lang]/`.
 
 Streaming means `FLATRATE`, `FREE` and `ADS` offers. A missing or uncertain offer is shown as **À vérifier**: it does not prove that a film is unavailable.
 
 ## Import your Letterboxd data
 
-Letterboxd does not connect to Tonight’s Movie. You download your own data, then drop it into the import block on `/reglages`:
+Letterboxd does not connect to Tonight’s Movie. You download your own data, then drop it into the import block on `/reglages` (`/en/settings` in English):
 
 1. Sign in to letterboxd.com from a computer.
 2. Open your profile, then **Settings**.
@@ -95,7 +97,7 @@ The file is read in your browser and is never uploaded to a server. Only the fil
 
 ## Data sources
 
-[TMDB](https://www.themoviedb.org/) is the single data source for film data and French watch providers. Watch-provider data comes from [JustWatch](https://www.justwatch.com/) through TMDB. Requests use `fr-FR` and `watch_region=FR`. The only other service is the optional [Watchmode](https://api.watchmode.com/) API, called server-side for one film at a time to get direct links to the streaming services (free plan: non-commercial use, attribution required, cached data refreshed within 30 days). There is no scraping and no Letterboxd request.
+[TMDB](https://www.themoviedb.org/) is the single data source for film data and French watch providers. Watch-provider data comes from [JustWatch](https://www.justwatch.com/) through TMDB. Requests use `watch_region=FR`, and `fr-FR` or `en-US` for titles and synopses depending on the language of the page. The only other service is the optional [Watchmode](https://api.watchmode.com/) API, called server-side for one film at a time to get direct links to the streaming services (free plan: non-commercial use, attribution required, cached data refreshed within 30 days). There is no scraping and no Letterboxd request.
 
 `FLATRATE`, `FREE` and `ADS` are streaming offers. `RENT` and `BUY` appear only when the visitor enables them and never count as a subscription already owned. Prime Video and each Prime Video Channel are separate provider IDs.
 
@@ -122,7 +124,7 @@ A single Next.js App Router application serves the React interface and a few sta
 | `GET /api/discover?providers=8,119&maxRuntime=120&page=1` | Films streaming on any provider, page up to 500 |
 | `GET /api/health`                                         | `200`, or `503` when `TMDB_API_KEY` is missing  |
 
-Parameters are validated strictly (unknown ones get a 400) and there is no passthrough to TMDB. Errors are typed (`{ "error": { "code", "message" } }`). TMDB answers are cached by the Next fetch cache for 24 hours; that cache lives in `.next/cache` and holds public film data only. Each client IP is limited to 600 requests per minute by default, set by `RATE_LIMIT_PER_MINUTE` (429 beyond), read from `X-Forwarded-For` as set by your own proxies (`TRUSTED_PROXY_HOPS`); behind no proxy the header is client-controlled, so deploy behind one that overwrites it. Counters live in process memory, so several instances do not share them.
+The movie, providers and discover routes also take `lang=fr|en` (French by default), which only picks the language of titles, synopses and provider names. Parameters are validated strictly (unknown ones get a 400) and there is no passthrough to TMDB. Errors are typed (`{ "error": { "code", "message" } }`). TMDB answers are cached by the Next fetch cache for 24 hours; that cache lives in `.next/cache` and holds public film data only. Each client IP is limited to 600 requests per minute by default, set by `RATE_LIMIT_PER_MINUTE` (429 beyond), read from `X-Forwarded-For` as set by your own proxies (`TRUSTED_PROXY_HOPS`); behind no proxy the header is client-controlled, so deploy behind one that overwrites it. Counters live in process memory, so several instances do not share them.
 
 ## Deployment
 

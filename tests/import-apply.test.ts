@@ -8,6 +8,7 @@ import {
   summarizeImport,
 } from "@/lib/import/apply";
 import { ImportError, type ImportResult } from "@/lib/import/letterboxd";
+import { getDictionary } from "@/lib/i18n";
 import { createLibrary } from "@/lib/storage/library";
 
 const result: ImportResult = {
@@ -52,15 +53,18 @@ describe("matchStats", () => {
 });
 
 describe("describeImportError", () => {
-  it("uses the French message of an import error", () => {
-    expect(describeImportError(new ImportError("empty", "Ce fichier est vide."))).toBe(
-      "Ce fichier est vide.",
-    );
+  it("words an import error in the language of the page", () => {
+    const error = new ImportError("empty", "internal message");
+    expect(describeImportError(error, getDictionary("fr"))).toBe("Ce fichier est vide.");
+    expect(describeImportError(error, getDictionary("en"))).toBe("This file is empty.");
   });
 
   it("hides the details of an unexpected error", () => {
-    expect(describeImportError(new TypeError("boom"))).toBe(
+    expect(describeImportError(new TypeError("boom"), getDictionary("fr"))).toBe(
       "L’import a échoué. Réessayez avec un autre fichier.",
+    );
+    expect(describeImportError(new TypeError("boom"), getDictionary("en"))).toBe(
+      "The import failed. Try again with another file.",
     );
   });
 });
