@@ -435,7 +435,6 @@ function Screening({
   useEffect(() => {
     const inertRoots = [
       document.querySelector(".site-header"),
-      document.querySelector(".site-footer"),
       document.querySelector(".draw-room"),
       document.querySelector(".draw-player"),
     ].filter((node): node is HTMLElement => node instanceof HTMLElement);

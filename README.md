@@ -100,11 +100,11 @@ The file is read in your browser and is never uploaded to a server. Only the fil
 
 ### Attribution
 
-The app footer reads:
+The `/a-propos` page, linked from the header, carries the credits and reads:
 
 > Données des films fournies par TMDB et disponibilités par JustWatch. Tonight’s Movie n’est ni soutenu ni certifié par TMDB ou JustWatch.
 
-In English: film data is provided by TMDB and availability by JustWatch. This product uses the TMDB API but is not endorsed or certified by TMDB or JustWatch. The footer also carries the official TMDB logo (`public/tmdb-logo.svg`), as the [TMDB logo guidelines](https://www.themoviedb.org/about/logos-attribution) ask. Tonight’s Movie is also independent of Letterboxd. Keep this attribution in the footer of any deployment.
+In English: film data is provided by TMDB and availability by JustWatch. This product uses the TMDB API but is not endorsed or certified by TMDB or JustWatch. The page also carries the official TMDB logo (`public/tmdb-logo.svg`), as the [TMDB logo guidelines](https://www.themoviedb.org/about/logos-attribution) ask. Tonight’s Movie is also independent of Letterboxd. Keep this attribution on the `/a-propos` page in any deployment.
 
 ## Architecture
 
