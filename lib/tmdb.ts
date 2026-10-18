@@ -299,3 +299,22 @@ export async function discoverMovies(
     results: summarizeAll(data.results),
   };
 }
+
+/**
+ * The films a provider streams with its subscription, most popular first. Horror and
+ * documentaries are left out and a vote floor drops obscure titles: the home page shows
+ * these to every visitor.
+ */
+export async function popularOnProvider(providerId: number): Promise<MovieSummary[]> {
+  const data = await tmdbGet<TmdbPage>("/discover/movie", {
+    language: LANGUAGE,
+    watch_region: REGION,
+    with_watch_providers: String(providerId),
+    with_watch_monetization_types: "flatrate",
+    include_adult: "false",
+    sort_by: "popularity.desc",
+    "vote_count.gte": "100",
+    without_genres: "27|99",
+  });
+  return summarizeAll(data.results);
+}
