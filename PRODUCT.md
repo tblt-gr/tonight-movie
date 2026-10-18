@@ -24,7 +24,7 @@ Desktop and mobile, mostly in the evening. No account. Services, imported Letter
 
 ## Capabilities and Constraints
 
-- Presentation page for a first visit, then settings, then the draw. Routes: `/`, `/reglages`, `/tirage`, `/films`.
+- Presentation page for a first visit, then settings, then the draw. Routes: `/`, `/reglages`, `/tirage`, `/films`, with an English version under `/en` (`/en/settings`, `/en/draw`, `/en/films`).
 - Choose streaming services among all French providers known to TMDB. At least one is required.
 - Optionally import a Letterboxd export: watchlist, lists, liked films and watched films. An (i) guide explains the export steps.
 - Draw one film at random from a chosen source (watchlist, a list, liked films, or all films on the visitor’s services) with a maximum duration and an option to exclude films already seen. Redraw without limit.

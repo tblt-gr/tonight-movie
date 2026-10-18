@@ -3,6 +3,7 @@
 import { Upload } from "lucide-react";
 import { useEffect, useId, useRef, useState, type DragEvent } from "react";
 import { ExportGuide } from "@/components/ExportGuide";
+import { useI18n } from "@/components/I18nProvider";
 import {
   describeImportError,
   importExport,
@@ -14,16 +15,9 @@ import {
 import { onReset } from "@/lib/storage";
 import { library } from "@/lib/storage/library";
 
-const plural = (count: number, one: string, many: string) => `${count} ${count > 1 ? many : one}`;
-
-function progressLabel(progress: ImportProgress) {
-  return progress.phase === "reading"
-    ? "Lecture du fichier…"
-    : `Recherche des films : ${progress.done} sur ${progress.total}`;
-}
-
 export function ImportBlock() {
   const ids = useId();
+  const { t } = useI18n();
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +60,7 @@ export function ImportBlock() {
         setUnsure(unsureFilms(await library.getFilms()).length);
       }
     } catch (reason) {
-      if (!controller.signal.aborted) setError(describeImportError(reason));
+      if (!controller.signal.aborted) setError(describeImportError(reason, t));
     } finally {
       if (running.current === controller) running.current = null;
       if (!controller.signal.aborted) setProgress(null);
@@ -92,11 +86,17 @@ export function ImportBlock() {
         setUnsure(result.stats.toCheck);
       }
     } catch (reason) {
-      if (!controller.signal.aborted) setError(describeImportError(reason));
+      if (!controller.signal.aborted) setError(describeImportError(reason, t));
     } finally {
       if (running.current === controller) running.current = null;
       if (!controller.signal.aborted) setProgress(null);
     }
+  }
+
+  function progressLabel(current: ImportProgress) {
+    return current.phase === "reading"
+      ? t.import.reading
+      : t.import.matching(current.done, current.total);
   }
 
   function drop(event: DragEvent) {
@@ -110,13 +110,10 @@ export function ImportBlock() {
   return (
     <section className="import" aria-labelledby={`${ids}-title`}>
       <div className="import-head">
-        <h2 id={`${ids}-title`}>Importer vos films Letterboxd</h2>
+        <h2 id={`${ids}-title`}>{t.import.title}</h2>
         <ExportGuide />
       </div>
-      <p>
-        Facultatif. Sans import, le tirage choisit parmi tous les films disponibles sur vos
-        services.
-      </p>
+      <p>{t.import.optional}</p>
       <div
         className={dragging ? "dropzone is-dragging" : "dropzone"}
         onDragOver={(event) => {
@@ -141,19 +138,19 @@ export function ImportBlock() {
         />
         <label htmlFor={`${ids}-file`} className="dropzone-label">
           <Upload aria-hidden="true" />
-          <span>Déposez votre archive .zip ou un fichier .csv ici</span>
-          <span className="dropzone-action">ou choisissez un fichier</span>
+          <span>{t.import.drop}</span>
+          <span className="dropzone-action">{t.import.dropAction}</span>
         </label>
       </div>
       <p id={`${ids}-privacy`} className="import-privacy">
-        Le fichier est lu dans votre navigateur. Rien n’est envoyé à un serveur de Tonight’s Movie.
+        {t.import.privacy}
       </p>
       <div role="status" className="import-status">
         {progress && (
           <>
             <span>{progressLabel(progress)}</span>
             <progress
-              aria-label="Avancement de l’import"
+              aria-label={t.import.progress}
               value={progress.phase === "matching" ? progress.done : undefined}
               max={progress.phase === "matching" ? progress.total : undefined}
             />
@@ -167,40 +164,36 @@ export function ImportBlock() {
       )}
       {unsure > 0 && !busy && (
         <div className="import-recheck">
-          <p>
-            {plural(unsure, "film n’est pas associé", "films ne sont pas associés")} avec certitude
-            à TMDB : ils n’ont ni affiche ni durée et le tirage les ignore.
-          </p>
+          <p>{t.import.unsure(unsure)}</p>
           <button type="button" className="button" onClick={() => void recheck()}>
-            Relancer la recherche
+            {t.import.recheck}
           </button>
         </div>
       )}
       {outcome && !busy && (
         <div className="import-summary" role="status">
-          <h3>Import terminé</h3>
+          <h3>{t.import.done}</h3>
           <dl className="import-figures">
             <div>
-              <dt>Watchlist</dt>
+              <dt>{t.import.watchlist}</dt>
               <dd>{outcome.summary.watchlist}</dd>
             </div>
             <div>
-              <dt>Listes</dt>
+              <dt>{t.import.lists}</dt>
               <dd>{outcome.summary.lists}</dd>
             </div>
             <div>
-              <dt>Likes</dt>
+              <dt>{t.import.likes}</dt>
               <dd>{outcome.summary.liked}</dd>
             </div>
             <div>
-              <dt>Vus</dt>
+              <dt>{t.import.seen}</dt>
               <dd>{outcome.summary.seen}</dd>
             </div>
           </dl>
           <p>
-            Le tirage peut utiliser {plural(outcome.stats.drawable, "film", "films")}.
-            {outcome.stats.toCheck > 0 &&
-              ` ${plural(outcome.stats.toCheck, "film est", "films sont")} à vérifier : la correspondance n’est pas certaine.`}
+            {t.import.usable(outcome.stats.drawable)}
+            {outcome.stats.toCheck > 0 && t.import.toCheck(outcome.stats.toCheck)}
           </p>
         </div>
       )}

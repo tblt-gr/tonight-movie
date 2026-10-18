@@ -1,4 +1,5 @@
 import { fetchWithRetry } from "@/lib/fetch-retry";
+import { DEFAULT_LOCALE, langParam, type Locale } from "@/lib/i18n/config";
 import type { DiscoverSort } from "@/lib/validation";
 import type {
   DiscoverFilters,
@@ -18,15 +19,27 @@ async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
 }
 
 /** Successful lookups only, kept for the session so a filter change never refetches. */
-const details = new Map<number, MovieDetails>();
+const details = new Map<string, MovieDetails>();
 
-export const cachedDetails = (tmdbId: number) => details.get(tmdbId);
+const detailsKey = (tmdbId: number, lang: Locale) => `${lang}:${tmdbId}`;
 
-export async function fetchDetails(tmdbId: number, signal?: AbortSignal): Promise<MovieDetails> {
-  const known = details.get(tmdbId);
+const withLang = (url: string, lang: Locale) => {
+  const param = langParam(lang);
+  return param ? `${url}${url.includes("?") ? "&" : "?"}${param}` : url;
+};
+
+export const cachedDetails = (tmdbId: number, lang: Locale = DEFAULT_LOCALE) =>
+  details.get(detailsKey(tmdbId, lang));
+
+export async function fetchDetails(
+  tmdbId: number,
+  signal?: AbortSignal,
+  lang: Locale = DEFAULT_LOCALE,
+): Promise<MovieDetails> {
+  const known = cachedDetails(tmdbId, lang);
   if (known) return known;
-  const fresh = await getJson<MovieDetails>(`/api/movie/${tmdbId}`, signal);
-  details.set(tmdbId, fresh);
+  const fresh = await getJson<MovieDetails>(withLang(`/api/movie/${tmdbId}`, lang), signal);
+  details.set(detailsKey(tmdbId, lang), fresh);
   return fresh;
 }
 
@@ -37,6 +50,7 @@ export function fetchDiscover(
   sort: DiscoverSort,
   filters: DiscoverFilters,
   signal?: AbortSignal,
+  lang: Locale = DEFAULT_LOCALE,
 ) {
   const params = new URLSearchParams({ providers: providers.join(",") });
   if (maxRuntime !== null) params.set("maxRuntime", String(maxRuntime));
@@ -47,11 +61,15 @@ export function fetchDiscover(
   if (filters.genres.length > 0) params.set("genres", filters.genres.join(","));
   params.set("page", String(page));
   params.set("sort", sort);
+  if (lang !== DEFAULT_LOCALE) params.set("lang", lang);
   return getJson<DiscoverResponse>(`/api/discover?${params}`, signal);
 }
 
-export async function fetchProviders(signal?: AbortSignal): Promise<Map<string, ProviderInfo>> {
-  const { providers } = await getJson<ProvidersResponse>("/api/providers", signal);
+export async function fetchProviders(
+  signal?: AbortSignal,
+  lang: Locale = DEFAULT_LOCALE,
+): Promise<Map<string, ProviderInfo>> {
+  const { providers } = await getJson<ProvidersResponse>(withLang("/api/providers", lang), signal);
   return new Map(providers.map((provider) => [provider.id, provider]));
 }
 

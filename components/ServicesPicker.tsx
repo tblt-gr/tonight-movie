@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { useI18n } from "@/components/I18nProvider";
 import { MultiSelect } from "@/components/MultiSelect";
+import { langParam } from "@/lib/i18n/config";
 import { summarizeNames, validateServices } from "@/lib/services";
 import { resetAll } from "@/lib/storage";
 import { loadSettings, updateSettings } from "@/lib/storage/settings";
@@ -12,6 +14,7 @@ type Status = "loading" | "ready" | "error";
 
 export function ServicesPicker({ children }: { children?: ReactNode }) {
   const router = useRouter();
+  const { lang, t, href } = useI18n();
   const ids = useId();
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [status, setStatus] = useState<Status>("loading");
@@ -24,7 +27,9 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/providers", { signal: controller.signal })
+    fetch(`/api/providers${langParam(lang) ? `?${langParam(lang)}` : ""}`, {
+      signal: controller.signal,
+    })
       .then((response) => (response.ok ? (response.json() as Promise<ProvidersResponse>) : null))
       .then((data) => {
         if (!data) return setStatus("error");
@@ -35,7 +40,7 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
         if (!(reason instanceof DOMException && reason.name === "AbortError")) setStatus("error");
       });
     return () => controller.abort();
-  }, [attempt]);
+  }, [attempt, lang]);
 
   function change(next: ReadonlySet<string>) {
     setError(null);
@@ -44,11 +49,11 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const problem = validateServices(selected);
+    const problem = validateServices(selected) === "none" ? t.services.needOne : null;
     setError(problem);
     if (problem) return;
     updateSettings({ services: [...selected] });
-    router.push("/tirage");
+    router.push(href("draw"));
   }
 
   function retry() {
@@ -64,45 +69,39 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
   }
 
   const count = selected.size;
-  const summary =
-    count === 0
-      ? "Aucun service choisi"
-      : `${count} service${count > 1 ? "s" : ""} choisi${count > 1 ? "s" : ""}`;
+  const summary = count === 0 ? t.services.none : t.services.count(count);
 
   return (
     <>
       <form className="services" onSubmit={submit} noValidate>
         <fieldset className="services-group" aria-describedby={error ? `${ids}-error` : undefined}>
-          <legend className="services-title">Vos services de streaming</legend>
-          <p className="services-hint">
-            Choisissez les abonnements que vous avez. Le tirage ne propose que des films disponibles
-            chez eux.
-          </p>
+          <legend className="services-title">{t.services.title}</legend>
+          <p className="services-hint">{t.services.hint}</p>
           {status === "ready" && (
             <p className="services-count" role="status">
               {summary}
             </p>
           )}
-          {status === "loading" && <p role="status">Chargement des services…</p>}
+          {status === "loading" && <p role="status">{t.services.loading}</p>}
           {status === "error" && (
             <div role="alert" className="services-message">
-              <p>Impossible de charger la liste des services.</p>
+              <p>{t.services.loadError}</p>
               <button type="button" className="button ghost" onClick={retry}>
-                Réessayer
+                {t.common.retry}
               </button>
             </div>
           )}
           {status === "ready" && (
             <MultiSelect
-              label="Rechercher un service"
+              label={t.services.searchLabel}
               options={providers}
               selected={selected}
               onChange={change}
-              emptyMessage={(query) => `Aucun service ne correspond à « ${query} ».`}
-              removeLabel={(name) => `Retirer ${name}`}
+              emptyMessage={t.services.empty}
+              removeLabel={t.services.remove}
               summary={summarizeNames(
                 providers.filter((provider) => selected.has(provider.id)).map((p) => p.name),
-                "Rechercher un service",
+                t.services.searchLabel,
               )}
             />
           )}
@@ -113,26 +112,26 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
           </p>
         )}
         <button type="submit" className="button primary">
-          Valider
+          {t.services.submit}
         </button>
       </form>
       {children}
       <section className="reset" aria-labelledby={`${ids}-reset`}>
-        <h2 id={`${ids}-reset`}>Vos données</h2>
-        <p>Efface vos services, vos listes importées et vos films vus de ce navigateur.</p>
+        <h2 id={`${ids}-reset`}>{t.services.dataTitle}</h2>
+        <p>{t.services.dataText}</p>
         {confirming ? (
           <div role="alertdialog" aria-labelledby={`${ids}-confirm`} className="reset-confirm">
-            <p id={`${ids}-confirm`}>Cette action est définitive. Tout effacer ?</p>
+            <p id={`${ids}-confirm`}>{t.services.confirm}</p>
             <button type="button" className="button danger" onClick={erase}>
-              Oui, tout effacer
+              {t.services.confirmYes}
             </button>
             <button type="button" className="button ghost" onClick={() => setConfirming(false)}>
-              Annuler
+              {t.services.cancel}
             </button>
           </div>
         ) : (
           <button type="button" className="button ghost" onClick={() => setConfirming(true)}>
-            Effacer mes données
+            {t.services.erase}
           </button>
         )}
       </section>

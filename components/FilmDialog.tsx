@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { CardFilm } from "@/components/FilmCard";
 import { FilmOffers } from "@/components/FilmOffers";
 import { FilmPoster } from "@/components/FilmPoster";
+import { useI18n } from "@/components/I18nProvider";
 import { cachedDetails, fetchDetails } from "@/lib/browse-client";
 import { formatMinutes, formatRating } from "@/lib/catalog";
 import type { MovieDetails } from "@/lib/types";
@@ -24,21 +25,22 @@ export function FilmDialog({
   /** The card that opened the dialog, focused again on close. */
   opener: React.RefObject<HTMLElement | null>;
 }) {
+  const { lang, t } = useI18n();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const { tmdbId } = film;
 
   useEffect(() => {
-    if (tmdbId === null || cachedDetails(tmdbId)) return;
+    if (tmdbId === null || cachedDetails(tmdbId, lang)) return;
     const controller = new AbortController();
-    fetchDetails(tmdbId, controller.signal)
+    fetchDetails(tmdbId, controller.signal, lang)
       .then((detail) => setLoaded({ id: film.id, detail }))
       .catch(() => {
         if (!controller.signal.aborted) setLoaded({ id: film.id, detail: "failed" });
       });
     return () => controller.abort();
-  }, [film.id, tmdbId]);
+  }, [film.id, tmdbId, lang]);
 
-  const known = tmdbId === null ? undefined : cachedDetails(tmdbId);
+  const known = tmdbId === null ? undefined : cachedDetails(tmdbId, lang);
   const state = known ?? (loaded?.id === film.id ? loaded.detail : undefined);
   const detail = typeof state === "object" ? state : null;
   const waiting = tmdbId !== null && state === undefined;
@@ -57,7 +59,11 @@ export function FilmDialog({
           }}
         >
           <div className="film-dialog-poster">
-            <FilmPoster title={film.title} poster={detail?.poster ?? film.poster} />
+            <FilmPoster
+              title={film.title}
+              poster={detail?.poster ?? film.poster}
+              alt={t.common.posterOf(film.title)}
+            />
           </div>
           <div className="film-dialog-info">
             <Dialog.Title className="dialog-title">
@@ -66,34 +72,31 @@ export function FilmDialog({
             </Dialog.Title>
             <dl className="result-figures">
               <div>
-                <dt>Durée</dt>
-                <dd>{formatMinutes(runtime)}</dd>
+                <dt>{t.common.duration}</dt>
+                <dd>{formatMinutes(runtime, t)}</dd>
               </div>
               <div>
-                <dt>Note TMDB</dt>
-                <dd>{formatRating(rating)}</dd>
+                <dt>{t.common.tmdbRating}</dt>
+                <dd>{formatRating(rating, t)}</dd>
               </div>
             </dl>
             <Dialog.Description className="result-synopsis">
               {waiting
-                ? "Chargement de la fiche…"
-                : detail?.overview ||
-                  (tmdbId === null
-                    ? "Synopsis indisponible : ce film n’a pas pu être associé avec certitude à TMDB."
-                    : "Synopsis indisponible.")}
+                ? t.dialog.loading
+                : detail?.overview || (tmdbId === null ? t.dialog.unmatched : t.draw.noSynopsis)}
             </Dialog.Description>
             {detail ? (
               <FilmOffers film={detail} services={services} directLinks />
             ) : (
               !waiting && (
                 <p className="tag-check">
-                  <span className="tag">À vérifier</span> La disponibilité n’est pas confirmée.
+                  <span className="tag">{t.common.toCheck}</span> {t.offers.unconfirmed}
                 </p>
               )
             )}
           </div>
-          <Dialog.Close className="button">Fermer</Dialog.Close>
-          <Dialog.Close className="icon-button dialog-x" aria-label="Fermer">
+          <Dialog.Close className="button">{t.common.close}</Dialog.Close>
+          <Dialog.Close className="icon-button dialog-x" aria-label={t.common.close}>
             <X aria-hidden="true" />
           </Dialog.Close>
         </Dialog.Content>

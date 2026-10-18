@@ -1,5 +1,6 @@
 import { ApiFailure } from "@/lib/errors";
 import { MAX_GENRES } from "@/lib/genres";
+import { DEFAULT_LOCALE, hasLocale, type Locale } from "@/lib/i18n/config";
 import type { DiscoverFilters } from "@/lib/types";
 
 export const MAX_PAGE = 500;
@@ -56,6 +57,17 @@ export function parseNoParams(searchParams: URLSearchParams) {
   pick(searchParams, []);
 }
 
+/** The language of titles and synopses, French when the caller does not say. */
+function locale(raw: string | null): Locale {
+  if (raw === null) return DEFAULT_LOCALE;
+  if (!hasLocale(raw)) throw bad("lang is not supported");
+  return raw;
+}
+
+export function parseLangOnly(searchParams: URLSearchParams): Locale {
+  return locale(pick(searchParams, ["lang"])("lang"));
+}
+
 function genreList(raw: string): number[] {
   const parts = raw.split(",");
   if (parts.length > MAX_GENRES) throw bad(`genres accepts at most ${MAX_GENRES} ids`);
@@ -75,6 +87,7 @@ export function parseDiscover(searchParams: URLSearchParams) {
     "genres",
     "page",
     "sort",
+    "lang",
   ]);
   const rawProviders = get("providers");
   if (!rawProviders) throw bad("providers is required");
@@ -111,5 +124,6 @@ export function parseDiscover(searchParams: URLSearchParams) {
     } satisfies DiscoverFilters,
     page: rawPage === null ? 1 : integer(rawPage, "page", 1, MAX_PAGE),
     sort: sort as DiscoverSort,
+    lang: locale(get("lang")),
   };
 }

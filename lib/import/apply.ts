@@ -5,6 +5,7 @@ import {
   parseLetterboxdExport,
   type ImportResult,
 } from "@/lib/import/letterboxd";
+import type { Dictionary } from "@/lib/i18n";
 import { isDrawable } from "@/lib/match";
 import { fetchSearch, resolveFilms, type Resolver } from "@/lib/resolve";
 import type { FilmInput } from "@/lib/storage/library";
@@ -36,11 +37,9 @@ export type ImportProgress =
 
 export type ImportOutcome = { summary: ImportSummary; stats: MatchStats };
 
-const GENERIC_ERROR = "L’import a échoué. Réessayez avec un autre fichier.";
-
-/** A French, user-facing sentence for any failure raised by an import. */
-export function describeImportError(error: unknown): string {
-  return error instanceof ImportError ? error.message : GENERIC_ERROR;
+/** A user-facing sentence, in the visitor's language, for any failure raised by an import. */
+export function describeImportError(error: unknown, t: Dictionary): string {
+  return t.import.errors[error instanceof ImportError ? error.code : "generic"];
 }
 
 export function summarizeImport(result: ImportResult): ImportSummary {
