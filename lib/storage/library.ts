@@ -40,13 +40,15 @@ const settled = <T>(request: IDBRequest<T>) =>
 function mergeFilm(existing: StoredFilm | undefined, input: FilmInput): StoredFilm {
   const lists = [...new Set([...(existing?.lists ?? []), ...(input.lists ?? [])])];
   if (!existing) return { ...input, lists };
+  const sure = existing.tmdbId !== null && (existing.confidence ?? 0) >= 1;
   return {
     key: existing.key,
     title: input.title,
     year: input.year ?? existing.year,
-    // A resolved id outlives a re-import, which keeps differential syncs cheap.
-    tmdbId: existing.tmdbId ?? input.tmdbId,
-    confidence: existing.tmdbId === null ? input.confidence : existing.confidence,
+    // A sure match outlives a re-import, which keeps differential syncs cheap; a weak one is
+    // replaced so that a better search can correct it.
+    tmdbId: sure ? existing.tmdbId : input.tmdbId,
+    confidence: sure ? existing.confidence : input.confidence,
     lists,
     // A film already seen stays seen: a plain list import carries no diary data.
     seen: existing.seen || input.seen,

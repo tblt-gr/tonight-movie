@@ -166,3 +166,25 @@ export async function importExport(
   });
   return { summary, stats: matchStats(await store.getFilms(), new Set(keys)) };
 }
+
+/** Films the draw cannot use yet: never matched, or matched without certainty. */
+export const unsureFilms = (films: StoredFilm[]) =>
+  films.filter((film) => film.confidence === null || !isDrawable(film));
+
+/**
+ * Searches again for every film that is not a sure match, so a better search corrects
+ * matches stored by an older one.
+ */
+export async function recheckFilms(
+  store: ImportStore,
+  options: Pick<ImportOptions, "onProgress" | "signal"> = {},
+): Promise<MatchStats> {
+  const unsure = unsureFilms(await store.getFilms());
+  await store.upsertFilms(unsure.map((film) => ({ ...film, tmdbId: null, confidence: null })));
+  const keys = unsure.map((film) => film.key);
+  await resolveFilms(keys, store, fetchSearch(options.signal), {
+    signal: options.signal,
+    onProgress: (done, total) => options.onProgress?.({ phase: "matching", done, total }),
+  });
+  return matchStats(await store.getFilms(), new Set(keys));
+}

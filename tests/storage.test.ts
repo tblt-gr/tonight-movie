@@ -191,15 +191,23 @@ describe("library", () => {
 
   it("keeps the resolved TMDB id and merges list memberships", async () => {
     const lib = createLibrary(() => factory);
-    await lib.upsertFilms([film({ tmdbId: 42, confidence: 0.9 })]);
+    await lib.upsertFilms([film({ tmdbId: 42, confidence: 1 })]);
     await lib.upsertFilms([film({ lists: ["favourites"], tmdbId: null, confidence: null })]);
-    await lib.upsertFilms([film({ lists: ["watchlist"], tmdbId: 7, confidence: 0.1 })]);
+    await lib.upsertFilms([film({ lists: ["watchlist"], tmdbId: 7, confidence: 0.5 })]);
     const [stored] = await lib.getFilms();
     expect(stored).toMatchObject({
       tmdbId: 42,
-      confidence: 0.9,
+      confidence: 1,
       lists: ["watchlist", "favourites"],
     });
+  });
+
+  it("lets a new search replace a weak match", async () => {
+    const lib = createLibrary(() => factory);
+    await lib.upsertFilms([film({ tmdbId: 7, confidence: 0.5 })]);
+    await lib.upsertFilms([film({ tmdbId: 42, confidence: 1 })]);
+    const [stored] = await lib.getFilms();
+    expect(stored).toMatchObject({ tmdbId: 42, confidence: 1 });
   });
 
   it("never un-sees a film", async () => {
