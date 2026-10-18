@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import { FilmPoster } from "@/components/FilmPoster";
 import { HomeRedirect } from "@/components/HomeRedirect";
+import { REEL_PROVIDERS, pickReel } from "@/lib/home-reel";
+import { getProviders, popularOnProvider } from "@/lib/tmdb";
 
 export const metadata: Metadata = {
   title: "Tonight’s Movie — Un seul film pour ce soir",
   description:
     "Vous ne savez pas quoi regarder ce soir ? Indiquez vos plateformes en France et laissez le hasard choisir un film que vous pouvez lancer maintenant.",
 };
+
+/** The reel is rebuilt from TMDB at most once a day, like the data behind it. */
+export const revalidate = 86400;
 
 const steps = [
   {
@@ -32,7 +39,22 @@ const REEL = [
   { title: "Playtime", tone: "tone-2" },
 ];
 
-export default function HomePage() {
+/** One popular film per provider, or `null` when TMDB cannot supply all of them. */
+async function loadReel() {
+  const [popular, providers] = await Promise.all([
+    Promise.allSettled(REEL_PROVIDERS.map(({ id }) => popularOnProvider(id))),
+    getProviders().catch(() => null),
+  ]);
+  const logos = new Map(providers?.providers.map((provider) => [provider.id, provider.logo]));
+  const reel = pickReel(
+    popular.map((result) => (result.status === "fulfilled" ? result.value : [])),
+  );
+  if (reel.length !== REEL_PROVIDERS.length) return null;
+  return reel.map((film) => ({ ...film, logo: logos.get(String(film.providerId)) ?? null }));
+}
+
+export default async function HomePage() {
+  const reel = await loadReel();
   return (
     <>
       <HomeRedirect />
@@ -51,15 +73,36 @@ export default function HomePage() {
             <Link className="button primary" href="/reglages">
               Commencer
             </Link>
-            <Popcorn />
+            <Image
+              className="decor-popcorn"
+              src="/popcorn.png"
+              alt=""
+              width={72}
+              height={94}
+              draggable={false}
+            />
           </div>
         </div>
         <div className="home-reel" aria-hidden="true">
-          {REEL.map((poster) => (
-            <div key={poster.title} className={`poster-card ${poster.tone}`}>
-              <b>{poster.title}</b>
-            </div>
-          ))}
+          {reel
+            ? reel.map((film) => (
+                <div key={film.tmdbId} className="poster-card has-poster">
+                  <FilmPoster title={film.title} poster={film.poster} />
+                  <span className="poster-provider">
+                    {film.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- Official TMDB logo, served as is.
+                      <img src={film.logo} alt={film.provider} width={32} height={32} />
+                    ) : (
+                      film.provider
+                    )}
+                  </span>
+                </div>
+              ))
+            : REEL.map((poster) => (
+                <div key={poster.title} className={`poster-card ${poster.tone}`}>
+                  <b>{poster.title}</b>
+                </div>
+              ))}
         </div>
       </section>
       <ol className="home-steps" aria-label="Comment ça marche">
@@ -71,32 +114,5 @@ export default function HomePage() {
         ))}
       </ol>
     </>
-  );
-}
-
-function Popcorn() {
-  return (
-    <svg className="decor-popcorn" viewBox="0 0 100 124" aria-hidden="true" focusable="false">
-      <g className="kernel">
-        <circle cx="26" cy="34" r="12" />
-        <circle cx="40" cy="26" r="11" />
-        <circle cx="55" cy="24" r="14" />
-        <circle cx="70" cy="32" r="12" />
-        <circle cx="48" cy="38" r="12" />
-        <circle cx="64" cy="40" r="10" />
-        <circle cx="34" cy="42" r="10" />
-      </g>
-      <g className="fleck">
-        <circle cx="38" cy="22" r="3.4" />
-        <circle cx="62" cy="20" r="3.4" />
-        <circle cx="74" cy="30" r="3" />
-        <circle cx="52" cy="40" r="2.6" />
-      </g>
-      <circle className="kernel" cx="88" cy="60" r="6" />
-      <circle className="kernel" cx="8" cy="76" r="4.5" />
-      <path className="bucket" d="M12 48 Q50 56 88 48 L79 114 Q50 120 21 114 Z" />
-      <path className="stripe" d="M26 52 L30 116 M50 54 V119 M74 52 L70 116" />
-      <path className="stripe rim" d="M12 48 Q50 56 88 48" />
-    </svg>
   );
 }
