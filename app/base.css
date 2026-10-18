@@ -111,18 +111,15 @@ svg {
 }
 .site-nav a {
   padding: 6px 0;
-  border-bottom: 3px solid transparent;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-decoration: none;
   text-transform: uppercase;
 }
-.site-nav a[aria-current="page"] {
-  border-bottom-color: var(--red);
-}
+.site-nav a[aria-current="page"],
 .gear[aria-current="page"] {
-  border-color: var(--red);
+  color: var(--live);
 }
 .gear {
   display: inline-flex;
