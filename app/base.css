@@ -330,6 +330,10 @@ svg {
   color: var(--text);
   font-weight: 700;
 }
+.multiselect-input::placeholder {
+  color: var(--text);
+  opacity: 1;
+}
 .multiselect-popup {
   position: absolute;
   top: 100%;
@@ -1151,7 +1155,7 @@ html[data-home-redirect] .home-steps {
   display: grid;
   transform: translateX(-50%);
   border: 3px solid var(--bg);
-  border-radius: 10px;
+  border-radius: 5px;
   overflow: hidden;
   font-size: 12px;
   font-weight: 700;
@@ -1273,6 +1277,19 @@ html[data-home-redirect] .home-steps {
   border-top: 2px solid var(--text);
   border-bottom: 1px solid var(--line);
 }
+/* One control height across the bar, as in the draw bar. */
+.filters .select,
+.filters .button,
+.filters .multiselect-input,
+.filters input[type="search"] {
+  box-sizing: border-box;
+  height: 48px;
+  padding-block: 0;
+}
+.filter-services {
+  flex: 1 1 260px;
+  max-width: 560px;
+}
 .filter {
   display: grid;
   gap: 6px;
@@ -1294,28 +1311,25 @@ html[data-home-redirect] .home-steps {
   color: var(--text);
   font-weight: 700;
 }
-.filters-count {
-  margin-left: auto;
-  font-size: 36px;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.filters-count .label {
-  margin-left: var(--s1);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
+.browse-filters-panel {
+  flex: 1 0 100%;
+  order: 1;
+  align-items: end;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s4) var(--s5);
+  padding-top: var(--s3);
 }
 .view-toggle {
   display: flex;
+  margin-left: auto;
 }
 .view-toggle .button {
   display: inline-flex;
   align-items: center;
-  gap: var(--s2);
-  padding-inline: var(--s4);
+  justify-content: center;
+  width: 48px;
+  padding-inline: 0;
 }
 .view-toggle .button + .button {
   margin-left: -2px;
@@ -1325,8 +1339,8 @@ html[data-home-redirect] .home-steps {
   color: var(--bg);
 }
 .view-toggle svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 .browse-status {
   margin: var(--s5) 0 var(--s4);
@@ -1408,7 +1422,9 @@ html[data-home-redirect] .home-steps {
   font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .film-card-meta {
   color: var(--muted);
@@ -1417,9 +1433,18 @@ html[data-home-redirect] .home-steps {
 }
 .film-card-tags {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: var(--s2);
   margin-top: var(--s1);
+  overflow: hidden;
+}
+.film-card-tags img {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--panel2);
 }
 .tag-offer {
   border-style: solid;
@@ -1579,6 +1604,9 @@ html[data-home-redirect] .home-steps {
   .filters > .button {
     min-width: 0;
   }
+  .browse-filters-panel {
+    grid-column: 1 / -1;
+  }
   .filter {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1588,9 +1616,6 @@ html[data-home-redirect] .home-steps {
   .filters .check,
   .filters > .button {
     grid-column: 1 / -1;
-  }
-  .filters-count {
-    display: none;
   }
   .view-toggle .button {
     flex: 1;

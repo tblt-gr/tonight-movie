@@ -6,14 +6,14 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { FilmCard, type CardFilm } from "@/components/FilmCard";
 import { FilmDialog } from "@/components/FilmDialog";
+import { MultiSelect } from "@/components/MultiSelect";
+import { RangeField } from "@/components/RangeField";
 import {
   DEFAULT_FILTERS,
   LOOKUP_BATCH,
   PAGE_SIZE,
   SERVICE_ANY,
-  SERVICE_MINE,
   filterGlobalResults,
-  genresOf,
   parseFilters,
   planListPage,
   seenIndex,
@@ -27,14 +27,23 @@ import {
   type ListPlan,
   type Shown,
 } from "@/lib/browse";
-import { fetchDetails, fetchDiscover, fetchProviderNames, mapLimit } from "@/lib/browse-client";
+import { fetchDetails, fetchDiscover, fetchProviders, mapLimit } from "@/lib/browse-client";
 import { SERVICES_SOURCE_ID, effectiveSources } from "@/lib/draw";
+import { GENRES, genreIds } from "@/lib/genres";
 import {
-  SERVICES_SOURCE_LABEL,
+  DURATION_SCALE,
+  RATING_SCALE,
   durationLabel,
   durationOptions,
+  hoursLabel,
+  keepOrder,
+  limitAt,
   offersToShow,
+  positionOf,
+  sourceOptions,
+  yearScale,
 } from "@/lib/draw-state";
+import { summarizeNames } from "@/lib/services";
 import { fetchSearch, resolveFilms } from "@/lib/resolve";
 import { onReset } from "@/lib/storage";
 import { library } from "@/lib/storage/library";
@@ -47,7 +56,7 @@ import {
 import { loadSettings } from "@/lib/storage/settings";
 import type { DiscoverSort } from "@/lib/validation";
 import { MAX_PROVIDERS } from "@/lib/validation";
-import type { MovieSummary } from "@/lib/types";
+import type { MovieSummary, ProviderInfo } from "@/lib/types";
 
 const SORT_LABELS: Record<BrowseSort, string> = {
   rank: "Ordre de la source",
@@ -89,9 +98,18 @@ export function FilmBrowser() {
   const [lists, setLists] = useState<StoredList[]>([]);
   const [films, setFilms] = useState<StoredFilm[]>([]);
   const [ready, setReady] = useState(false);
-  const [providerNames, setProviderNames] = useState<Map<string, string>>(new Map());
+  const [providerInfo, setProviderInfo] = useState<Map<string, ProviderInfo>>(new Map());
   const [queryInput, setQueryInput] = useState(filters.query);
   const [paging, setPaging] = useState({ key: filterKey, limit: PAGE_SIZE });
+  const [advancedOpen, setAdvancedOpen] = useState(
+    () =>
+      filters.maxDuration !== null ||
+      filters.minDuration !== null ||
+      filters.minRating !== null ||
+      filters.minYear !== null ||
+      filters.maxYear !== null ||
+      filters.genres.length > 0,
+  );
   const [retry, setRetry] = useState(0);
   const [selected, setSelected] = useState<CardFilm | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
@@ -102,7 +120,6 @@ export function FilmBrowser() {
   const [, setTick] = useState(0);
 
   const [plan, setPlan] = useState<ListPlan>(EMPTY_PLAN);
-  const [genres, setGenres] = useState<string[]>([]);
   const [global, setGlobal] = useState<GlobalState | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -124,8 +141,8 @@ export function FilmBrowser() {
     void refresh();
     const stop = onReset(() => void refresh());
     const controller = new AbortController();
-    fetchProviderNames(controller.signal)
-      .then(setProviderNames)
+    fetchProviders(controller.signal)
+      .then(setProviderInfo)
       .catch(() => undefined);
     return () => {
       alive = false;
@@ -134,7 +151,7 @@ export function FilmBrowser() {
     };
   }, []);
 
-  const sources = effectiveSources(settings.sources, lists);
+  const sources = effectiveSources(filters.source ? [filters.source] : settings.sources, lists);
   const listIds = useMemo(
     () => new Set(sources.filter((id) => id !== SERVICES_SOURCE_ID)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `sources` is rebuilt on each render.
@@ -146,14 +163,6 @@ export function FilmBrowser() {
     [films, listIds],
   );
   const services = useMemo(() => new Set(settings.services), [settings.services]);
-  const sourceNames = sources
-    .map((id) =>
-      id === SERVICES_SOURCE_ID
-        ? SERVICES_SOURCE_LABEL
-        : lists.find((list) => list.id === id)?.name,
-    )
-    .filter(Boolean)
-    .join(", ");
   const hasSeen = useMemo(() => films.some((film) => film.seen), [films]);
 
   const update = useCallback(
@@ -187,7 +196,6 @@ export function FilmBrowser() {
         );
         if (signal.aborted) return;
         setPlan(next);
-        setGenres(genresOf(detailsRef.current.values()));
         if (next.pending.length === 0) {
           setBusy(false);
           return;
@@ -239,12 +247,22 @@ export function FilmBrowser() {
   // The global source: TMDB discover pages, then the details of each page for chips and duration.
   const providers = useMemo(() => {
     const own = settings.services.map(Number).filter(Number.isFinite);
-    const wanted = /^\d+$/.test(filters.service) ? [Number(filters.service)] : own;
-    return wanted.slice(0, MAX_PROVIDERS);
-  }, [settings.services, filters.service]);
+    const chosen = filters.services.filter((id) => /^\d+$/.test(id)).map(Number);
+    return (chosen.length > 0 ? chosen : own).slice(0, MAX_PROVIDERS);
+  }, [settings.services, filters.services]);
   const discoverSort = DISCOVER_SORT[filters.sort];
   const pagesWanted = Math.ceil(limit / PAGE_SIZE);
-  const globalKey = `${providers.join(",")}|${filters.maxDuration}|${discoverSort}`;
+  const discoverFilters = useMemo(
+    () => ({
+      minRuntime: filters.minDuration,
+      minRating: filters.minRating,
+      minYear: filters.minYear,
+      maxYear: filters.maxYear,
+      genres: genreIds(filters.genres),
+    }),
+    [filters.minDuration, filters.minRating, filters.minYear, filters.maxYear, filters.genres],
+  );
+  const globalKey = `${providers.join(",")}|${filters.maxDuration}|${discoverSort}|${JSON.stringify(discoverFilters)}`;
   const globalRef = useRef<GlobalState | null>(null);
 
   useEffect(() => {
@@ -267,6 +285,7 @@ export function FilmBrowser() {
             filters.maxDuration,
             state.page + 1,
             discoverSort,
+            discoverFilters,
             signal,
           );
         } catch {
@@ -303,10 +322,20 @@ export function FilmBrowser() {
       setBusy(false);
     })();
     return () => controller.abort();
-  }, [ready, mode, providers, globalKey, pagesWanted, filters.maxDuration, discoverSort, retry]);
+  }, [
+    ready,
+    mode,
+    providers,
+    globalKey,
+    pagesWanted,
+    filters.maxDuration,
+    discoverSort,
+    discoverFilters,
+    retry,
+  ]);
 
-  const offerNames = (detail: Parameters<typeof offersToShow>[0] | undefined) =>
-    detail ? offersToShow(detail, services).map((offer) => offer.name) : [];
+  const cardOffers = (detail: Parameters<typeof offersToShow>[0] | undefined) =>
+    detail ? offersToShow(detail, services).map(({ name, icon }) => ({ name, icon })) : [];
 
   const cards: CardFilm[] = useMemo(() => {
     if (mode === "lists") {
@@ -318,7 +347,7 @@ export function FilmBrowser() {
         poster: detail?.poster ?? null,
         rating: detail?.rating ?? null,
         runtime: detail?.runtime ?? null,
-        offerNames: offerNames(detail),
+        offers: cardOffers(detail),
         uncertain,
       }));
     }
@@ -335,26 +364,60 @@ export function FilmBrowser() {
         poster: movie.poster,
         rating: movie.rating,
         runtime: loaded?.runtime ?? null,
-        offerNames: offerNames(loaded),
+        offers: cardOffers(loaded),
         uncertain: false,
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `offerNames` only reads `services`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `cardOffers` only reads `services`.
   }, [mode, plan, filters.sort, filters.hideSeen, global, globalKey, films, services]);
 
-  const serviceOptions = [
-    { value: SERVICE_MINE, label: "Tous mes services" },
-    ...settings.services.map((id) => ({
-      value: id,
-      label: providerNames.get(id) ?? `Service ${id}`,
-    })),
-    ...(mode === "lists" ? [{ value: SERVICE_ANY, label: "Peu importe" }] : []),
+  const serviceOptions: ProviderInfo[] = [
+    ...(mode === "lists" ? [{ id: SERVICE_ANY, name: "Peu importe", logo: null }] : []),
+    ...settings.services.map(
+      (id) => providerInfo.get(id) ?? { id, name: `Service ${id}`, logo: null },
+    ),
   ];
-  const serviceValue = serviceOptions.some((option) => option.value === filters.service)
-    ? filters.service
-    : SERVICE_MINE;
-  const genreOptions =
-    filters.genre && !genres.includes(filters.genre) ? [...genres, filters.genre] : genres;
+  const serviceSelected = useMemo(
+    () => new Set(filters.services.filter((id) => serviceOptions.some((o) => o.id === id))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `serviceOptions` follows these two.
+    [filters.services, settings.services, providerInfo, mode],
+  );
+  const chosenNames = serviceOptions.filter((o) => serviceSelected.has(o.id)).map((o) => o.name);
+  const servicesSummary = summarizeNames(chosenNames, "Tous mes services");
+  const years = yearScale();
+  const sourceValue = sources.length === 1 ? sources[0] : "many";
+  const advancedCount =
+    (filters.maxDuration !== null ? 1 : 0) +
+    (filters.hideSeen ? 1 : 0) +
+    (filters.minDuration !== null ? 1 : 0) +
+    (filters.minRating !== null ? 1 : 0) +
+    (filters.minYear !== null ? 1 : 0) +
+    (filters.maxYear !== null ? 1 : 0) +
+    (filters.genres.length > 0 ? 1 : 0);
+
+  function moveDuration(side: "minDuration" | "maxDuration", value: number) {
+    const limit = limitAt(value, side === "minDuration" ? DURATION_SCALE.min : DURATION_SCALE.max);
+    update(
+      keepOrder(
+        { minDuration: filters.minDuration, maxDuration: filters.maxDuration, [side]: limit },
+        side,
+        side === "minDuration" ? "maxDuration" : "minDuration",
+        side === "minDuration",
+      ),
+    );
+  }
+
+  function moveYear(side: "minYear" | "maxYear", value: number) {
+    const limit = limitAt(value, side === "minYear" ? years.min : years.max);
+    update(
+      keepOrder(
+        { minYear: filters.minYear, maxYear: filters.maxYear, [side]: limit },
+        side,
+        side === "minYear" ? "maxYear" : "minYear",
+        side === "minYear",
+      ),
+    );
+  }
   const sortOptions = sortsFor(mode);
   const sortValue = sortOptions.includes(filters.sort) ? filters.sort : DEFAULT_FILTERS.sort;
 
@@ -383,13 +446,31 @@ export function FilmBrowser() {
   return (
     <>
       <p className="browse-source">
-        Source : <strong>{sourceNames || SERVICES_SOURCE_LABEL}</strong>
-        {" · "}
         <Link href="/tirage">Retour au tirage</Link>
       </p>
 
       {ready && (
         <div className="filters" role="search">
+          <div className="filter">
+            <label htmlFor={`${ids}-source`}>Source</label>
+            <select
+              className="select"
+              id={`${ids}-source`}
+              value={sourceValue}
+              onChange={(event) => update({ source: event.target.value, services: [] })}
+            >
+              {sourceValue === "many" && (
+                <option value="many" disabled>
+                  Plusieurs sources
+                </option>
+              )}
+              {sourceOptions(lists).map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          </div>
           {mode === "lists" && (
             <div className="filter">
               <label htmlFor={`${ids}-q`}>Titre</label>
@@ -406,57 +487,17 @@ export function FilmBrowser() {
               />
             </div>
           )}
-          <div className="filter">
-            <label htmlFor={`${ids}-service`}>Service</label>
-            <select
-              className="select"
-              id={`${ids}-service`}
-              value={serviceValue}
-              onChange={(event) => update({ service: event.target.value })}
-            >
-              {serviceOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+          <div className="filter filter-services">
+            <MultiSelect
+              label="Services"
+              options={serviceOptions}
+              selected={serviceSelected}
+              onChange={(next) => update({ services: [...next] })}
+              emptyMessage={(query) => `Aucun service ne correspond à « ${query} ».`}
+              removeLabel={(name) => `Retirer ${name}`}
+              summary={servicesSummary}
+            />
           </div>
-          <div className="filter">
-            <label htmlFor={`${ids}-duration`}>Durée maximale</label>
-            <select
-              className="select"
-              id={`${ids}-duration`}
-              value={filters.maxDuration ?? ""}
-              onChange={(event) =>
-                update({ maxDuration: event.target.value ? Number(event.target.value) : null })
-              }
-            >
-              <option value="">Sans limite</option>
-              {durationOptions(filters.maxDuration).map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {durationLabel(minutes)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {mode === "lists" && (
-            <div className="filter">
-              <label htmlFor={`${ids}-genre`}>Genre</label>
-              <select
-                className="select"
-                id={`${ids}-genre`}
-                value={filters.genre ?? ""}
-                onChange={(event) => update({ genre: event.target.value || null })}
-              >
-                <option value="">Tous les genres</option>
-                {genreOptions.map((genre) => (
-                  <option key={genre} value={genre}>
-                    {genre}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           <div className="filter">
             <label htmlFor={`${ids}-sort`}>Tri</label>
             <select
@@ -472,57 +513,146 @@ export function FilmBrowser() {
               ))}
             </select>
           </div>
-          {hasSeen && (
-            <div className="check">
-              <input
-                id={`${ids}-seen`}
-                type="checkbox"
-                checked={filters.hideSeen}
-                onChange={(event) => update({ hideSeen: event.target.checked })}
-              />
-              <label htmlFor={`${ids}-seen`}>Masquer les films déjà vus</label>
-            </div>
-          )}
-          <div className="filter">
-            <span className="field-label" id={`${ids}-view`}>
-              Affichage
-            </span>
-            <div className="view-toggle" role="group" aria-labelledby={`${ids}-view`}>
-              <button
-                type="button"
-                className="button"
-                aria-pressed={filters.view === "grid"}
-                onClick={() => update({ view: "grid" })}
-              >
-                <LayoutGrid aria-hidden="true" /> Grille
-              </button>
-              <button
-                type="button"
-                className="button"
-                aria-pressed={filters.view === "list"}
-                onClick={() => update({ view: "list" })}
-              >
-                <List aria-hidden="true" /> Liste
-              </button>
-            </div>
-          </div>
-          {filtersChanged && (
+          <div className="view-toggle" role="group" aria-label="Affichage">
             <button
               type="button"
               className="button"
-              onClick={() => {
-                setQueryInput("");
-                update({ ...DEFAULT_FILTERS, view: filters.view });
-              }}
+              aria-pressed={filters.view === "grid"}
+              aria-label="Grille"
+              title="Grille"
+              onClick={() => update({ view: "grid" })}
             >
-              Réinitialiser
+              <LayoutGrid aria-hidden="true" />
             </button>
-          )}
-          {cards.length > 0 && (
-            <p className="filters-count" aria-hidden="true">
-              {cards.length}
-              <span className="label">{cards.length > 1 ? "films" : "film"}</span>
-            </p>
+            <button
+              type="button"
+              className="button"
+              aria-pressed={filters.view === "list"}
+              aria-label="Liste"
+              title="Liste"
+              onClick={() => update({ view: "list" })}
+            >
+              <List aria-hidden="true" />
+            </button>
+          </div>
+          <button
+            type="button"
+            className="button"
+            aria-expanded={advancedOpen}
+            aria-controls={`${ids}-advanced`}
+            onClick={() => setAdvancedOpen((open) => !open)}
+          >
+            Filtres avancés{advancedCount > 0 ? ` (${advancedCount})` : ""}
+          </button>
+          {advancedOpen && (
+            <div
+              className="browse-filters-panel"
+              id={`${ids}-advanced`}
+              role="group"
+              aria-label="Filtres avancés"
+            >
+              <div className="filter">
+                <label htmlFor={`${ids}-duration`}>Durée maximale</label>
+                <select
+                  className="select"
+                  id={`${ids}-duration`}
+                  value={filters.maxDuration ?? ""}
+                  onChange={(event) =>
+                    update({ maxDuration: event.target.value ? Number(event.target.value) : null })
+                  }
+                >
+                  <option value="">Sans limite</option>
+                  {durationOptions(filters.maxDuration).map((minutes) => (
+                    <option key={minutes} value={minutes}>
+                      {durationLabel(minutes)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {hasSeen && (
+                <div className="check">
+                  <input
+                    id={`${ids}-seen`}
+                    type="checkbox"
+                    checked={filters.hideSeen}
+                    onChange={(event) => update({ hideSeen: event.target.checked })}
+                  />
+                  <label htmlFor={`${ids}-seen`}>Masquer les films déjà vus</label>
+                </div>
+              )}
+              <RangeField
+                label="Durée minimale"
+                display={filters.minDuration === null ? "Aucune" : hoursLabel(filters.minDuration)}
+                value={positionOf(
+                  filters.minDuration,
+                  DURATION_SCALE.min,
+                  DURATION_SCALE.min,
+                  DURATION_SCALE.max,
+                )}
+                {...DURATION_SCALE}
+                onChange={(value) => moveDuration("minDuration", value)}
+              />
+              <RangeField
+                label="Note TMDB minimale"
+                display={
+                  filters.minRating === null ? "Toutes" : `${filters.minRating.toFixed(1)} / 10`
+                }
+                value={positionOf(
+                  filters.minRating,
+                  RATING_SCALE.min,
+                  RATING_SCALE.min,
+                  RATING_SCALE.max,
+                )}
+                {...RATING_SCALE}
+                onChange={(value) => update({ minRating: limitAt(value, RATING_SCALE.min) })}
+              />
+              <RangeField
+                label="Sortie à partir de"
+                display={filters.minYear === null ? "Toutes" : String(filters.minYear)}
+                value={positionOf(filters.minYear, years.min, years.min, years.max)}
+                {...years}
+                onChange={(value) => moveYear("minYear", value)}
+              />
+              <RangeField
+                label="Sortie jusqu’en"
+                display={filters.maxYear === null ? "Aujourd’hui" : String(filters.maxYear)}
+                value={positionOf(filters.maxYear, years.max, years.min, years.max)}
+                {...years}
+                onChange={(value) => moveYear("maxYear", value)}
+              />
+              <fieldset className="genre-field">
+                <legend>Genres</legend>
+                <div className="genre-chips">
+                  {GENRES.map((genre) => (
+                    <label key={genre.id} className="genre-chip">
+                      <input
+                        type="checkbox"
+                        checked={filters.genres.includes(genre.name)}
+                        onChange={(event) =>
+                          update({
+                            genres: event.target.checked
+                              ? [...filters.genres, genre.name]
+                              : filters.genres.filter((name) => name !== genre.name),
+                          })
+                        }
+                      />
+                      <span>{genre.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <button
+                type="button"
+                className="button browse-filters-reset"
+                disabled={!filtersChanged}
+                onClick={() => {
+                  setQueryInput("");
+                  update({ ...DEFAULT_FILTERS, source: filters.source, view: filters.view });
+                }}
+              >
+                Réinitialiser les filtres
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -557,7 +687,7 @@ export function FilmBrowser() {
               className="button"
               onClick={() => {
                 setQueryInput("");
-                update({ ...DEFAULT_FILTERS, view: filters.view });
+                update({ ...DEFAULT_FILTERS, source: filters.source, view: filters.view });
               }}
             >
               Réinitialiser les filtres

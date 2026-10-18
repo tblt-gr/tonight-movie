@@ -53,8 +53,13 @@ describe("URL state", () => {
     const state = filters({
       query: "Alien & co",
       maxDuration: 120,
-      service: "8",
-      genre: "Drame",
+      services: ["8", "119"],
+      genres: ["Drame", "Thriller"],
+      source: "watchlist",
+      minDuration: 60,
+      minRating: 6.5,
+      minYear: 1990,
+      maxYear: 2020,
       hideSeen: true,
       sort: "rating",
       view: "list",
@@ -70,7 +75,7 @@ describe("URL state", () => {
 
   it("falls back to the defaults for invalid values", () => {
     const params = new URLSearchParams(
-      "duration=abc&service=%3Cscript%3E&sort=nope&view=cube&seen=2&genre=",
+      "duration=abc&service=%3Cscript%3E,x&sort=nope&view=cube&seen=2&genres=nope&source=%3C&rating=99&from=12&until=abc&minduration=0",
     );
     expect(parseFilters(params)).toEqual(DEFAULT_FILTERS);
     expect(parseFilters(new URLSearchParams("duration=99999")).maxDuration).toBeNull();
@@ -96,7 +101,7 @@ describe("classifyListFilm", () => {
     const result = classifyListFilm(
       weak,
       undefined,
-      filters({ maxDuration: 60, genre: "X" }),
+      filters({ maxDuration: 60, genres: ["X"] }),
       mine,
     );
     expect(result).toEqual({ verdict: "show", uncertain: true });
@@ -120,7 +125,7 @@ describe("classifyListFilm", () => {
     });
     const film = stored({ title: "A" });
     expect(classifyListFilm(film, elsewhere, filters(), mine).verdict).toBe("hide");
-    expect(classifyListFilm(film, elsewhere, filters({ service: "all" }), mine).verdict).toBe(
+    expect(classifyListFilm(film, elsewhere, filters({ services: ["all"] }), mine).verdict).toBe(
       "show",
     );
   });
@@ -142,8 +147,12 @@ describe("classifyListFilm", () => {
 
   it("filters on one service", () => {
     const film = stored({ title: "A" });
-    expect(classifyListFilm(film, details(), filters({ service: "8" }), mine).verdict).toBe("show");
-    expect(classifyListFilm(film, details(), filters({ service: "9" }), mine).verdict).toBe("hide");
+    expect(classifyListFilm(film, details(), filters({ services: ["8"] }), mine).verdict).toBe(
+      "show",
+    );
+    expect(classifyListFilm(film, details(), filters({ services: ["9"] }), mine).verdict).toBe(
+      "hide",
+    );
   });
 
   it("filters on duration, treating an unknown runtime as too long", () => {
@@ -154,12 +163,33 @@ describe("classifyListFilm", () => {
     expect(classifyListFilm(film, details({ runtime: null }), limit, mine).verdict).toBe("hide");
   });
 
+  it("shows a film streaming on any of several chosen services", () => {
+    const film = stored({ title: "A" });
+    const verdict = (ids: string[]) =>
+      classifyListFilm(film, details(), filters({ services: ids }), mine).verdict;
+    expect(verdict(["9", "8"])).toBe("show");
+    expect(verdict(["9", "10"])).toBe("hide");
+  });
+
+  it("filters on rating, minimum runtime and release year", () => {
+    const film = stored({ title: "A" });
+    const verdict = (patch: Partial<BrowseFilters>, detail = details()) =>
+      classifyListFilm(film, detail, filters(patch), mine).verdict;
+    expect(verdict({ minRating: 8 })).toBe("hide");
+    expect(verdict({ minRating: 7 })).toBe("show");
+    expect(verdict({ minDuration: 150 }, details({ runtime: 100 }))).toBe("hide");
+    expect(verdict({ minDuration: 90 }, details({ runtime: 100 }))).toBe("show");
+    expect(verdict({ minYear: 2010 })).toBe("hide");
+    expect(verdict({ maxYear: 1990 })).toBe("hide");
+    expect(verdict({ minYear: 1990, maxYear: 2010 })).toBe("show");
+  });
+
   it("filters on genre", () => {
     const film = stored({ title: "A" });
-    expect(classifyListFilm(film, details(), filters({ genre: "Drame" }), mine).verdict).toBe(
+    expect(classifyListFilm(film, details(), filters({ genres: ["Drame"] }), mine).verdict).toBe(
       "show",
     );
-    expect(classifyListFilm(film, details(), filters({ genre: "Horreur" }), mine).verdict).toBe(
+    expect(classifyListFilm(film, details(), filters({ genres: ["Horreur"] }), mine).verdict).toBe(
       "hide",
     );
   });
