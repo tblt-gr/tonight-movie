@@ -904,16 +904,6 @@ html[data-home-redirect] .home-steps {
   align-items: flex-end;
   gap: var(--s5);
 }
-.decor-popcorn {
-  width: 72px;
-  height: auto;
-  margin-bottom: -4px;
-}
-.decor-popcorn,
-.home-reel img {
-  -webkit-user-drag: none;
-  user-select: none;
-}
 .home-reel {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -937,6 +927,10 @@ html[data-home-redirect] .home-steps {
   line-height: 1.05;
   text-transform: uppercase;
   overflow-wrap: anywhere;
+}
+.home-reel img {
+  -webkit-user-drag: none;
+  user-select: none;
 }
 .poster-card img {
   display: block;
@@ -1058,8 +1052,11 @@ html[data-home-redirect] .home-steps {
   line-height: 1.2;
   text-transform: uppercase;
 }
-.home-steps h2.is-accent {
-  color: var(--red);
+.home-steps li.is-optional {
+  border-top-color: var(--soft);
+}
+.home-steps li.is-optional h2 {
+  color: var(--muted);
 }
 .home-steps p {
   margin: 0;
@@ -1416,6 +1413,12 @@ html[data-home-redirect] .home-steps {
   .home-hero .button {
     justify-self: stretch;
   }
+  .home-cta {
+    justify-self: stretch;
+  }
+  .home-cta .button {
+    flex: 1;
+  }
   .import-figures {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1483,6 +1486,34 @@ html[data-home-redirect] .home-steps {
   }
   .home-hero h1 span:nth-child(3) {
     animation-delay: 220ms;
+  }
+  .home-lead,
+  .home-cta .button {
+    animation-name: fade-in;
+    animation-duration: 420ms;
+    animation-timing-function: var(--ease-out);
+    animation-fill-mode: backwards;
+  }
+  .home-lead {
+    animation-delay: 300ms;
+  }
+  .home-cta .button {
+    animation-delay: 420ms;
+  }
+  .home-steps li {
+    animation-name: wipe;
+    animation-duration: 520ms;
+    animation-timing-function: var(--ease-out);
+    animation-fill-mode: backwards;
+  }
+  .home-steps li:nth-child(1) {
+    animation-delay: 900ms;
+  }
+  .home-steps li:nth-child(2) {
+    animation-delay: 1010ms;
+  }
+  .home-steps li:nth-child(3) {
+    animation-delay: 1120ms;
   }
   .draw-page[data-phase="idle"] .draw-lead,
   .draw-page[data-phase="idle"] .draw-trigger {
