@@ -845,7 +845,7 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   font-weight: 700;
   text-decoration: none;
 }
-.offers-label {
+p.offers-label {
   margin: var(--s6) 0 var(--s3);
   color: var(--muted);
   font-size: 12px;
@@ -863,6 +863,9 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   color: var(--chip-ink, var(--live-ink));
   font-weight: 700;
   text-decoration: none;
+}
+.provider-link:hover {
+  color: var(--chip-ink, var(--live-ink));
 }
 .provider-link img {
   flex: none;
