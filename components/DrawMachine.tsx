@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useReducer, useRef, useState } from "react";
+import { Accordion } from "@/components/Accordion";
 import { FilmOffers } from "@/components/FilmOffers";
 import { FilmPoster } from "@/components/FilmPoster";
 import { formatMinutes, formatRating } from "@/lib/catalog";
@@ -342,48 +343,19 @@ function Result({
           <dd>{formatRating(film.rating)}</dd>
         </div>
       </dl>
-      <FilmOffers film={film} services={services} directLinks />
-      <Synopsis key={film.tmdbId} text={film.overview || "Synopsis indisponible."} />
+      <FilmOffers
+        film={film}
+        services={services}
+        directLinks
+        between={
+          <Accordion key={film.tmdbId} title="Synopsis" defaultOpen>
+            <p className="result-synopsis">{film.overview || "Synopsis indisponible."}</p>
+          </Accordion>
+        }
+      />
       <p className="result-escape">
         Pas ce qui vous convient ? <Link href="/films">Parcourir les films</Link>
       </p>
     </article>
-  );
-}
-
-function Synopsis({ text }: { text: string }) {
-  const ref = useRef<HTMLParagraphElement>(null);
-  const [open, setOpen] = useState(false);
-  const [clamped, setClamped] = useState(false);
-  const id = useId();
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    function measure() {
-      if (node && !open) setClamped(node.scrollHeight > node.clientHeight + 1);
-    }
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [text, open]);
-
-  return (
-    <div className="result-synopsis">
-      <p id={id} ref={ref} className={open ? undefined : "is-clamped"}>
-        {text}
-      </p>
-      {(clamped || open) && (
-        <button
-          type="button"
-          className="link-button"
-          aria-expanded={open}
-          aria-controls={id}
-          onClick={() => setOpen(!open)}
-        >
-          {open ? "Voir moins" : "Voir plus"}
-        </button>
-      )}
-    </div>
   );
 }
