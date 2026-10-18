@@ -13,7 +13,9 @@ import { MAX_PAGE, MAX_PROVIDERS } from "@/lib/validation";
 /** Source id for "all films on my services", drawn from TMDB instead of an imported list. */
 export const SERVICES_SOURCE_ID = "services";
 
-export const MAX_ATTEMPTS = 20;
+export const MAX_ATTEMPTS = 60;
+/** Candidates judged at once: each one costs a few TMDB round trips. */
+export const CONCURRENCY = 4;
 
 export type NoneReason = "no-candidates" | "nothing-available" | "all-seen" | "all-too-long";
 
@@ -28,6 +30,7 @@ export type DrawDeps = {
   /** Uniform in [0, 1); injected so tests are deterministic. */
   random?: () => number;
   maxAttempts?: number;
+  concurrency?: number;
 };
 
 export type DrawInput = {
@@ -94,6 +97,7 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
   const { settings } = input;
   const random = deps.random ?? Math.random;
   const maxAttempts = deps.maxAttempts ?? MAX_ATTEMPTS;
+  const concurrency = deps.concurrency ?? CONCURRENCY;
   const services = new Set(settings.services);
   const sources = effectiveSources(settings.sources, input.lists);
   const listSources = new Set(sources.filter((id) => id !== SERVICES_SOURCE_ID));
@@ -153,40 +157,50 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
   }
 
   // Discover pages already fetched, minus the items already tried.
-  const pages = new Map<number, MovieSummary[]>();
+  const pages = new Map<number, Promise<MovieSummary[]>>();
   let totalPages = MAX_PAGE;
 
   async function nextGlobal(): Promise<Candidate | null> {
     const page = 1 + Math.floor(random() * totalPages);
-    let items = pages.get(page);
-    if (!items) {
-      const response = await deps.discover(providers, settings.maxDuration, page);
-      // A page past the real end comes back empty; the next draw stays within the true range.
-      totalPages = Math.max(1, Math.min(response.totalPages, MAX_PAGE));
-      items = [...response.results];
-      pages.set(page, items);
+    let loading = pages.get(page);
+    if (!loading) {
+      loading = deps.discover(providers, settings.maxDuration, page).then((response) => {
+        // A page past the real end comes back empty; the next draw stays within the true range.
+        totalPages = Math.max(1, Math.min(response.totalPages, MAX_PAGE));
+        return [...response.results];
+      });
+      pages.set(page, loading);
+      // A failed page is fetched again by a later attempt.
+      loading.catch(() => pages.delete(page));
     }
+    const items = await loading;
     const [movie] = items.splice(Math.floor(random() * items.length), 1);
     return movie && !recent.has(tmdbKey(movie.tmdbId)) ? fromSummary(movie) : null;
   }
 
-  while (attempts < maxAttempts) {
-    const global = useGlobal && (pool.length === 0 || random() < 0.5);
-    if (!global && pool.length === 0) break;
-    attempts += 1;
-    try {
-      const candidate = global ? await nextGlobal() : (pool.pop() ?? null);
-      if (!candidate) continue;
-      judged += 1;
-      const outcome = await judge(candidate);
-      if (outcome === null) continue;
-      if (typeof outcome === "string") counts[outcome] += 1;
-      else return { status: "found", key: candidate.key, film: outcome, attempts };
-    } catch {
-      // A TMDB failure only costs this attempt.
+  const result: { found: { key: string; film: MovieDetails } | null } = { found: null };
+
+  async function worker() {
+    while (!result.found && attempts < maxAttempts) {
+      const global = useGlobal && (pool.length === 0 || random() < 0.5);
+      if (!global && pool.length === 0) return;
+      attempts += 1;
+      try {
+        const candidate = global ? await nextGlobal() : (pool.pop() ?? null);
+        if (!candidate) continue;
+        judged += 1;
+        const outcome = await judge(candidate);
+        if (outcome === null) continue;
+        if (typeof outcome === "string") counts[outcome] += 1;
+        else result.found ??= { key: candidate.key, film: outcome };
+      } catch {
+        // A TMDB failure only costs this attempt.
+      }
     }
   }
+  await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
 
+  if (result.found) return { status: "found", ...result.found, attempts };
   return { status: "none", reason: reasonFor(counts, judged), attempts };
 }
 

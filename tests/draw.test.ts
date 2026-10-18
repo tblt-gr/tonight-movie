@@ -265,7 +265,7 @@ describe("drawFilm from lists", () => {
 
   it("gives up after the maximum attempts without throwing", async () => {
     const films = Array.from({ length: 30 }, (_, index) => stored(index + 1));
-    const { deps, calls } = makeDeps({});
+    const { deps, calls } = makeDeps({}, { maxAttempts: 20 });
     const result = await drawFilm({ settings, films, lists }, deps);
     expect(result).toMatchObject({ status: "none", attempts: 20 });
     expect(calls.details).toHaveLength(20);
