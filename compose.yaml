@@ -1,0 +1,9 @@
+services:
+  tonight-movie:
+    build: .
+    image: tonight-movie
+    container_name: tonight-movie
+    restart: unless-stopped
+    env_file: .env.local
+    ports:
+      - "3047:3000"
