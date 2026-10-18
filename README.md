@@ -62,6 +62,14 @@ docker run --rm -p 3000:3000 -e TMDB_API_KEY=<v4 token> -e TRUSTED_PROXY_HOPS=1 
 
 The container keeps no data on disk, so it needs no volume. Pass the key at run time; never bake it into the image.
 
+With Docker Compose, `compose.yaml` builds the image, reads the variables from `.env.local` at run time and serves the app on <http://localhost:3047>, restarting it automatically:
+
+```bash
+docker compose up -d --build
+```
+
+Recreate the container after changing `.env.local`: `docker compose up -d --force-recreate`.
+
 ### Configuration
 
 Copy `.env.example` to `.env.local` (local) or set the variables in your host (Docker, Vercel). They are server-only: never prefix them with `NEXT_PUBLIC_` and never commit a real value.
