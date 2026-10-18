@@ -6,8 +6,10 @@ import {
   durationOptions,
   noneMessage,
   offersToShow,
+  roomLight,
   sourceOptions,
   swapDelays,
+  watchLinks,
   type DrawState,
 } from "@/lib/draw-state";
 import { DEFAULT_SETTINGS, type StoredFilm } from "@/lib/storage/schema";
@@ -119,6 +121,67 @@ describe("noneMessage", () => {
       expect(message.hint.length).toBeGreaterThan(0);
     }
     expect(noneMessage("all-too-long").hint).toMatch(/durée/i);
+  });
+});
+
+describe("roomLight", () => {
+  it("is dark only while a draw runs", () => {
+    expect(roomLight("drawing")).toBe("dark");
+    for (const phase of ["idle", "result", "none", "error"] as const) {
+      expect(roomLight(phase)).toBe("lit");
+    }
+  });
+});
+
+describe("watchLinks", () => {
+  const offer = (id: string, url: string | null, type = "FLATRATE") => ({
+    id,
+    name: id,
+    icon: null,
+    type,
+    url,
+  });
+
+  it("returns one play link per confirmed streaming offer", () => {
+    const links = watchLinks(
+      {
+        availabilityStatus: "verified",
+        offersUrl: "https://tmdb.example/film",
+        offers: [
+          offer("8", "https://watch.example/8"),
+          offer("9", null),
+          offer("8", "https://ads.example", "ADS"),
+        ],
+      } as unknown as MovieDetails,
+      new Set(["8"]),
+    );
+    expect(links).toEqual({
+      verified: true,
+      links: [{ id: "8", name: "8", href: "https://watch.example/8" }],
+    });
+  });
+
+  it("stays unverified when the offer is missing or has nowhere to press play", () => {
+    expect(
+      watchLinks(
+        {
+          availabilityStatus: "unknown",
+          offersUrl: "https://tmdb.example/film",
+          offers: [],
+        } as unknown as MovieDetails,
+        new Set(["8"]),
+      ),
+    ).toEqual({ verified: false, links: [] });
+    expect(
+      watchLinks(
+        {
+          availabilityStatus: "verified",
+          offersUrl: null,
+          offers: [offer("8", null)],
+        } as unknown as MovieDetails,
+        new Set(["8"]),
+      ),
+    ).toEqual({ verified: false, links: [] });
   });
 });
 

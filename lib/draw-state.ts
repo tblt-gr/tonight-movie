@@ -16,6 +16,18 @@ export type DrawAction =
   | { type: "none"; reason: NoneReason }
   | { type: "fail" };
 
+export type DrawPhase = DrawState["phase"];
+
+export type RoomLight = "lit" | "dark";
+
+/**
+ * The room is dark only while a draw runs. It is derived from the phase and never stored,
+ * so a settled draw, an error or a leftover timer cannot leave the lights out.
+ */
+export function roomLight(phase: DrawPhase): RoomLight {
+  return phase === "drawing" ? "dark" : "lit";
+}
+
 /** A draw can start anywhere but while one runs; only a running draw can settle. */
 export function drawReducer(state: DrawState, action: DrawAction): DrawState {
   if (action.type === "start") {
@@ -119,4 +131,26 @@ export function offersToShow(film: Pick<MovieDetails, "offers">, services: Reado
     }
   }
   return [...shown.values()];
+}
+
+export type WatchLink = { id: string; name: string; href: string };
+
+/**
+ * Where to press play: one link per streaming service of the visitor. An empty `links` list
+ * is an unconfirmed offer, shown as À vérifier, never as proof that the film is unavailable.
+ */
+export function watchLinks(
+  film: Pick<MovieDetails, "offers" | "availabilityStatus" | "offersUrl">,
+  services: ReadonlySet<string>,
+): { verified: boolean; links: WatchLink[] } {
+  const offers = offersToShow(film, services);
+  if (film.availabilityStatus !== "verified" || offers.length === 0) {
+    return { verified: false, links: [] };
+  }
+  const links = offers.flatMap((offer) => {
+    const href = offer.url ?? film.offersUrl;
+    return href ? [{ id: offer.id, name: offer.name, href }] : [];
+  });
+  if (links.length === 0) return { verified: false, links: [] };
+  return { verified: true, links };
 }
