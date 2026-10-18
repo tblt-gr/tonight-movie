@@ -85,7 +85,7 @@ Letterboxd does not connect to Tonight’s Movie. You download your own data, th
 
 1. Sign in to letterboxd.com from a computer.
 2. Open your profile, then **Settings**.
-3. Go to the **Import & Export** tab.
+3. Go to the **Data** tab.
 4. Click **Export your data**.
 5. Download the `.zip` archive Letterboxd provides.
 6. Back in Tonight’s Movie, drop the archive into the import block without extracting it. A single `.csv` file such as `watchlist.csv` also works.
