@@ -3,6 +3,8 @@
 import { Check, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { lastSelectedId, moveActive, toggleId, type ListKey } from "@/lib/multiselect";
+import { brandFor } from "@/lib/brand-color";
+import type { Brand } from "@/lib/provider-colors";
 import { filterProviders } from "@/lib/services";
 import type { ProviderInfo } from "@/lib/types";
 
@@ -21,6 +23,46 @@ function Logo({ option }: { option: ProviderInfo }) {
     <img src={option.logo} alt="" width={32} height={32} loading="lazy" />
   ) : (
     <span className="multiselect-logo-empty" aria-hidden="true" />
+  );
+}
+
+function Chip({
+  option,
+  removeLabel,
+  onRemove,
+}: {
+  option: ProviderInfo;
+  removeLabel: string;
+  onRemove: () => void;
+}) {
+  const [brand, setBrand] = useState<Brand | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void brandFor(option.id, option.logo).then((found) => alive && setBrand(found));
+    return () => {
+      alive = false;
+    };
+  }, [option.id, option.logo]);
+  return (
+    <li
+      className="multiselect-chip"
+      style={
+        brand
+          ? ({ "--chip": brand.background, "--chip-ink": brand.ink } as React.CSSProperties)
+          : undefined
+      }
+    >
+      <Logo option={option} />
+      <span className="multiselect-name">{option.name}</span>
+      <button
+        type="button"
+        className="multiselect-remove"
+        aria-label={removeLabel}
+        onClick={onRemove}
+      >
+        <X aria-hidden="true" />
+      </button>
+    </li>
   );
 }
 
@@ -109,21 +151,15 @@ export function MultiSelect({
       {chosen.length > 0 && (
         <ul className="multiselect-chips">
           {chosen.map((option) => (
-            <li key={option.id} className="multiselect-chip">
-              <Logo option={option} />
-              <span className="multiselect-name">{option.name}</span>
-              <button
-                type="button"
-                className="multiselect-remove"
-                aria-label={removeLabel(option.name)}
-                onClick={() => {
-                  toggle(option.id);
-                  inputRef.current?.focus();
-                }}
-              >
-                <X aria-hidden="true" />
-              </button>
-            </li>
+            <Chip
+              key={option.id}
+              option={option}
+              removeLabel={removeLabel(option.name)}
+              onRemove={() => {
+                toggle(option.id);
+                inputRef.current?.focus();
+              }}
+            />
           ))}
         </ul>
       )}
