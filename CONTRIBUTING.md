@@ -58,6 +58,18 @@ Pull requests target `main` and are **squash-merged** only, so the pull request 
 - the description states how the change was verified and what it risks;
 - documentation is updated where behavior changed.
 
+Label every pull request with one type and at least one area:
+
+- **Type**: `enhancement` for `feat`, `bug` for `fix`, `documentation` for `docs`, `refactor`, `perf`, `security` or `accessibility` when that is the main point. Dependency and CI updates use `dependencies`, `javascript`, `github_actions` or `docker`.
+- **Area**: `area:home`, `area:settings`, `area:browse`, `area:draw`, `area:import`, `area:storage`, `area:data`, `area:architecture`, `area:design` or `area:docs`. Use several when the change spans screens.
+
+Also set the milestone of the next release (the open milestone with the highest version; a merged pull request keeps the milestone of the release it ships in).
+
+```bash
+gh pr create --base main --label enhancement --label area:home --milestone v1.1.0 ...
+gh api -X PATCH repos/<owner>/<repo>/issues/<number> -F milestone=<milestone number>
+```
+
 ```bash
 gh pr merge <number> --squash --delete-branch
 ```
