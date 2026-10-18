@@ -2,16 +2,16 @@
 export const fr = {
   locale: "fr-FR",
   meta: {
-    siteTitle: "Tonight’s Movie — trouvez votre film du soir",
+    siteTitle: "Tonight’s Movie - trouvez votre film du soir",
     siteDescription:
       "Choisissez vos plateformes en France et laissez le hasard choisir votre film du soir.",
-    homeTitle: "Tonight’s Movie — Un seul film pour ce soir",
+    homeTitle: "Tonight’s Movie - Un seul film pour ce soir",
     homeDescription:
       "Vous ne savez pas quoi regarder ce soir ? Indiquez vos plateformes en France et laissez le hasard choisir un film que vous pouvez lancer maintenant.",
-    about: "À propos — Tonight’s Movie",
-    films: "Films — Tonight’s Movie",
-    settings: "Réglages — Tonight’s Movie",
-    draw: "Tirage — Tonight’s Movie",
+    about: "À propos - Tonight’s Movie",
+    films: "Films - Tonight’s Movie",
+    settings: "Réglages - Tonight’s Movie",
+    draw: "Tirage - Tonight’s Movie",
   },
   nav: {
     pages: "Pages",
