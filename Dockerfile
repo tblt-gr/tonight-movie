@@ -26,6 +26,7 @@ RUN rm -rf /usr/local/lib/node_modules /opt/yarn-* \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 RUN chown -R node:node /app
 USER node
 EXPOSE 3000
