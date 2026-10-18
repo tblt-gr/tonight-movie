@@ -839,10 +839,9 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   padding: 0;
   list-style: none;
 }
-.result-offers span {
+.result-offers li > span {
   display: inline-block;
   padding: var(--s2) var(--s4);
-  border: 2px solid var(--text);
   font-weight: 700;
   text-decoration: none;
 }
