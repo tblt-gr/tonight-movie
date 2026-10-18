@@ -69,6 +69,27 @@ export function imageUrl(path: string | null | undefined, kind: keyof typeof IMA
   return `${TMDB_IMAGES}${IMAGE_SIZES[kind]}${path}`;
 }
 
+const LOGO_FILE = /^[\w-]{8,64}\.(png|jpg)$/;
+
+/** The bytes of a provider logo, or `null` for an unusable file name or a failed download. */
+export async function fetchProviderLogo(
+  file: string,
+): Promise<{ body: ArrayBuffer; type: string } | null> {
+  if (!LOGO_FILE.test(file)) return null;
+  try {
+    const response = await fetch(`${TMDB_IMAGES}${IMAGE_SIZES.logo}/${file}`, {
+      redirect: "error",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      next: { revalidate: REVALIDATE_SECONDS },
+    });
+    const type = response.headers.get("content-type") ?? "";
+    if (!response.ok || !type.startsWith("image/")) return null;
+    return { body: await response.arrayBuffer(), type };
+  } catch {
+    return null;
+  }
+}
+
 async function tmdbGet<T>(
   path: string,
   params: Record<string, string> = {},
