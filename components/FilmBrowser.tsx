@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGrid, List } from "lucide-react";
+import { ChevronDown, LayoutGrid, List } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -537,12 +537,13 @@ export function FilmBrowser() {
           </div>
           <button
             type="button"
-            className="button"
+            className="button filters-toggle"
             aria-expanded={advancedOpen}
             aria-controls={`${ids}-advanced`}
             onClick={() => setAdvancedOpen((open) => !open)}
           >
             Filtres avancés{advancedCount > 0 ? ` (${advancedCount})` : ""}
+            <ChevronDown aria-hidden="true" />
           </button>
           {advancedOpen && (
             <div

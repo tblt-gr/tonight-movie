@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useReducer, useRef, useState } from "react";
 import { Accordion } from "@/components/Accordion";
@@ -291,12 +292,13 @@ export function DrawMachine() {
         </div>
         <button
           type="button"
-          className="button draw-more"
+          className="button draw-more filters-toggle"
           aria-expanded={moreOpen}
           aria-controls={`${ids}-more`}
           onClick={() => setMoreOpen((open) => !open)}
         >
           Filtres avancés{activeFilters > 0 ? ` (${activeFilters})` : ""}
+          <ChevronDown aria-hidden="true" />
         </button>
         {state.phase !== "idle" && !drawing && (
           <button type="button" className="button primary draw-go" onClick={() => void run()}>

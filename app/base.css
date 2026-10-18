@@ -214,6 +214,19 @@ svg {
 .button:active {
   transform: translateY(2px);
 }
+.filters-toggle svg {
+  width: 18px;
+  height: 18px;
+  transition: transform var(--cut) steps(2);
+}
+.filters-toggle[aria-expanded="true"] {
+  border-color: var(--live);
+  background: var(--live);
+  color: var(--live-ink);
+}
+.filters-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
 .button.primary {
   background: var(--live);
   border-color: var(--live);
