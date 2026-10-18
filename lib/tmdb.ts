@@ -1,5 +1,6 @@
 import { ApiFailure } from "@/lib/errors";
 import type {
+  DiscoverFilters,
   DiscoverResponse,
   MovieDetails,
   MovieSummary,
@@ -270,6 +271,8 @@ export async function getProviders(): Promise<ProvidersResponse> {
   return { providers: providers.map(({ info }) => info) };
 }
 
+const MIN_RATING_VOTES = "50";
+
 const DISCOVER_ORDER: Record<DiscoverSort, Record<string, string>> = {
   popularity: { sort_by: "popularity.desc" },
   // Without a vote floor, films with one perfect vote would top the list.
@@ -282,6 +285,7 @@ export async function discoverMovies(
   maxRuntime: number | null,
   page: number,
   sort: DiscoverSort = "popularity",
+  filters: Partial<DiscoverFilters> = {},
 ): Promise<DiscoverResponse> {
   const data = await tmdbGet<TmdbPage>("/discover/movie", {
     language: LANGUAGE,
@@ -292,6 +296,14 @@ export async function discoverMovies(
     ...DISCOVER_ORDER[sort],
     page: String(page),
     ...(maxRuntime === null ? {} : { "with_runtime.lte": String(maxRuntime) }),
+    ...(filters.minRuntime ? { "with_runtime.gte": String(filters.minRuntime) } : {}),
+    // A few votes can average anything: a rating floor needs a vote floor to mean something.
+    ...(filters.minRating
+      ? { "vote_average.gte": String(filters.minRating), "vote_count.gte": MIN_RATING_VOTES }
+      : {}),
+    ...(filters.minYear ? { "primary_release_date.gte": `${filters.minYear}-01-01` } : {}),
+    ...(filters.maxYear ? { "primary_release_date.lte": `${filters.maxYear}-12-31` } : {}),
+    ...(filters.genres?.length ? { with_genres: filters.genres.join("|") } : {}),
   });
   return {
     page: data.page ?? page,

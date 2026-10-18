@@ -1,3 +1,4 @@
+import { MAX_GENRES } from "@/lib/genres";
 import { MAX_RUNTIME } from "@/lib/validation";
 
 export const SETTINGS_KEY = "tonight-movie:settings";
@@ -18,8 +19,17 @@ export type Settings = {
   services: string[];
   /** Ids of the lists the draw picks from. */
   sources: string[];
+  /** Minimum runtime in minutes, `null` for no limit. */
+  minDuration: number | null;
   /** Maximum runtime in minutes, `null` for no limit. */
   maxDuration: number | null;
+  /** Minimum TMDB rating on a 0–10 scale, `null` for no limit. */
+  minRating: number | null;
+  /** Earliest and latest release year, `null` for no limit. */
+  minYear: number | null;
+  maxYear: number | null;
+  /** French genre names, a film matches when it has any of them; empty for all genres. */
+  genres: string[];
   excludeSeen: boolean;
   /** Film keys, newest first, capped at `RECENT_DRAWS_LIMIT`. */
   recentDraws: string[];
@@ -49,7 +59,12 @@ export type StoredList = {
 export const DEFAULT_SETTINGS: Settings = {
   services: [],
   sources: [],
+  minDuration: null,
   maxDuration: null,
+  minRating: null,
+  minYear: null,
+  maxYear: null,
+  genres: [],
   excludeSeen: true,
   recentDraws: [],
 };
@@ -75,6 +90,16 @@ function integerOrNull(value: unknown, min: number, max: number): number | null 
   return value >= min && value <= max ? value : undefined;
 }
 
+/** A missing field takes `fallback`, so settings saved before a filter existed still load. */
+function optional<T>(value: unknown, parse: (value: unknown) => T | undefined, fallback: T) {
+  return value === undefined ? fallback : parse(value);
+}
+
+function ratingOrNull(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  return typeof value === "number" && value >= 0 && value <= 10 ? value : undefined;
+}
+
 export function filmKey(film: {
   letterboxdUri?: string | null;
   title: string;
@@ -91,9 +116,35 @@ export function parseSettings(value: unknown): Settings | null {
   const sources = textList(value.sources);
   const recentDraws = textList(value.recentDraws, RECENT_DRAWS_LIMIT);
   const maxDuration = integerOrNull(value.maxDuration, 1, MAX_RUNTIME);
-  if (!services || !sources || !recentDraws) return null;
+  const minDuration = optional(value.minDuration, (v) => integerOrNull(v, 1, MAX_RUNTIME), null);
+  const minRating = optional(value.minRating, ratingOrNull, null);
+  const minYear = optional(
+    value.minYear,
+    (v) => integerOrNull(v, FIRST_FILM_YEAR, LAST_FILM_YEAR),
+    null,
+  );
+  const maxYear = optional(
+    value.maxYear,
+    (v) => integerOrNull(v, FIRST_FILM_YEAR, LAST_FILM_YEAR),
+    null,
+  );
+  const genres = optional(value.genres, (v) => textList(v, MAX_GENRES) ?? undefined, []);
+  if (!services || !sources || !recentDraws || !genres) return null;
   if (maxDuration === undefined || typeof value.excludeSeen !== "boolean") return null;
-  return { services, sources, maxDuration, excludeSeen: value.excludeSeen, recentDraws };
+  if (minDuration === undefined || minRating === undefined) return null;
+  if (minYear === undefined || maxYear === undefined) return null;
+  return {
+    services,
+    sources,
+    minDuration,
+    maxDuration,
+    minRating,
+    minYear,
+    maxYear,
+    genres,
+    excludeSeen: value.excludeSeen,
+    recentDraws,
+  };
 }
 
 export function parseFilm(value: unknown): StoredFilm | null {

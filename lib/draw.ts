@@ -7,7 +7,8 @@ import {
   type StoredFilm,
   type StoredList,
 } from "@/lib/storage/schema";
-import type { DiscoverResponse, MovieDetails, MovieSummary } from "@/lib/types";
+import { genreIds } from "@/lib/genres";
+import type { DiscoverFilters, DiscoverResponse, MovieDetails, MovieSummary } from "@/lib/types";
 import { MAX_PAGE, MAX_PROVIDERS } from "@/lib/validation";
 
 /** Source id for "all films on my services", drawn from TMDB instead of an imported list. */
@@ -22,7 +23,8 @@ export const CONCURRENCY = 6;
 /** Failed lookups and empty discover picks tolerated before giving up. */
 export const MAX_MISSES = 20;
 
-export type NoneReason = "no-candidates" | "nothing-available" | "all-seen" | "all-too-long";
+export type NoneReason =
+  "no-candidates" | "nothing-available" | "all-seen" | "all-too-long" | "no-match";
 
 export type DrawResult =
   | { status: "found"; key: string; film: MovieDetails; attempts: number }
@@ -31,7 +33,12 @@ export type DrawResult =
 export type DrawDeps = {
   search: SearchFn;
   getDetails(tmdbId: number): Promise<MovieDetails>;
-  discover(providers: number[], maxRuntime: number | null, page: number): Promise<DiscoverResponse>;
+  discover(
+    providers: number[],
+    maxRuntime: number | null,
+    page: number,
+    filters?: DiscoverFilters,
+  ): Promise<DiscoverResponse>;
   /** Uniform in [0, 1); injected so tests are deterministic. */
   random?: () => number;
   /** Candidates judged at once. */
@@ -43,7 +50,19 @@ export type DrawDeps = {
 };
 
 export type DrawInput = {
-  settings: Pick<Settings, "services" | "sources" | "maxDuration" | "excludeSeen" | "recentDraws">;
+  settings: Pick<
+    Settings,
+    | "services"
+    | "sources"
+    | "minDuration"
+    | "maxDuration"
+    | "minRating"
+    | "minYear"
+    | "maxYear"
+    | "genres"
+    | "excludeSeen"
+    | "recentDraws"
+  >;
   films: StoredFilm[];
   lists: Pick<StoredList, "id">[];
 };
@@ -62,6 +81,36 @@ export function effectiveSources(sources: string[], lists: Pick<StoredList, "id"
   return [ids.has(WATCHLIST_ID) ? WATCHLIST_ID : SERVICES_SOURCE_ID];
 }
 
+/** What the settings ask TMDB to narrow a discover call by. */
+export function discoverFilters(
+  settings: Pick<Settings, "minDuration" | "minRating" | "minYear" | "maxYear" | "genres">,
+): DiscoverFilters {
+  return {
+    minRuntime: settings.minDuration,
+    minRating: settings.minRating,
+    minYear: settings.minYear,
+    maxYear: settings.maxYear,
+    genres: genreIds(settings.genres),
+  };
+}
+
+/** Whether a film passes the fine filters; runtime limits are judged apart. */
+function fitsFilters(film: MovieDetails, settings: DrawInput["settings"]): boolean {
+  if (settings.minDuration !== null) {
+    if (film.runtime === null || film.runtime < settings.minDuration) return false;
+  }
+  if (settings.minRating !== null) {
+    if (film.rating === null || film.rating < settings.minRating) return false;
+  }
+  if (settings.minYear !== null && (film.year === null || film.year < settings.minYear)) {
+    return false;
+  }
+  if (settings.maxYear !== null && (film.year === null || film.year > settings.maxYear)) {
+    return false;
+  }
+  return settings.genres.length === 0 || film.genres.some((name) => settings.genres.includes(name));
+}
+
 const titleYear = (title: string, year: number | null) => `${normalizeTitle(title)}|${year ?? ""}`;
 
 export function shuffle<T>(items: T[], random: () => number): T[] {
@@ -73,7 +122,7 @@ export function shuffle<T>(items: T[], random: () => number): T[] {
   return result;
 }
 
-type Rejection = "unavailable" | "seen" | "tooLong";
+type Rejection = "unavailable" | "seen" | "tooLong" | "filtered";
 
 type Candidate = {
   key: string;
@@ -142,7 +191,7 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
     weak: film.confidence !== null && !isDrawable(film),
   }));
 
-  const counts: Record<Rejection, number> = { unavailable: 0, seen: 0, tooLong: 0 };
+  const counts: Record<Rejection, number> = { unavailable: 0, seen: 0, tooLong: 0, filtered: 0 };
   let attempts = 0;
   let judged = 0;
   let misses = 0;
@@ -169,7 +218,7 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
     if (settings.maxDuration !== null) {
       if (details.runtime === null || details.runtime > settings.maxDuration) return "tooLong";
     }
-    return details;
+    return fitsFilters(details, settings) ? details : "filtered";
   }
 
   // Discover pages already fetched, minus the items already tried.
@@ -188,7 +237,12 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
         const page = 1 + Math.floor(random() * totalPages);
         items = pages.get(page);
         if (!items) {
-          const response = await deps.discover(providers, settings.maxDuration, page);
+          const response = await deps.discover(
+            providers,
+            settings.maxDuration,
+            page,
+            discoverFilters(settings),
+          );
           // A page past the real end comes back empty; the next draw stays within the true range.
           totalPages = Math.max(1, Math.min(response.totalPages, MAX_PAGE));
           items = [...response.results];
@@ -242,7 +296,8 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
 
 function reasonFor(counts: Record<Rejection, number>, judged: number): NoneReason {
   if (judged === 0) return "no-candidates";
-  const top = Math.max(counts.unavailable, counts.seen, counts.tooLong);
+  const top = Math.max(counts.unavailable, counts.seen, counts.tooLong, counts.filtered);
   if (counts.unavailable === top) return "nothing-available";
-  return counts.seen === top ? "all-seen" : "all-too-long";
+  if (counts.seen === top) return "all-seen";
+  return counts.tooLong === top ? "all-too-long" : "no-match";
 }

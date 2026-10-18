@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useReducer, useRef, useState } from "react";
 import { Accordion } from "@/components/Accordion";
+import { DrawFilters } from "@/components/DrawFilters";
 import { FilmOffers } from "@/components/FilmOffers";
 import { FilmPoster } from "@/components/FilmPoster";
 import { formatMinutes, formatRating } from "@/lib/catalog";
@@ -10,9 +11,8 @@ import { drawFilm, effectiveSources } from "@/lib/draw";
 import { collectSwapPosters, createDrawClient } from "@/lib/draw-client";
 import {
   buildDrawInput,
+  countActiveFilters,
   drawReducer,
-  durationLabel,
-  durationOptions,
   noneMessage,
   roomLight,
   sourceOptions,
@@ -30,6 +30,14 @@ const WINNER_HOLD_MS = 1000;
 // Pace of the poster flashes while the scan is still collecting films after the opening spin.
 const SCAN_SWAP_MS = 300;
 const MANY_SOURCES = "many";
+const NO_FINE_FILTERS: Partial<Settings> = {
+  minDuration: null,
+  maxDuration: null,
+  minRating: null,
+  minYear: null,
+  maxYear: null,
+  genres: [],
+};
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -52,6 +60,7 @@ export function DrawMachine() {
   const [lists, setLists] = useState<StoredList[]>([]);
   const [hasSeen, setHasSeen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [slot, setSlot] = useState<Slot>({ poster: null, framed: false });
   const alive = useRef(true);
   const running = useRef(false);
@@ -172,6 +181,7 @@ export function DrawMachine() {
   const services = new Set(settings.services);
   const sources = effectiveSources(settings.sources, lists);
   const sourceValue = sources.length === 1 ? sources[0] : MANY_SOURCES;
+  const activeFilters = countActiveFilters(settings);
   const showPoster = drawing || state.phase === "result";
 
   const announcement = {
@@ -279,39 +289,28 @@ export function DrawMachine() {
             ))}
           </select>
         </div>
-        <div className="filter">
-          <label htmlFor={`${ids}-duration`}>Durée maximale</label>
-          <select
-            className="select"
-            id={`${ids}-duration`}
-            value={settings.maxDuration ?? ""}
-            onChange={(event) =>
-              change({ maxDuration: event.target.value ? Number(event.target.value) : null })
-            }
-          >
-            <option value="">Sans limite</option>
-            {durationOptions(settings.maxDuration).map((minutes) => (
-              <option key={minutes} value={minutes}>
-                {durationLabel(minutes)}
-              </option>
-            ))}
-          </select>
-        </div>
-        {hasSeen && (
-          <div className="check">
-            <input
-              id={`${ids}-seen`}
-              type="checkbox"
-              checked={settings.excludeSeen}
-              onChange={(event) => change({ excludeSeen: event.target.checked })}
-            />
-            <label htmlFor={`${ids}-seen`}>Masquer les films déjà vus</label>
-          </div>
-        )}
+        <button
+          type="button"
+          className="button draw-more"
+          aria-expanded={moreOpen}
+          aria-controls={`${ids}-more`}
+          onClick={() => setMoreOpen((open) => !open)}
+        >
+          Filtres avancés{activeFilters > 0 ? ` (${activeFilters})` : ""}
+        </button>
         {state.phase !== "idle" && !drawing && (
-          <button type="button" className="button draw-go" onClick={() => void run()}>
+          <button type="button" className="button primary draw-go" onClick={() => void run()}>
             Relancer
           </button>
+        )}
+        {moreOpen && (
+          <DrawFilters
+            id={`${ids}-more`}
+            settings={settings}
+            hasSeen={hasSeen}
+            onChange={change}
+            onReset={() => change(NO_FINE_FILTERS)}
+          />
         )}
       </div>
     </div>
