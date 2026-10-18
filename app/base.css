@@ -888,6 +888,14 @@ body:has(.draw-page[data-room="dark"]) .site-footer,
   letter-spacing: 0.04em;
   color: var(--text);
 }
+html[data-home-redirect] {
+  overflow: hidden;
+}
+html[data-home-redirect] .home-hero,
+html[data-home-redirect] .home-steps {
+  display: none;
+}
+
 .home-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
