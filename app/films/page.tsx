@@ -8,7 +8,7 @@ export default function FilmsPage() {
   return (
     <>
       <RequireServices />
-      <h1>Films</h1>
+      <h1>Parcourir les films</h1>
       <Suspense>
         <FilmBrowser />
       </Suspense>

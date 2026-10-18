@@ -389,10 +389,9 @@ export function FilmBrowser() {
       </p>
 
       {ready && (
-        <fieldset className="draw-settings browse-filters">
-          <legend>Filtres</legend>
+        <div className="filters" role="search">
           {mode === "lists" && (
-            <div className="field field-wide">
+            <div className="filter">
               <label htmlFor={`${ids}-q`}>Titre</label>
               <input
                 id={`${ids}-q`}
@@ -407,9 +406,10 @@ export function FilmBrowser() {
               />
             </div>
           )}
-          <div className="field">
+          <div className="filter">
             <label htmlFor={`${ids}-service`}>Service</label>
             <select
+              className="select"
               id={`${ids}-service`}
               value={serviceValue}
               onChange={(event) => update({ service: event.target.value })}
@@ -421,9 +421,10 @@ export function FilmBrowser() {
               ))}
             </select>
           </div>
-          <div className="field">
+          <div className="filter">
             <label htmlFor={`${ids}-duration`}>Durée maximale</label>
             <select
+              className="select"
               id={`${ids}-duration`}
               value={filters.maxDuration ?? ""}
               onChange={(event) =>
@@ -439,9 +440,10 @@ export function FilmBrowser() {
             </select>
           </div>
           {mode === "lists" && (
-            <div className="field">
+            <div className="filter">
               <label htmlFor={`${ids}-genre`}>Genre</label>
               <select
+                className="select"
                 id={`${ids}-genre`}
                 value={filters.genre ?? ""}
                 onChange={(event) => update({ genre: event.target.value || null })}
@@ -455,9 +457,10 @@ export function FilmBrowser() {
               </select>
             </div>
           )}
-          <div className="field">
+          <div className="filter">
             <label htmlFor={`${ids}-sort`}>Tri</label>
             <select
+              className="select"
               id={`${ids}-sort`}
               value={sortValue}
               onChange={(event) => update({ sort: event.target.value as BrowseSort })}
@@ -470,7 +473,7 @@ export function FilmBrowser() {
             </select>
           </div>
           {hasSeen && (
-            <div className="field field-check field-wide">
+            <div className="check">
               <input
                 id={`${ids}-seen`}
                 type="checkbox"
@@ -480,7 +483,7 @@ export function FilmBrowser() {
               <label htmlFor={`${ids}-seen`}>Masquer les films déjà vus</label>
             </div>
           )}
-          <div className="field field-wide">
+          <div className="filter">
             <span className="field-label" id={`${ids}-view`}>
               Affichage
             </span>
@@ -515,7 +518,13 @@ export function FilmBrowser() {
               Réinitialiser
             </button>
           )}
-        </fieldset>
+          {cards.length > 0 && (
+            <p className="filters-count" aria-hidden="true">
+              {cards.length}
+              <span className="label">{cards.length > 1 ? "films" : "film"}</span>
+            </p>
+          )}
+        </div>
       )}
 
       <h2 className="sr-only">Résultats</h2>
