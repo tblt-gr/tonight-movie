@@ -58,6 +58,16 @@ Pull requests target `main` and are **squash-merged** only, so the pull request 
 - the description states how the change was verified and what it risks;
 - documentation is updated where behavior changed.
 
+Label every pull request with one type and at least one area:
+
+- **Type**: `enhancement` for `feat`, `bug` for `fix`, `documentation` for `docs`, `refactor`, `perf`, `security` or `accessibility` when that is the main point. Dependency and CI updates use `dependencies`, `javascript`, `github_actions` or `docker`.
+- **Area**: `area:home`, `area:settings`, `area:browse`, `area:draw`, `area:import`, `area:storage`, `area:data`, `area:architecture`, `area:design` or `area:docs`. Use several when the change spans screens.
+
+```bash
+gh pr create --base main --label enhancement --label area:home ...
+gh pr edit <number> --add-label bug --add-label area:draw
+```
+
 ```bash
 gh pr merge <number> --squash --delete-branch
 ```
