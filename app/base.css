@@ -112,7 +112,8 @@ svg {
   margin-right: auto;
   margin-left: var(--s6);
 }
-.site-nav a {
+.site-nav a,
+.about-link {
   padding: 6px 0;
   font-size: 14px;
   font-weight: 700;
@@ -124,6 +125,7 @@ svg {
 .gear[aria-current="page"] {
   color: var(--live);
 }
+.about-link[aria-current="page"],
 .gear {
   display: inline-flex;
   align-items: center;
@@ -135,6 +137,28 @@ svg {
 .gear:hover {
   background: var(--text);
   color: var(--bg);
+  .about {
+    display: grid;
+    gap: var(--s5);
+    max-width: 60ch;
+    margin-top: var(--s5);
+  }
+  .about p,
+  .about h2 {
+    margin: 0;
+  }
+  .about section {
+    display: grid;
+    gap: var(--s3);
+  }
+  .about-logo {
+    display: block;
+    width: 180px;
+    height: auto;
+  }
+  .about-link + .gear {
+    margin-left: var(--s4);
+  }
 }
 .gear svg {
   width: 20px;
@@ -577,32 +601,9 @@ svg {
   top: var(--s3);
   right: var(--s3);
 }
-.site-footer {
-  border-top: 1px solid var(--line);
-  padding-block: var(--s5);
-  color: var(--muted);
-  font-size: 14px;
-}
-.site-footer-inner {
-  display: grid;
-  gap: var(--s3);
-  justify-items: start;
-}
-.site-footer p {
-  margin: 0;
-  max-width: 72ch;
-}
-.tmdb-logo {
-  display: block;
-}
-.tmdb-logo img {
-  display: block;
-  width: 180px;
-  height: auto;
-}
 body:has(.draw-page) {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100dvh;
   overflow: hidden;
 }
@@ -614,7 +615,6 @@ body:has(.draw-page) main.page {
   overflow: hidden;
 }
 body:has(.draw-page[data-room="dark"]) .site-header,
-body:has(.draw-page[data-room="dark"]) .site-footer,
 .draw-page[data-room="dark"] .draw-player {
   pointer-events: none;
 }

@@ -34,6 +34,13 @@ export function SiteHeader() {
             ))}
           </nav>
         )}
+        <Link
+          className="about-link"
+          href="/a-propos"
+          aria-current={pathname === "/a-propos" ? "page" : undefined}
+        >
+          À propos
+        </Link>
         {!home && (
           <Link
             className="gear"
