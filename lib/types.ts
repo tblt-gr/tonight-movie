@@ -73,3 +73,14 @@ export type DiscoverResponse = {
   totalPages: number;
   results: MovieSummary[];
 };
+
+/** Optional narrowing of a discover call, on top of the providers and the maximum runtime. */
+export type DiscoverFilters = {
+  minRuntime: number | null;
+  /** Minimum TMDB rating on a 0–10 scale. */
+  minRating: number | null;
+  minYear: number | null;
+  maxYear: number | null;
+  /** TMDB genre ids, a film matches when it has any of them. */
+  genres: number[];
+};

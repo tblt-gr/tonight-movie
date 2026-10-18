@@ -69,11 +69,40 @@ describe("settings", () => {
     saveSettings({
       services: ["8"],
       sources: ["watchlist"],
+      minDuration: null,
       maxDuration: 120,
+      minRating: 7,
+      minYear: 1990,
+      maxYear: null,
+      genres: ["Drame"],
       excludeSeen: false,
       recentDraws: [],
     });
-    expect(loadSettings()).toMatchObject({ services: ["8"], maxDuration: 120, excludeSeen: false });
+    expect(loadSettings()).toMatchObject({
+      services: ["8"],
+      maxDuration: 120,
+      minRating: 7,
+      minYear: 1990,
+      genres: ["Drame"],
+      excludeSeen: false,
+    });
+  });
+
+  it("loads settings saved before the fine filters existed", () => {
+    storage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({
+        version: 1,
+        data: { services: ["8"], sources: [], maxDuration: 90, excludeSeen: true, recentDraws: [] },
+      }),
+    );
+    expect(loadSettings()).toMatchObject({
+      services: ["8"],
+      maxDuration: 90,
+      minDuration: null,
+      minRating: null,
+      genres: [],
+    });
   });
 
   it("keeps the last five distinct draws, newest first", () => {

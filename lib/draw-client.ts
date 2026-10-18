@@ -1,4 +1,5 @@
 import {
+  discoverFilters,
   effectiveSources,
   shuffle,
   SERVICES_SOURCE_ID,
@@ -44,9 +45,14 @@ export function createDrawClient(
       return (await get<SearchResponse>(`/api/search?${params}`)).results;
     },
     getDetails: (tmdbId) => get<MovieDetails>(`/api/movie/${tmdbId}`),
-    discover(providers, maxRuntime, page) {
+    discover(providers, maxRuntime, page, filters) {
       const params = new URLSearchParams({ providers: providers.join(",") });
       if (maxRuntime !== null) params.set("maxRuntime", String(maxRuntime));
+      if (filters?.minRuntime) params.set("minRuntime", String(filters.minRuntime));
+      if (filters?.minRating) params.set("minRating", String(filters.minRating));
+      if (filters?.minYear) params.set("minYear", String(filters.minYear));
+      if (filters?.maxYear) params.set("maxYear", String(filters.maxYear));
+      if (filters?.genres.length) params.set("genres", filters.genres.join(","));
       params.set("page", String(page));
       return get<DiscoverResponse>(`/api/discover?${params}`);
     },
@@ -83,7 +89,9 @@ export async function collectSwapPosters(
   const [details, popular] = await Promise.all([
     Promise.allSettled(picks.map((film) => deps.getDetails(film.tmdbId!))),
     sources.includes(SERVICES_SOURCE_ID) && providers.length > 0
-      ? deps.discover(providers, input.settings.maxDuration, 1).catch(() => null)
+      ? deps
+          .discover(providers, input.settings.maxDuration, 1, discoverFilters(input.settings))
+          .catch(() => null)
       : null,
   ]);
   for (const result of details) {

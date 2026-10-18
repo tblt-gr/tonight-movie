@@ -59,6 +59,10 @@ describe("validation", () => {
     ["/api/discover?providers=8&maxRuntime=601"],
     ["/api/discover?providers=8,"],
     ["/api/discover?providers=8&maxRuntime=1e3"],
+    ["/api/discover?providers=8&minRating=11"],
+    ["/api/discover?providers=8&minRating=7.3"],
+    ["/api/discover?providers=8&genres=abc"],
+    ["/api/discover?providers=8&minYear=1700"],
     ["/api/discover?providers=8&sort=revenue"],
     ["/api/discover?providers=8&sort=rating&sort=year"],
     [`/api/discover?providers=${Array.from({ length: 21 }, (_, i) => i + 1).join(",")}`],
@@ -232,6 +236,22 @@ describe("routes", () => {
     expect(params[1].get("sort_by")).toBe("vote_average.desc");
     expect(params[1].get("vote_count.gte")).toBe("300");
     expect(params[2].get("sort_by")).toBe("primary_release_date.desc");
+  });
+
+  it("passes the fine filters to TMDB discover", async () => {
+    reply({ results: [] });
+    await discover(
+      req(
+        "/api/discover?providers=8&minRuntime=80&minRating=7.5&minYear=1990&maxYear=2010&genres=35,18",
+      ),
+    );
+    const params = new URL(fetchMock.mock.calls[0][0]).searchParams;
+    expect(params.get("with_runtime.gte")).toBe("80");
+    expect(params.get("vote_average.gte")).toBe("7.5");
+    expect(params.get("vote_count.gte")).toBe("50");
+    expect(params.get("primary_release_date.gte")).toBe("1990-01-01");
+    expect(params.get("primary_release_date.lte")).toBe("2010-12-31");
+    expect(params.get("with_genres")).toBe("18|35");
   });
 
   it("sends the token as a header only, never in the URL, with the 24 h revalidation", async () => {

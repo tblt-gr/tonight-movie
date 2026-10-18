@@ -202,7 +202,10 @@ svg {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: background-color var(--cut) steps(2);
+  transition:
+    background-color var(--cut) steps(2),
+    border-color var(--cut) steps(2),
+    color var(--cut) steps(2);
 }
 .button:hover {
   background: var(--text);
@@ -798,14 +801,14 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   gap: var(--s5);
   margin: 0;
   padding-top: var(--s2);
-  border-top: 2px solid var(--red);
+  border-top: 2px solid var(--text);
 }
 .result-figures dt {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--red);
+  color: var(--muted);
 }
 .result-figures dd {
   margin: 0;
@@ -975,11 +978,99 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   border-top: 1px solid var(--line);
   background: transparent;
 }
+/* One control height across the bar: the button's padding would otherwise outgrow the select. */
+.draw-player .button,
+.draw-player .select {
+  height: 48px;
+  padding-block: 0;
+}
 .draw-player[data-pending] {
   visibility: hidden;
 }
 .draw-go {
   margin-left: auto;
+}
+/* Floats above the bar so opening it never squeezes the draw room. */
+.draw-filters {
+  position: absolute;
+  inset: auto 0 100% 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s4) var(--s5);
+  max-height: 60dvh;
+  padding: var(--s4) var(--s8);
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.range-field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px var(--s3);
+}
+.range-field label,
+.genre-field legend {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.range-field output {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.range-field input {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 32px;
+  margin: 0;
+  accent-color: var(--text);
+}
+.genre-field {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.genre-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+.genre-chip {
+  position: relative;
+  display: inline-flex;
+}
+.genre-chip input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.genre-chip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+.genre-chip input:checked + span {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+.genre-chip input:focus-visible + span {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+.draw-filters-reset {
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 html[data-home-redirect] {
   overflow: hidden;
@@ -1407,8 +1498,21 @@ html[data-home-redirect] .home-steps {
     transform: none;
   }
   .draw-player {
+    position: sticky;
+    bottom: 0;
     padding: var(--s4);
     gap: var(--s3);
+    background: var(--bg);
+  }
+  .draw-player .filter,
+  .draw-more {
+    width: 100%;
+  }
+  .draw-player .select {
+    width: 100%;
+  }
+  .draw-filters {
+    padding: var(--s4);
   }
   .draw-go {
     width: 100%;
@@ -1418,6 +1522,7 @@ html[data-home-redirect] .home-steps {
     height: auto;
     min-height: 100dvh;
     overflow: auto;
+    overflow-x: hidden;
   }
   body:has(.draw-page) main.page {
     overflow: visible;
@@ -1474,6 +1579,12 @@ html[data-home-redirect] .home-steps {
   .filters > .button {
     min-width: 0;
   }
+  .filter {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .filters .select {
+    width: 100%;
+  }
   .filters .check,
   .filters > .button {
     grid-column: 1 / -1;
@@ -1484,6 +1595,8 @@ html[data-home-redirect] .home-steps {
   .view-toggle .button {
     flex: 1;
     justify-content: center;
+    min-width: 0;
+    padding-inline: var(--s3);
   }
   .filters > .button,
   .browse-more {

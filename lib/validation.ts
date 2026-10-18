@@ -1,4 +1,6 @@
 import { ApiFailure } from "@/lib/errors";
+import { MAX_GENRES } from "@/lib/genres";
+import type { DiscoverFilters } from "@/lib/types";
 
 export const MAX_PAGE = 500;
 export const MAX_PROVIDERS = 20;
@@ -54,8 +56,26 @@ export function parseNoParams(searchParams: URLSearchParams) {
   pick(searchParams, []);
 }
 
+function genreList(raw: string): number[] {
+  const parts = raw.split(",");
+  if (parts.length > MAX_GENRES) throw bad(`genres accepts at most ${MAX_GENRES} ids`);
+  return [...new Set(parts.map((part) => integer(part, "genres", 1, 999_999)))].sort(
+    (a, b) => a - b,
+  );
+}
+
 export function parseDiscover(searchParams: URLSearchParams) {
-  const get = pick(searchParams, ["providers", "maxRuntime", "page", "sort"]);
+  const get = pick(searchParams, [
+    "providers",
+    "maxRuntime",
+    "minRuntime",
+    "minRating",
+    "minYear",
+    "maxYear",
+    "genres",
+    "page",
+    "sort",
+  ]);
   const rawProviders = get("providers");
   if (!rawProviders) throw bad("providers is required");
   const parts = rawProviders.split(",");
@@ -66,12 +86,29 @@ export function parseDiscover(searchParams: URLSearchParams) {
     (a, b) => a - b,
   );
   const rawRuntime = get("maxRuntime");
+  const rawMinRuntime = get("minRuntime");
+  const rawRating = get("minRating");
+  const rawMinYear = get("minYear");
+  const rawMaxYear = get("maxYear");
+  const rawGenres = get("genres");
+  const lastYear = new Date().getFullYear() + MAX_FUTURE_YEARS;
+  if (rawRating !== null && !/^(\d|10)(\.5)?$/.test(rawRating)) throw bad("minRating is invalid");
   const rawPage = get("page");
   const sort = get("sort") ?? "popularity";
   if (!DISCOVER_SORTS.includes(sort as DiscoverSort)) throw bad("sort is not supported");
   return {
     providers,
     maxRuntime: rawRuntime === null ? null : integer(rawRuntime, "maxRuntime", 1, MAX_RUNTIME),
+    filters: {
+      minRuntime:
+        rawMinRuntime === null ? null : integer(rawMinRuntime, "minRuntime", 1, MAX_RUNTIME),
+      minRating: rawRating === null ? null : Number(rawRating),
+      minYear:
+        rawMinYear === null ? null : integer(rawMinYear, "minYear", FIRST_FILM_YEAR, lastYear),
+      maxYear:
+        rawMaxYear === null ? null : integer(rawMaxYear, "maxYear", FIRST_FILM_YEAR, lastYear),
+      genres: rawGenres === null ? [] : genreList(rawGenres),
+    } satisfies DiscoverFilters,
     page: rawPage === null ? 1 : integer(rawPage, "page", 1, MAX_PAGE),
     sort: sort as DiscoverSort,
   };

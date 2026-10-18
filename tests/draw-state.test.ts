@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { SERVICES_SOURCE_ID, tmdbKey } from "@/lib/draw";
 import {
   buildDrawInput,
+  countActiveFilters,
   drawReducer,
+  keepOrder,
+  limitAt,
+  positionOf,
   durationOptions,
   noneMessage,
   offersToShow,
@@ -203,5 +207,35 @@ describe("hasOffers", () => {
     expect(hasOffers(film("verified", [{}]))).toBe(true);
     expect(hasOffers(film("verified", []))).toBe(false);
     expect(hasOffers(film("unknown", [{}]))).toBe(false);
+  });
+});
+
+describe("fine filters", () => {
+  it("maps the slider end to no limit", () => {
+    expect(limitAt(30, 30)).toBeNull();
+    expect(limitAt(90, 30)).toBe(90);
+    expect(positionOf(null, 240, 30, 240)).toBe(240);
+    expect(positionOf(999, 240, 30, 240)).toBe(240);
+    expect(positionOf(5, 240, 30, 240)).toBe(30);
+  });
+
+  it("keeps a minimum under its maximum by moving the other bound", () => {
+    const pair = { lo: 120, hi: 100 };
+    expect(keepOrder(pair, "lo", "hi", true)).toEqual({ lo: 120, hi: 120 });
+    expect(keepOrder(pair, "hi", "lo", false)).toEqual({ lo: 100, hi: 100 });
+    expect(keepOrder({ lo: 60, hi: null }, "lo", "hi", true)).toEqual({ lo: 60, hi: null });
+  });
+
+  it("counts a filter group once", () => {
+    expect(countActiveFilters(DEFAULT_SETTINGS)).toBe(0);
+    expect(
+      countActiveFilters({
+        ...DEFAULT_SETTINGS,
+        minDuration: 60,
+        maxDuration: 120,
+        minRating: 7,
+        genres: ["Drame"],
+      }),
+    ).toBe(3);
   });
 });

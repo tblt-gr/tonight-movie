@@ -57,7 +57,12 @@ const lists = [{ id: "watchlist" }, { id: "liked" }, { id: "own" }];
 const settings = {
   services: ["8"],
   sources: ["watchlist"],
+  minDuration: null,
   maxDuration: null,
+  minRating: null,
+  minYear: null,
+  maxYear: null,
+  genres: [] as string[],
   excludeSeen: true,
   recentDraws: [] as string[],
 };
@@ -181,6 +186,42 @@ describe("drawFilm from lists", () => {
       deps,
     );
     expect(result).toMatchObject({ status: "found", key: "k3" });
+  });
+
+  it("applies the minimum runtime, rating, years and genres", async () => {
+    const { deps } = makeDeps({
+      1: details(1, { runtime: 70, rating: 8, year: 2010, genres: ["Drame"] }),
+      2: details(2, { runtime: 110, rating: 5, year: 2010, genres: ["Drame"] }),
+      3: details(3, { runtime: 110, rating: 8, year: 1980, genres: ["Drame"] }),
+      4: details(4, { runtime: 110, rating: 8, year: 2010, genres: ["Comédie"] }),
+      5: details(5, { runtime: 110, rating: null, year: 2010, genres: ["Drame"] }),
+      6: details(6, { runtime: 110, rating: 8, year: 2010, genres: ["Drame", "Crime"] }),
+    });
+    const result = await drawFilm(
+      {
+        settings: {
+          ...settings,
+          minDuration: 90,
+          minRating: 7,
+          minYear: 2000,
+          maxYear: 2020,
+          genres: ["Drame"],
+        },
+        films: [1, 2, 3, 4, 5, 6].map((id) => stored(id)),
+        lists,
+      },
+      deps,
+    );
+    expect(result).toMatchObject({ status: "found", key: "k6" });
+  });
+
+  it("reports no-match when only the fine filters reject films", async () => {
+    const { deps } = makeDeps({ 1: details(1, { rating: 4 }) });
+    const result = await drawFilm(
+      { settings: { ...settings, minRating: 8 }, films: [stored(1)], lists },
+      deps,
+    );
+    expect(result).toMatchObject({ status: "none", reason: "no-match" });
   });
 
   it("keeps an unknown runtime when there is no limit", async () => {

@@ -98,6 +98,60 @@ export function durationLabel(minutes: number) {
   return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} maximum`;
 }
 
+/** Scale shared by the minimum and maximum runtime sliders; either end means "no limit". */
+export const DURATION_SCALE = { min: 30, max: 240, step: 5 };
+/** Rating slider; the lowest step means "no limit". */
+export const RATING_SCALE = { min: 0, max: 9, step: 0.5 };
+export const FIRST_YEAR = 1920;
+
+/** Year slider, whose ends mean "no limit". */
+export const yearScale = (now = new Date()) => ({
+  min: FIRST_YEAR,
+  max: now.getFullYear(),
+  step: 1,
+});
+
+/** The limit a slider position stands for: `null` at the end that means "no limit". */
+export function limitAt(value: number, edge: number): number | null {
+  return value === edge ? null : value;
+}
+
+/** Where a slider sits for a saved limit, kept inside the scale. */
+export function positionOf(limit: number | null, edge: number, min: number, max: number): number {
+  return limit === null ? edge : Math.min(max, Math.max(min, limit));
+}
+
+/** Keeps a minimum from passing its maximum: the bound that was not moved gives way. */
+export function keepOrder<K extends string>(
+  pair: Record<K, number | null>,
+  moved: K,
+  other: K,
+  lowIsMoved: boolean,
+): Record<K, number | null> {
+  const [low, high] = lowIsMoved ? [pair[moved], pair[other]] : [pair[other], pair[moved]];
+  if (low === null || high === null || low <= high) return pair;
+  return { ...pair, [other]: pair[moved] };
+}
+
+/** How many fine filters differ from "no limit". */
+export function countActiveFilters(
+  settings: Pick<
+    Settings,
+    "minDuration" | "maxDuration" | "minRating" | "minYear" | "maxYear" | "genres"
+  >,
+): number {
+  return [
+    settings.minDuration !== null || settings.maxDuration !== null,
+    settings.minRating !== null,
+    settings.minYear !== null || settings.maxYear !== null,
+    settings.genres.length > 0,
+  ].filter(Boolean).length;
+}
+
+export function hoursLabel(minutes: number) {
+  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}`;
+}
+
 export function noneMessage(reason: NoneReason): { reason: string; hint: string } {
   switch (reason) {
     case "no-candidates":
@@ -113,12 +167,17 @@ export function noneMessage(reason: NoneReason): { reason: string; hint: string 
     case "all-seen":
       return {
         reason: "Vous avez déjà vu les films trouvés.",
-        hint: "Décochez « Exclure les films déjà vus » ou changez de source.",
+        hint: "Décochez « Masquer les films déjà vus » dans les filtres avancés ou changez de source.",
       };
     case "all-too-long":
       return {
         reason: "Aucun film trouvé ne tient dans cette durée.",
         hint: "Allongez la durée maximale ou changez de source.",
+      };
+    case "no-match":
+      return {
+        reason: "Aucun film trouvé ne correspond à vos filtres.",
+        hint: "Assouplissez les filtres avancés ou changez de source.",
       };
   }
 }
