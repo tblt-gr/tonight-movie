@@ -15,6 +15,8 @@ type Props = {
   onChange: (next: ReadonlySet<string>) => void;
   emptyMessage: (query: string) => string;
   removeLabel: (name: string) => string;
+  /** Written inside the field in place of the chips, for a bar with little room. */
+  summary?: string;
 };
 
 function Logo({ option }: { option: ProviderInfo }) {
@@ -73,6 +75,7 @@ export function MultiSelect({
   onChange,
   emptyMessage,
   removeLabel,
+  summary,
 }: Props) {
   const ids = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -148,7 +151,7 @@ export function MultiSelect({
       <label htmlFor={`${ids}-input`} className="multiselect-label">
         {label}
       </label>
-      {chosen.length > 0 && (
+      {summary === undefined && chosen.length > 0 && (
         <ul className="multiselect-chips">
           {chosen.map((option) => (
             <Chip
@@ -177,6 +180,8 @@ export function MultiSelect({
         autoCapitalize="off"
         spellCheck={false}
         value={query}
+        placeholder={summary}
+        title={summary}
         onChange={(event) => search(event.target.value)}
         onClick={() => setOpen(true)}
         onFocus={() => setOpen(true)}

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { MultiSelect } from "@/components/MultiSelect";
-import { validateServices } from "@/lib/services";
+import { summarizeNames, validateServices } from "@/lib/services";
 import { resetAll } from "@/lib/storage";
 import { loadSettings, updateSettings } from "@/lib/storage/settings";
 import type { ProviderInfo, ProvidersResponse } from "@/lib/types";
@@ -100,6 +100,10 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
               onChange={change}
               emptyMessage={(query) => `Aucun service ne correspond à « ${query} ».`}
               removeLabel={(name) => `Retirer ${name}`}
+              summary={summarizeNames(
+                providers.filter((provider) => selected.has(provider.id)).map((p) => p.name),
+                "Rechercher un service",
+              )}
             />
           )}
         </fieldset>

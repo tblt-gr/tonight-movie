@@ -1,6 +1,12 @@
 import { fetchWithRetry } from "@/lib/fetch-retry";
 import type { DiscoverSort } from "@/lib/validation";
-import type { DiscoverResponse, MovieDetails, ProvidersResponse } from "@/lib/types";
+import type {
+  DiscoverFilters,
+  DiscoverResponse,
+  MovieDetails,
+  ProviderInfo,
+  ProvidersResponse,
+} from "@/lib/types";
 
 /** GET JSON from the app's own routes, retrying a 429 or a temporary upstream error. */
 async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -29,18 +35,24 @@ export function fetchDiscover(
   maxRuntime: number | null,
   page: number,
   sort: DiscoverSort,
+  filters: DiscoverFilters,
   signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({ providers: providers.join(",") });
   if (maxRuntime !== null) params.set("maxRuntime", String(maxRuntime));
+  if (filters.minRuntime !== null) params.set("minRuntime", String(filters.minRuntime));
+  if (filters.minRating !== null) params.set("minRating", String(filters.minRating));
+  if (filters.minYear !== null) params.set("minYear", String(filters.minYear));
+  if (filters.maxYear !== null) params.set("maxYear", String(filters.maxYear));
+  if (filters.genres.length > 0) params.set("genres", filters.genres.join(","));
   params.set("page", String(page));
   params.set("sort", sort);
   return getJson<DiscoverResponse>(`/api/discover?${params}`, signal);
 }
 
-export async function fetchProviderNames(signal?: AbortSignal): Promise<Map<string, string>> {
+export async function fetchProviders(signal?: AbortSignal): Promise<Map<string, ProviderInfo>> {
   const { providers } = await getJson<ProvidersResponse>("/api/providers", signal);
-  return new Map(providers.map((provider) => [provider.id, provider.name]));
+  return new Map(providers.map((provider) => [provider.id, provider]));
 }
 
 /** Runs `task` over `items` with a bounded number in flight; a rejected task is swallowed because each task records its own failure. */

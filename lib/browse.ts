@@ -2,6 +2,8 @@ import { availabilityOn, collator, STREAM_TYPES } from "@/lib/catalog";
 import { normalizeTitle } from "@/lib/match";
 import type { StoredFilm } from "@/lib/storage/schema";
 import type { MovieDetails, MovieSummary } from "@/lib/types";
+import { FIRST_YEAR } from "@/lib/draw-state";
+import { GENRES } from "@/lib/genres";
 import { MAX_RUNTIME } from "@/lib/validation";
 
 export const PAGE_SIZE = 24;
@@ -13,15 +15,24 @@ export type BrowseSort = "rank" | "rating" | "runtime" | "title" | "year";
 export type BrowseView = "grid" | "list";
 export type BrowseMode = "lists" | "services";
 
-/** `mine` is the visitor's services, `all` ignores availability, anything else is a provider id. */
-export const SERVICE_MINE = "mine";
+/** `all` ignores availability; any other chosen service is a provider id. */
 export const SERVICE_ANY = "all";
+
+const MAX_SERVICES = 20;
 
 export type BrowseFilters = {
   query: string;
+  minDuration: number | null;
   maxDuration: number | null;
-  service: string;
-  genre: string | null;
+  minRating: number | null;
+  minYear: number | null;
+  maxYear: number | null;
+  /** Chosen services; empty means any of the visitor's own. */
+  services: string[];
+  /** Genre names; a film matches when it has any of them. */
+  genres: string[];
+  /** A saved list id or the services source; empty follows the draw settings. */
+  source: string;
   hideSeen: boolean;
   sort: BrowseSort;
   view: BrowseView;
@@ -29,9 +40,14 @@ export type BrowseFilters = {
 
 export const DEFAULT_FILTERS: BrowseFilters = {
   query: "",
+  minDuration: null,
   maxDuration: null,
-  service: SERVICE_MINE,
-  genre: null,
+  minRating: null,
+  minYear: null,
+  maxYear: null,
+  services: [],
+  genres: [],
+  source: "",
   hideSeen: false,
   sort: "rank",
   view: "grid",
@@ -47,19 +63,34 @@ export const sortsFor = (mode: BrowseMode): BrowseSort[] =>
 const MAX_QUERY = 100;
 
 /** Invalid or unknown values fall back to the defaults so a stale link still opens. */
+const duration = (raw: string | null) => {
+  const value = raw !== null && /^\d{1,3}$/.test(raw) ? Number(raw) : null;
+  return value !== null && value >= 1 && value <= MAX_RUNTIME ? value : null;
+};
+
+const year = (raw: string | null) => {
+  const value = raw !== null && /^\d{4}$/.test(raw) ? Number(raw) : null;
+  return value !== null && value >= FIRST_YEAR && value <= new Date().getFullYear() ? value : null;
+};
+
 export function parseFilters(params: URLSearchParams): BrowseFilters {
-  const duration = params.get("duration");
-  const maxDuration =
-    duration !== null && /^\d{1,3}$/.test(duration) && Number(duration) >= 1
-      ? Number(duration)
-      : null;
-  const service = params.get("service") ?? "";
+  const rating = params.get("rating");
+  const services = [
+    ...new Set((params.get("service") ?? "").split(",").filter((id) => /^(all|\d{1,6})$/.test(id))),
+  ].slice(0, MAX_SERVICES);
   const sort = params.get("sort");
   return {
     query: (params.get("q") ?? "").slice(0, MAX_QUERY),
-    maxDuration: maxDuration !== null && maxDuration <= MAX_RUNTIME ? maxDuration : null,
-    service: /^(all|\d{1,6})$/.test(service) ? service : SERVICE_MINE,
-    genre: params.get("genre")?.slice(0, 60) || null,
+    minDuration: duration(params.get("minduration")),
+    maxDuration: duration(params.get("duration")),
+    minRating: rating !== null && /^[1-9](\.5)?$/.test(rating) ? Number(rating) : null,
+    minYear: year(params.get("from")),
+    maxYear: year(params.get("until")),
+    services,
+    genres: (params.get("genres") ?? "")
+      .split(",")
+      .filter((name) => GENRES.some((genre) => genre.name === name)),
+    source: /^[\w-]{1,64}$/.test(params.get("source") ?? "") ? params.get("source")! : "",
     hideSeen: params.get("seen") === "1",
     sort: LIST_SORTS.includes(sort as BrowseSort) ? (sort as BrowseSort) : DEFAULT_FILTERS.sort,
     view: params.get("view") === "list" ? "list" : "grid",
@@ -70,9 +101,14 @@ export function parseFilters(params: URLSearchParams): BrowseFilters {
 export function serializeFilters(filters: BrowseFilters): string {
   const params = new URLSearchParams();
   if (filters.query) params.set("q", filters.query);
+  if (filters.minDuration !== null) params.set("minduration", String(filters.minDuration));
   if (filters.maxDuration !== null) params.set("duration", String(filters.maxDuration));
-  if (filters.service !== DEFAULT_FILTERS.service) params.set("service", filters.service);
-  if (filters.genre) params.set("genre", filters.genre);
+  if (filters.minRating !== null) params.set("rating", String(filters.minRating));
+  if (filters.minYear !== null) params.set("from", String(filters.minYear));
+  if (filters.maxYear !== null) params.set("until", String(filters.maxYear));
+  if (filters.services.length > 0) params.set("service", filters.services.join(","));
+  if (filters.genres.length > 0) params.set("genres", filters.genres.join(","));
+  if (filters.source) params.set("source", filters.source);
   if (filters.hideSeen) params.set("seen", "1");
   if (filters.sort !== DEFAULT_FILTERS.sort) params.set("sort", filters.sort);
   if (filters.view !== DEFAULT_FILTERS.view) params.set("view", filters.view);
@@ -92,6 +128,12 @@ const PENDING: Verdict = { verdict: "pending", uncertain: false };
 const hasStream = (detail: MovieDetails, providerId: string) =>
   detail.offers.some((offer) => STREAM_TYPES.has(offer.type) && offer.id === providerId);
 
+/** An unknown year passes here; it is judged again once the details are known. */
+const inYears = (value: number | null, filters: BrowseFilters) =>
+  value === null ||
+  ((filters.minYear === null || value >= filters.minYear) &&
+    (filters.maxYear === null || value <= filters.maxYear));
+
 /**
  * Whether an imported film belongs in the results. A weak match, a failed lookup or an
  * unknown offer is shown flagged (`uncertain`) and is never counted as available.
@@ -106,22 +148,31 @@ export function classifyListFilm(
   if (filters.query && !normalizeTitle(film.title).includes(normalizeTitle(filters.query))) {
     return HIDE;
   }
+  if (!inYears(film.year, filters)) return HIDE;
   if (film.confidence === null) return PENDING;
   if (film.confidence < 1 || film.tmdbId === null) return FLAGGED;
   if (detail === undefined) return PENDING;
   if (detail === "failed") return FLAGGED;
 
-  if (filters.maxDuration !== null) {
-    if (detail.runtime === null || detail.runtime > filters.maxDuration) return HIDE;
+  if (filters.minDuration !== null || filters.maxDuration !== null) {
+    if (detail.runtime === null) return HIDE;
+    if (filters.minDuration !== null && detail.runtime < filters.minDuration) return HIDE;
+    if (filters.maxDuration !== null && detail.runtime > filters.maxDuration) return HIDE;
   }
-  if (filters.genre && !detail.genres.includes(filters.genre)) return HIDE;
+  if (filters.minRating !== null && (detail.rating === null || detail.rating < filters.minRating)) {
+    return HIDE;
+  }
+  if (film.year === null && !inYears(detail.year, filters)) return HIDE;
+  if (filters.genres.length > 0 && !filters.genres.some((name) => detail.genres.includes(name))) {
+    return HIDE;
+  }
 
-  if (filters.service === SERVICE_ANY) return SHOW;
+  if (filters.services.includes(SERVICE_ANY)) return SHOW;
   if (detail.availabilityStatus === "unknown") return FLAGGED;
   const onService =
-    filters.service === SERVICE_MINE
+    filters.services.length === 0
       ? availabilityOn(detail, services) === "available"
-      : hasStream(detail, filters.service);
+      : filters.services.some((id) => hasStream(detail, id));
   return onService ? SHOW : HIDE;
 }
 
@@ -203,15 +254,6 @@ export function sortShown(items: Shown[], sort: BrowseSort): Shown[] {
     default:
       return sorted;
   }
-}
-
-/** Genres of the films loaded so far, for the genre filter. */
-export function genresOf(details: Iterable<DetailState>): string[] {
-  const genres = new Set<string>();
-  for (const detail of details) {
-    if (typeof detail === "object") detail.genres.forEach((genre) => genres.add(genre));
-  }
-  return [...genres].sort((a, b) => collator.compare(a, b));
 }
 
 const titleYear = (title: string, year: number | null) => `${normalizeTitle(title)}|${year ?? ""}`;

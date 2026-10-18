@@ -11,8 +11,8 @@ export type CardFilm = {
   poster: string | null;
   rating: number | null;
   runtime: number | null;
-  /** Names of the streaming services of the visitor that offer the film. */
-  offerNames: string[];
+  /** Streaming services of the visitor that offer the film. */
+  offers: { name: string; icon: string | null }[];
   /** Weak match, failed lookup or unknown offer: shown as À vérifier. */
   uncertain: boolean;
 };
@@ -41,16 +41,23 @@ export function FilmCard({
           <FilmPoster title={film.title} poster={film.poster} />
         </span>
         <span className="film-card-body">
-          <span className="film-card-title">{film.title}</span>
+          <span className="film-card-title" title={film.title}>
+            {film.title}
+          </span>
           {meta.length > 0 && <span className="film-card-meta">{meta.join(" · ")}</span>}
-          {(film.uncertain || film.offerNames.length > 0) && (
+          {(film.uncertain || film.offers.length > 0) && (
             <span className="film-card-tags">
               {film.uncertain && <span className="tag">À vérifier</span>}
-              {film.offerNames.map((name) => (
-                <span key={name} className="tag tag-offer">
-                  {name}
-                </span>
-              ))}
+              {film.offers.map(({ name, icon }) =>
+                icon ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- TMDB serves sized logos.
+                  <img key={name} src={icon} alt={name} title={name} width={28} height={28} />
+                ) : (
+                  <span key={name} className="tag tag-offer">
+                    {name}
+                  </span>
+                ),
+              )}
             </span>
           )}
         </span>

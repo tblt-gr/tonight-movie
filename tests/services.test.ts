@@ -3,6 +3,7 @@ import {
   NO_SERVICE_ERROR,
   filterProviders,
   normalizeSearch,
+  summarizeNames,
   validateServices,
 } from "@/lib/services";
 import { loadSettings, resetSettings, updateSettings } from "@/lib/storage/settings";
@@ -37,6 +38,14 @@ describe("filterProviders", () => {
   it("returns everything for a blank query and nothing for no match", () => {
     expect(filterProviders(providers, "  ")).toHaveLength(providers.length);
     expect(filterProviders(providers, "zzz")).toEqual([]);
+  });
+});
+
+describe("summarizeNames", () => {
+  it("lists up to two names, then counts the rest", () => {
+    expect(summarizeNames([], "Aucun")).toBe("Aucun");
+    expect(summarizeNames(["A", "B"], "")).toBe("A, B");
+    expect(summarizeNames(["A", "B", "C", "D"], "")).toBe("A, B… (+2)");
   });
 });
 
