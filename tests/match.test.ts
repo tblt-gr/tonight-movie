@@ -36,6 +36,17 @@ describe("normalizeTitle", () => {
 });
 
 describe("matchFilm", () => {
+  it("is high when only the English title equals the imported one", async () => {
+    const wages: MovieSummary = {
+      ...movie(1, "Le Salaire de la peur", 1953, "Le Salaire de la peur"),
+      englishTitle: "The Wages of Fear",
+    };
+    expect(await matchFilm({ title: "The Wages of Fear", year: 1953 }, catalog(wages))).toEqual({
+      tmdbId: 1,
+      confidence: "high",
+    });
+  });
+
   it("is high when the normalized title and the year are equal", async () => {
     const search = catalog(movie(1, "Le Fabuleux Destin d’Amélie Poulain", 2001));
     expect(

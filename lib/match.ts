@@ -28,7 +28,8 @@ export function normalizeTitle(title: string): string {
   return words.join(" ");
 }
 
-const names = (movie: MovieSummary) => [movie.title, movie.originalTitle ?? ""].map(normalizeTitle);
+const names = (movie: MovieSummary) =>
+  [movie.title, movie.originalTitle ?? "", movie.englishTitle ?? ""].map(normalizeTitle);
 const titleMatches = (movie: MovieSummary, wanted: string) => names(movie).includes(wanted);
 
 /**

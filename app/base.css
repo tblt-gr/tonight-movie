@@ -387,10 +387,42 @@ svg {
 .import h2,
 .import h3 {
   margin: 0;
+  font-size: 22px;
+  text-transform: uppercase;
+}
+.import h3 {
   font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.import-figures {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s2);
+  margin: 0;
+}
+.import-figures div {
+  padding: var(--s3) var(--s4);
+  background: var(--panel);
+}
+.import-figures dt {
+  font-size: 12px;
+  font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
+}
+.import-figures dd {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.import-recheck {
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
 }
 .import p {
   margin: 0;
@@ -999,6 +1031,9 @@ svg {
   .dialog > .button,
   .home-hero .button {
     justify-self: stretch;
+  }
+  .import-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .home-steps {
     grid-template-columns: minmax(0, 1fr);

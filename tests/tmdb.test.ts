@@ -165,8 +165,28 @@ describe("routes", () => {
     expect(url.searchParams.get("append_to_response")).toBe("watch/providers");
   });
 
+  it("searches in French and English and keeps the English title", async () => {
+    reply({ results: [{ id: 1, title: "Le Salaire de la peur", release_date: "1953-04-22" }] });
+    reply({
+      results: [
+        { id: 1, title: "The Wages of Fear", release_date: "1953-04-22" },
+        { id: 2, title: "Only English", release_date: "1953-01-01" },
+      ],
+    });
+    const body = await (await search(req("/api/search?title=The%20Wages%20of%20Fear"))).json();
+    expect(body.results).toMatchObject([
+      { tmdbId: 1, title: "Le Salaire de la peur", englishTitle: "The Wages of Fear" },
+      { tmdbId: 2, title: "Only English", englishTitle: "Only English" },
+    ]);
+    const languages = fetchMock.mock.calls.map(([url]) =>
+      new URL(url).searchParams.get("language"),
+    );
+    expect(languages).toEqual(["fr-FR", "en-US"]);
+  });
+
   it("searches with the title and year", async () => {
     reply({ results: [{ id: 1, title: "A", release_date: "2001-01-01" }, { id: 2 }] });
+    reply({ results: [] });
     const body = await (await search(req("/api/search?title=Amélie&year=2001"))).json();
     expect(body.results).toHaveLength(1);
     const url = new URL(fetchMock.mock.calls[0][0]);
@@ -228,10 +248,11 @@ describe("routes", () => {
   it("normalizes the title and sorts providers so equivalent requests share a cache entry", async () => {
     reply({ results: [] });
     reply({ results: [] });
+    reply({ results: [] });
     await search(req("/api/search?title=%20%20AMÉLIE%20%20Poulain"));
     await discover(req("/api/discover?providers=119,8"));
     expect(new URL(fetchMock.mock.calls[0][0]).searchParams.get("query")).toBe("amélie poulain");
-    expect(new URL(fetchMock.mock.calls[1][0]).searchParams.get("with_watch_providers")).toBe(
+    expect(new URL(fetchMock.mock.calls[2][0]).searchParams.get("with_watch_providers")).toBe(
       "8|119",
     );
   });

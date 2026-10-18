@@ -6,6 +6,8 @@ import { ExportGuide } from "@/components/ExportGuide";
 import {
   describeImportError,
   importExport,
+  recheckFilms,
+  unsureFilms,
   type ImportOutcome,
   type ImportProgress,
 } from "@/lib/import/apply";
@@ -26,18 +28,50 @@ export function ImportBlock() {
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [unsure, setUnsure] = useState(0);
   const running = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    let alive = true;
+    const count = () =>
+      void library.getFilms().then((films) => alive && setUnsure(unsureFilms(films).length));
+    count();
     const stop = onReset(() => {
       setOutcome(null);
       setError(null);
+      count();
     });
     return () => {
+      alive = false;
       stop();
       running.current?.abort();
     };
   }, []);
+
+  async function recheck() {
+    if (running.current) return;
+    const controller = new AbortController();
+    running.current = controller;
+    setError(null);
+    setOutcome(null);
+    setProgress({ phase: "reading" });
+    try {
+      await recheckFilms(library, {
+        signal: controller.signal,
+        onProgress: (next) => {
+          if (!controller.signal.aborted) setProgress(next);
+        },
+      });
+      if (!controller.signal.aborted) {
+        setUnsure(unsureFilms(await library.getFilms()).length);
+      }
+    } catch (reason) {
+      if (!controller.signal.aborted) setError(describeImportError(reason));
+    } finally {
+      if (running.current === controller) running.current = null;
+      if (!controller.signal.aborted) setProgress(null);
+    }
+  }
 
   async function start(file: File | undefined) {
     if (!file || running.current) return;
@@ -53,7 +87,10 @@ export function ImportBlock() {
           if (!controller.signal.aborted) setProgress(next);
         },
       });
-      if (!controller.signal.aborted) setOutcome(result);
+      if (!controller.signal.aborted) {
+        setOutcome(result);
+        setUnsure(result.stats.toCheck);
+      }
     } catch (reason) {
       if (!controller.signal.aborted) setError(describeImportError(reason));
     } finally {
@@ -128,15 +165,38 @@ export function ImportBlock() {
           {error}
         </p>
       )}
+      {unsure > 0 && !busy && (
+        <div className="import-recheck">
+          <p>
+            {plural(unsure, "film n’est pas associé", "films ne sont pas associés")} avec certitude
+            à TMDB : ils n’ont ni affiche ni durée et le tirage les ignore.
+          </p>
+          <button type="button" className="button" onClick={() => void recheck()}>
+            Relancer la recherche
+          </button>
+        </div>
+      )}
       {outcome && !busy && (
         <div className="import-summary" role="status">
           <h3>Import terminé</h3>
-          <ul>
-            <li>Watchlist : {plural(outcome.summary.watchlist, "film", "films")}</li>
-            <li>Listes : {outcome.summary.lists}</li>
-            <li>Films aimés : {outcome.summary.liked}</li>
-            <li>Films vus : {outcome.summary.seen}</li>
-          </ul>
+          <dl className="import-figures">
+            <div>
+              <dt>Watchlist</dt>
+              <dd>{outcome.summary.watchlist}</dd>
+            </div>
+            <div>
+              <dt>Listes</dt>
+              <dd>{outcome.summary.lists}</dd>
+            </div>
+            <div>
+              <dt>Likes</dt>
+              <dd>{outcome.summary.liked}</dd>
+            </div>
+            <div>
+              <dt>Vus</dt>
+              <dd>{outcome.summary.seen}</dd>
+            </div>
+          </dl>
           <p>
             Le tirage peut utiliser {plural(outcome.stats.drawable, "film", "films")}.
             {outcome.stats.toCheck > 0 &&

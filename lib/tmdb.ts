@@ -13,6 +13,7 @@ const TMDB_API = "https://api.themoviedb.org/3";
 const TMDB_SITE = "https://www.themoviedb.org";
 const TMDB_IMAGES = "https://image.tmdb.org/t/p/";
 const LANGUAGE = "fr-FR";
+const ENGLISH = "en-US";
 const REGION = "FR";
 const REVALIDATE_SECONDS = 24 * 60 * 60;
 const TIMEOUT_MS = 8_000;
@@ -176,15 +177,39 @@ export function mapMovie(movie: TmdbMovie): MovieDetails | null {
   };
 }
 
+/**
+ * Letterboxd names most foreign films by their English title, which TMDB's French
+ * results do not carry. Both languages are searched and merged by film id.
+ */
 export async function searchMovies(title: string, year: number | null): Promise<SearchResponse> {
-  const page = await tmdbGet<TmdbPage>("/search/movie", {
-    query: title,
-    language: LANGUAGE,
-    include_adult: "false",
-    page: "1",
-    ...(year === null ? {} : { year: String(year) }),
+  const search = (language: string) =>
+    tmdbGet<TmdbPage>("/search/movie", {
+      query: title,
+      language,
+      include_adult: "false",
+      page: "1",
+      ...(year === null ? {} : { year: String(year) }),
+    });
+  const [french, english] = await Promise.all([
+    search(LANGUAGE),
+    search(ENGLISH).catch(() => ({ results: [] }) as TmdbPage),
+  ]);
+  const englishTitles = new Map(
+    (english.results ?? []).flatMap((movie) =>
+      typeof movie.id === "number" && movie.title ? [[movie.id, movie.title] as const] : [],
+    ),
+  );
+  const known = new Set<number>();
+  const results = summarizeAll(french.results).map((movie) => {
+    known.add(movie.tmdbId);
+    return { ...movie, englishTitle: englishTitles.get(movie.tmdbId) ?? null };
   });
-  return { results: summarizeAll(page.results) };
+  for (const movie of summarizeAll(english.results)) {
+    if (!known.has(movie.tmdbId)) {
+      results.push({ ...movie, englishTitle: movie.title });
+    }
+  }
+  return { results };
 }
 
 export async function getMovie(id: number): Promise<MovieDetails> {
