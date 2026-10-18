@@ -6,7 +6,7 @@ import { Info, X } from "lucide-react";
 const STEPS = [
   "Connectez-vous à letterboxd.com depuis un ordinateur.",
   "Ouvrez votre profil, puis choisissez « Settings » (Réglages).",
-  "Allez dans l’onglet « Import & Export ».",
+  "Allez dans l’onglet « Data ».",
   "Cliquez sur « Export your data ».",
   "Téléchargez l’archive .zip proposée par Letterboxd.",
   "Revenez ici et déposez l’archive dans la zone d’import, sans la décompresser.",
