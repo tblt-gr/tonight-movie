@@ -6,7 +6,7 @@
   <a href="https://github.com/tblt-gr/tonight-movie/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tblt-gr/tonight-movie/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white">
-  <a href="https://github.com/tblt-gr/tonight-movie/releases"><img alt="Version 0.2.0" src="https://img.shields.io/badge/version-0.2.0-blue"></a>
+  <a href="https://github.com/tblt-gr/tonight-movie/releases"><img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-blue"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
 
@@ -21,11 +21,15 @@
   <a href="#contributing">Contributing</a>
 </p>
 
-Pick your streaming services in France, and Tonight’s Movie draws one film you can watch right now: poster, duration, rating, synopsis and the services that offer it. The interface is in French and in English.
+Tonight’s Movie draws one film you can watch right now. Pick your streaming services in France and get a random film with its poster, runtime, rating, synopsis and where to watch it. Available in French and English.
 
-You can optionally import your own Letterboxd export (watchlist, lists, liked and watched films) to draw among your films. The app never scrapes Letterboxd and never asks for Letterboxd credentials. There is no Tonight’s Movie account and no database: your services, your imported data and your draw history stay in your browser.
+Optionally, import your Letterboxd export to draw among your own watchlist and lists. Nothing is scraped, no Letterboxd login is asked, and there is no account or database: your data stays in your browser.
 
-**Status: alpha.** See [limits](#limits).
+## Demo
+
+<p align="center">
+  <img alt="Presentation of Tonight’s Movie: choose services, draw a movie, browse films" src=".github/media/tonight-movie-en.gif" width="720">
+</p>
 
 ## Run locally
 
@@ -62,21 +66,24 @@ The container keeps no data on disk, so it needs no volume. Pass the key at run 
 
 Copy `.env.example` to `.env.local` (local) or set the variables in your host (Docker, Vercel). They are server-only: never prefix them with `NEXT_PUBLIC_` and never commit a real value.
 
-| Variable             | Required | Default | Purpose                                                                                                                                                                                                        |
-| -------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TMDB_API_KEY`       | yes      | none    | TMDB v4 read access token. Never sent to the browser, logged or echoed.                                                                                                                                        |
-| `WATCHMODE_API_KEY`  | no       | none    | [Watchmode](https://api.watchmode.com/) key for direct links to the streaming services. Without it, or past the quota, links fall back to each service's search page, then to TMDB. Never sent to the browser. |
-| `TRUSTED_PROXY_HOPS` | no       | `1`     | Number of trusted reverse proxies in front of the app, used to read the client IP from `X-Forwarded-For` for rate limiting. `0` ignores the header (one shared bucket).                                        |
-| `PORT`               | no       | `3000`  | Listening port.                                                                                                                                                                                                |
+| Variable                | Required | Default | Purpose                                                                                                                                                                                                        |
+| ----------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TMDB_API_KEY`          | yes      | none    | TMDB v4 read access token. Never sent to the browser, logged or echoed.                                                                                                                                        |
+| `WATCHMODE_API_KEY`     | no       | none    | [Watchmode](https://api.watchmode.com/) key for direct links to the streaming services. Without it, or past the quota, links fall back to each service's search page, then to TMDB. Never sent to the browser. |
+| `TRUSTED_PROXY_HOPS`    | no       | `1`     | Number of trusted reverse proxies in front of the app, used to read the client IP from `X-Forwarded-For` for rate limiting. `0` ignores the header (one shared bucket).                                        |
+| `RATE_LIMIT_PER_MINUTE` | no       | `600`   | Requests allowed per client IP and minute on the `/api` routes (429 beyond).                                                                                                                                   |
+| `PORT`                  | no       | `3000`  | Listening port.                                                                                                                                                                                                |
 
 ## What you can do
 
 - Choose your streaming services among the French providers known to TMDB. At least one is required.
 - Optionally import a Letterboxd export. An (i) guide in the app explains the steps; they are repeated [below](#import-your-letterboxd-data).
-- Draw one film at random from a source (your watchlist, an imported list, your liked films, or all films on your services) with a maximum duration and an option to leave out films you have already seen. Draw again as often as you like; the last draws are avoided when possible.
-- Browse and filter films manually from the link under the result.
+- Draw one film at random from one or several sources (your watchlist, an imported list, your liked films, or all films on your services). Advanced filters narrow the draw by minimum and maximum runtime, minimum TMDB rating, release years and genres, and can hide films you have already seen. Draw again as often as you like; the last draws are avoided when possible. The result opens as a screening with poster, duration, rating, synopsis and offers in accordions.
+- Open the offers of a film straight on the streaming service. Direct links need the optional Watchmode key; otherwise each link falls back to the service’s search page, then to TMDB.
+- Browse films on `/films`, as a grid or a list, from any source. Search by title (imported lists), pick one or several of your services, open the advanced filters (same as the draw), and sort by rating, duration, title or year (popularity or source order by default). Every filter lives in the URL, so a view can be shared or bookmarked.
+- See popular films per streaming service on the home page before you choose.
 
-Pages: `/` (presentation, skipped once services are chosen), `/reglages` (services and import), `/tirage` (the draw), `/films` (browse and filter) and `/a-propos` (credits).
+Pages: `/` (presentation, skipped once services are chosen; add `?intro` to see it again), `/reglages` (services and import), `/tirage` (the draw), `/films` (browse and filter) and `/a-propos` (credits).
 
 The English version lives under `/en` with translated segments: `/en`, `/en/settings`, `/en/draw`, `/en/films` and `/en/about`. French has no prefix. The header links to the same page in the other language, query string included; the choice is never stored, the URL is the language. Services, imported lists and draw settings are shared by both languages. Text lives in `lib/i18n/dictionaries/` (`fr.ts` sets the shape, `en.ts` must match it), and `proxy.ts` rewrites the public URLs onto the pages in `app/[lang]/`.
 
@@ -116,15 +123,17 @@ A single Next.js App Router application serves the React interface and a few sta
 - The browser parses the Letterboxd export (`lib/import/`), keeps services, lists, films and draw history in local storage (`lib/storage/`), and runs the draw (`lib/draw.ts`).
 - The route handlers are a thin, validated proxy to TMDB, so the key stays on the server:
 
-| Route                                                     | Purpose                                         |
-| --------------------------------------------------------- | ----------------------------------------------- |
-| `GET /api/search?title=…&year=…`                          | Search by title, optional year                  |
-| `GET /api/movie/{id}`                                     | Details plus French offers                      |
-| `GET /api/providers`                                      | French watch provider list                      |
-| `GET /api/discover?providers=8,119&maxRuntime=120&page=1` | Films streaming on any provider, page up to 500 |
-| `GET /api/health`                                         | `200`, or `503` when `TMDB_API_KEY` is missing  |
+| Route                                                                     | Purpose                                                                                     |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `GET /api/search?title=…&year=…`                                          | Search by title, optional year                                                              |
+| `GET /api/movie/{id}`                                                     | Details plus French offers                                                                  |
+| `GET /api/providers`                                                      | French watch provider list                                                                  |
+| `GET /api/discover?providers=8,119&maxRuntime=120&page=1&sort=popularity` | Films streaming on any provider; `sort` is `popularity`, `rating` or `year`; page up to 500 |
+| `GET /api/watch-links/{tmdbId}`                                           | Direct links to the streaming services (needs `WATCHMODE_API_KEY`)                          |
+| `GET /api/provider-logo?file=…`                                           | Provider logo proxied from TMDB (bare file name only)                                       |
+| `GET /api/health`                                                         | `200`, or `503` when `TMDB_API_KEY` is missing                                              |
 
-The movie, providers and discover routes also take `lang=fr|en` (French by default), which only picks the language of titles, synopses and provider names. Parameters are validated strictly (unknown ones get a 400) and there is no passthrough to TMDB. Errors are typed (`{ "error": { "code", "message" } }`). TMDB answers are cached by the Next fetch cache for 24 hours; that cache lives in `.next/cache` and holds public film data only. Each client IP is limited to 600 requests per minute by default, set by `RATE_LIMIT_PER_MINUTE` (429 beyond), read from `X-Forwarded-For` as set by your own proxies (`TRUSTED_PROXY_HOPS`); behind no proxy the header is client-controlled, so deploy behind one that overwrites it. Counters live in process memory, so several instances do not share them.
+`/api/discover` also takes `minRuntime`, `minRating`, `minYear`, `maxYear` and `genres` (TMDB genre ids) for the advanced filters. The movie, providers and discover routes also take `lang=fr|en` (French by default), which only picks the language of titles, synopses and provider names. Parameters are validated strictly (unknown ones get a 400) and there is no passthrough to TMDB. Errors are typed (`{ "error": { "code", "message" } }`). TMDB answers are cached by the Next fetch cache for 24 hours; that cache lives in `.next/cache` and holds public film data only. Each client IP is limited to 600 requests per minute by default, set by `RATE_LIMIT_PER_MINUTE` (429 beyond), read from `X-Forwarded-For` as set by your own proxies (`TRUSTED_PROXY_HOPS`); behind no proxy the header is client-controlled, so deploy behind one that overwrites it. Counters live in process memory, so several instances do not share them.
 
 ## Deployment
 
