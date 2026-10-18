@@ -1,6 +1,7 @@
-import { STREAM_TYPES } from "@/lib/catalog";
+import { RENT_TYPES, STREAM_TYPES } from "@/lib/catalog";
 import { SERVICES_SOURCE_ID, tmdbKey, type DrawInput, type NoneReason } from "@/lib/draw";
 import type { Settings, StoredFilm, StoredList } from "@/lib/storage/schema";
+import { providerSearchUrl } from "@/lib/provider-links";
 import type { MovieDetails, Offer } from "@/lib/types";
 
 export type DrawState =
@@ -124,33 +125,42 @@ export function noneMessage(reason: NoneReason): { reason: string; hint: string 
 
 /** Streaming offers on the visitor's services, one per service. */
 export function offersToShow(film: Pick<MovieDetails, "offers">, services: ReadonlySet<string>) {
-  const shown = new Map<string, Offer>();
-  for (const offer of film.offers) {
-    if (STREAM_TYPES.has(offer.type) && services.has(offer.id) && !shown.has(offer.id)) {
-      shown.set(offer.id, offer);
-    }
-  }
-  return [...shown.values()];
+  return offerGroups(film, services).owned;
 }
 
-export type WatchLink = { id: string; name: string; href: string };
-
 /**
- * Where to press play: one link per streaming service of the visitor. An empty `links` list
- * is an unconfirmed offer, shown as À vérifier, never as proof that the film is unavailable.
+ * The offers of a film in three groups, one per service: streaming on the visitor's services,
+ * streaming elsewhere, and rent or buy. Rent and buy never count as a subscription, so a
+ * service that also streams the film only shows up as streaming.
  */
-export function watchLinks(
-  film: Pick<MovieDetails, "offers" | "availabilityStatus" | "offersUrl">,
-  services: ReadonlySet<string>,
-): { verified: boolean; links: WatchLink[] } {
-  const offers = offersToShow(film, services);
-  if (film.availabilityStatus !== "verified" || offers.length === 0) {
-    return { verified: false, links: [] };
+export function offerGroups(film: Pick<MovieDetails, "offers">, services: ReadonlySet<string>) {
+  const owned = new Map<string, Offer>();
+  const other = new Map<string, Offer>();
+  const rental = new Map<string, Offer>();
+  for (const offer of film.offers) {
+    if (STREAM_TYPES.has(offer.type)) {
+      const group = services.has(offer.id) ? owned : other;
+      if (!group.has(offer.id)) group.set(offer.id, offer);
+    }
   }
-  const links = offers.flatMap((offer) => {
-    const href = offer.url ?? film.offersUrl;
-    return href ? [{ id: offer.id, name: offer.name, href }] : [];
-  });
-  if (links.length === 0) return { verified: false, links: [] };
-  return { verified: true, links };
+  for (const offer of film.offers) {
+    if (RENT_TYPES.has(offer.type) && !owned.has(offer.id) && !other.has(offer.id)) {
+      if (!rental.has(offer.id)) rental.set(offer.id, offer);
+    }
+  }
+  return { owned: [...owned.values()], other: [...other.values()], rental: [...rental.values()] };
+}
+
+/** True when the film has a confirmed offer a direct link could be looked up for. */
+export function hasOffers(film: Pick<MovieDetails, "offers" | "availabilityStatus">): boolean {
+  return film.availabilityStatus === "verified" && film.offers.length > 0;
+}
+
+/** A direct link to the film, else the provider's search page, else the offer's link, else TMDB. */
+export function offerHref(
+  film: Pick<MovieDetails, "title" | "offersUrl">,
+  offer: Pick<Offer, "id" | "url">,
+  direct: Readonly<Record<string, string>> = {},
+): string | null {
+  return direct[offer.id] ?? providerSearchUrl(offer.id, film.title) ?? offer.url ?? film.offersUrl;
 }

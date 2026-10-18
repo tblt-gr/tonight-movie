@@ -9,7 +9,9 @@ import {
   roomLight,
   sourceOptions,
   swapDelays,
-  watchLinks,
+  hasOffers,
+  offerGroups,
+  offerHref,
   type DrawState,
 } from "@/lib/draw-state";
 import { DEFAULT_SETTINGS, type StoredFilm } from "@/lib/storage/schema";
@@ -133,55 +135,45 @@ describe("roomLight", () => {
   });
 });
 
-describe("watchLinks", () => {
-  const offer = (id: string, url: string | null, type = "FLATRATE") => ({
-    id,
-    name: id,
-    icon: null,
-    type,
-    url,
-  });
+describe("offerHref", () => {
+  const film = { title: "Heat & Dust", offersUrl: "https://tmdb.example/film" };
 
-  it("returns one play link per confirmed streaming offer", () => {
-    const links = watchLinks(
+  it("prefers a direct link, then the service's search page, then the offer, then TMDB", () => {
+    expect(
+      offerHref(film, { id: "8", url: null }, { "8": "https://www.netflix.com/title/1" }),
+    ).toBe("https://www.netflix.com/title/1");
+    expect(offerHref(film, { id: "8", url: null })).toBe(
+      "https://www.netflix.com/search?q=Heat%20%26%20Dust",
+    );
+    expect(offerHref(film, { id: "999", url: "https://watch.example/999" })).toBe(
+      "https://watch.example/999",
+    );
+    expect(offerHref(film, { id: "999", url: null })).toBe("https://tmdb.example/film");
+    expect(offerHref({ ...film, offersUrl: null }, { id: "999", url: null })).toBeNull();
+  });
+});
+
+describe("offerGroups", () => {
+  const offer = (id: string, type: string) => ({ id, name: id, icon: null, type, url: null });
+
+  it("splits streaming on my services, streaming elsewhere, and rent or buy", () => {
+    const groups = offerGroups(
       {
-        availabilityStatus: "verified",
-        offersUrl: "https://tmdb.example/film",
         offers: [
-          offer("8", "https://watch.example/8"),
-          offer("9", null),
-          offer("8", "https://ads.example", "ADS"),
+          offer("8", "FLATRATE"),
+          offer("9", "ADS"),
+          offer("9", "FREE"),
+          offer("8", "RENT"),
+          offer("10", "RENT"),
+          offer("10", "BUY"),
+          offer("9", "BUY"),
         ],
-      } as unknown as MovieDetails,
+      } as MovieDetails,
       new Set(["8"]),
     );
-    expect(links).toEqual({
-      verified: true,
-      links: [{ id: "8", name: "8", href: "https://watch.example/8" }],
-    });
-  });
-
-  it("stays unverified when the offer is missing or has nowhere to press play", () => {
-    expect(
-      watchLinks(
-        {
-          availabilityStatus: "unknown",
-          offersUrl: "https://tmdb.example/film",
-          offers: [],
-        } as unknown as MovieDetails,
-        new Set(["8"]),
-      ),
-    ).toEqual({ verified: false, links: [] });
-    expect(
-      watchLinks(
-        {
-          availabilityStatus: "verified",
-          offersUrl: null,
-          offers: [offer("8", null)],
-        } as unknown as MovieDetails,
-        new Set(["8"]),
-      ),
-    ).toEqual({ verified: false, links: [] });
+    expect(groups.owned.map((o) => o.id)).toEqual(["8"]);
+    expect(groups.other.map((o) => [o.id, o.type])).toEqual([["9", "ADS"]]);
+    expect(groups.rental.map((o) => [o.id, o.type])).toEqual([["10", "RENT"]]);
   });
 });
 
@@ -200,5 +192,16 @@ describe("offersToShow", () => {
       new Set(["8"]),
     );
     expect(shown.map((item) => item.id)).toEqual(["8"]);
+  });
+});
+
+describe("hasOffers", () => {
+  const film = (status: string, offers: unknown[]) =>
+    ({ availabilityStatus: status, offers }) as unknown as MovieDetails;
+
+  it("is true only for a confirmed film with at least one offer", () => {
+    expect(hasOffers(film("verified", [{}]))).toBe(true);
+    expect(hasOffers(film("verified", []))).toBe(false);
+    expect(hasOffers(film("unknown", [{}]))).toBe(false);
   });
 });

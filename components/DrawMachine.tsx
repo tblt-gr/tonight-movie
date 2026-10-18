@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useId, useReducer, useRef, useState } from "react";
+import { useEffect, useId, useReducer, useRef, useState } from "react";
 import { FilmOffers } from "@/components/FilmOffers";
 import { FilmPoster } from "@/components/FilmPoster";
 import { formatMinutes, formatRating } from "@/lib/catalog";
@@ -16,7 +16,6 @@ import {
   roomLight,
   sourceOptions,
   swapDelays,
-  watchLinks,
 } from "@/lib/draw-state";
 import { onReset } from "@/lib/storage";
 import { library } from "@/lib/storage/library";
@@ -53,11 +52,9 @@ export function DrawMachine() {
   const [hasSeen, setHasSeen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [slot, setSlot] = useState<Slot>({ poster: null, framed: false });
-  const [screening, setScreening] = useState(false);
   const alive = useRef(true);
   const running = useRef(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const watchRef = useRef<HTMLButtonElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
   const slotRef = useRef<HTMLDivElement>(null);
 
@@ -107,20 +104,9 @@ export function DrawMachine() {
     setSettings(updateSettings(patch));
   }
 
-  const closeScreening = useCallback(() => {
-    setScreening(false);
-  }, []);
-
-  const screeningWasOpen = useRef(false);
-  useEffect(() => {
-    if (screeningWasOpen.current && !screening) watchRef.current?.focus({ preventScroll: true });
-    screeningWasOpen.current = screening;
-  }, [screening]);
-
   async function run() {
     if (running.current) return;
     running.current = true;
-    setScreening(false);
     dispatch({ type: "start" });
     setSlot({ poster: null, framed: false });
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -221,13 +207,7 @@ export function DrawMachine() {
 
         <div className="draw-side">
           {state.phase === "result" && !drawing && (
-            <Result
-              film={state.film}
-              services={services}
-              headingRef={headingRef}
-              watchRef={watchRef}
-              onWatch={() => setScreening(true)}
-            />
+            <Result film={state.film} services={services} headingRef={headingRef} />
           )}
           {state.phase === "none" && (
             <div className="draw-outcome">
@@ -333,10 +313,6 @@ export function DrawMachine() {
           </button>
         )}
       </div>
-
-      {screening && state.phase === "result" && (
-        <Screening film={state.film} services={services} onClose={closeScreening} />
-      )}
     </div>
   );
 }
@@ -345,14 +321,10 @@ function Result({
   film,
   services,
   headingRef,
-  watchRef,
-  onWatch,
 }: {
   film: MovieDetails;
   services: ReadonlySet<string>;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
-  watchRef: React.RefObject<HTMLButtonElement | null>;
-  onWatch: () => void;
 }) {
   return (
     <article className="result">
@@ -370,11 +342,8 @@ function Result({
           <dd>{formatRating(film.rating)}</dd>
         </div>
       </dl>
-      <FilmOffers film={film} services={services} />
+      <FilmOffers film={film} services={services} directLinks />
       <Synopsis key={film.tmdbId} text={film.overview || "Synopsis indisponible."} />
-      <button type="button" className="button primary" ref={watchRef} onClick={onWatch}>
-        Regarder ce film
-      </button>
       <p className="result-escape">
         Pas ce qui vous convient ? <Link href="/films">Parcourir les films</Link>
       </p>
@@ -415,104 +384,6 @@ function Synopsis({ text }: { text: string }) {
           {open ? "Voir moins" : "Voir plus"}
         </button>
       )}
-    </div>
-  );
-}
-
-function Screening({
-  film,
-  services,
-  onClose,
-}: {
-  film: MovieDetails;
-  services: ReadonlySet<string>;
-  onClose: () => void;
-}) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const lightsRef = useRef<HTMLButtonElement>(null);
-  const where = watchLinks(film, services);
-
-  useEffect(() => {
-    const inertRoots = [
-      document.querySelector(".site-header"),
-      document.querySelector(".draw-room"),
-      document.querySelector(".draw-player"),
-    ].filter((node): node is HTMLElement => node instanceof HTMLElement);
-    for (const node of inertRoots) node.setAttribute("inert", "");
-    lightsRef.current?.focus();
-
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const items = [
-        ...(panelRef.current?.querySelectorAll<HTMLElement>("a[href], button:not([disabled])") ??
-          []),
-      ];
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      for (const node of inertRoots) node.removeAttribute("inert");
-    };
-  }, [onClose]);
-
-  return (
-    <div className="cinema" ref={panelRef} role="dialog" aria-modal="true" aria-label="Séance">
-      <div className="cinema-screen">
-        <FilmPoster title={film.title} poster={film.poster} />
-      </div>
-      <div className="cinema-bar">
-        <h2>Bonne séance</h2>
-        <p>
-          {film.title}
-          {film.runtime ? ` · ${formatMinutes(film.runtime)}` : ""}
-        </p>
-        {where.verified ? (
-          <div className="cinema-links">
-            {where.links.map((link, index) => (
-              <a
-                key={link.id}
-                className={index === 0 ? "button primary" : "button"}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {index === 0 ? `Regarder sur ${link.name}` : link.name}
-              </a>
-            ))}
-          </div>
-        ) : (
-          <p className="tag-check">
-            <span className="tag">À vérifier</span>
-            {film.offersUrl && (
-              <>
-                {" "}
-                <a href={film.offersUrl} target="_blank" rel="noopener noreferrer">
-                  Voir la disponibilité sur TMDB (nouvel onglet)
-                </a>
-              </>
-            )}
-          </p>
-        )}
-        <button type="button" className="button" ref={lightsRef} onClick={onClose}>
-          Rallumer les lumières
-        </button>
-      </div>
     </div>
   );
 }

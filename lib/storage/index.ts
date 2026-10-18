@@ -1,6 +1,7 @@
 import { library } from "@/lib/storage/library";
 import { resetSettings } from "@/lib/storage/settings";
 import { clearUnavailable } from "@/lib/storage/status";
+import { clearWatchLinks } from "@/lib/storage/watch-links";
 
 const resetListeners = new Set<() => void>();
 
@@ -17,5 +18,6 @@ export async function resetAll() {
   resetSettings();
   await library.reset();
   clearUnavailable();
+  clearWatchLinks();
   resetListeners.forEach((listener) => listener());
 }
