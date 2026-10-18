@@ -845,6 +845,14 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   font-weight: 700;
   text-decoration: none;
 }
+.offers-label {
+  margin: var(--s4) 0 var(--s2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
 .provider-link {
   display: inline-flex;
   align-items: center;
@@ -995,63 +1003,6 @@ html[data-home-redirect] .home-steps {
 }
 .home-reel .poster-card:nth-child(2) {
   transform: translateY(-32px);
-}
-.cinema {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  align-items: center;
-  justify-items: center;
-  background: #000;
-}
-.cinema-screen {
-  padding-top: var(--s6);
-}
-.cinema-screen img,
-.cinema-screen .poster-missing {
-  display: block;
-  width: auto;
-  height: min(58vh, 560px);
-  aspect-ratio: 2 / 3;
-  border: 1px solid #3a3a3f;
-  object-fit: cover;
-}
-.cinema-bar {
-  display: grid;
-  gap: var(--s3);
-  justify-items: center;
-  padding: var(--s5) var(--s4) var(--s7);
-  text-align: center;
-}
-.cinema-bar h2 {
-  margin: 0;
-  font-size: clamp(26px, 3.4vw, 48px);
-  font-weight: 700;
-  line-height: 1.02;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
-}
-.cinema-bar p {
-  margin: 0;
-  color: var(--muted);
-}
-.cinema-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s3);
-  justify-content: center;
-}
-.cinema-links .provider-link {
-  min-height: 48px;
-  padding-right: var(--s5);
-  font-size: 17px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.cinema .button {
-  text-decoration: none;
 }
 .home-accent {
   white-space: nowrap;
@@ -1520,26 +1471,6 @@ html[data-home-redirect] .home-steps {
       opacity: 1;
     }
   }
-  @keyframes screen-in {
-    from {
-      opacity: 0;
-      transform: scale(0.86);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-  @keyframes bar-in {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
   .title-stack.is-in span,
   .home-hero h1 span {
     animation-name: wipe;
@@ -1609,24 +1540,6 @@ html[data-home-redirect] .home-steps {
   }
   .home-reel .poster-card:nth-child(3) {
     animation-delay: 790ms;
-  }
-  .cinema {
-    animation: fade-in 220ms ease-out;
-  }
-  .cinema-screen img,
-  .cinema-screen .poster-missing {
-    animation-name: screen-in;
-    animation-duration: 380ms;
-    animation-delay: 80ms;
-    animation-timing-function: var(--ease-out);
-    animation-fill-mode: backwards;
-  }
-  .cinema-bar {
-    animation-name: bar-in;
-    animation-duration: 360ms;
-    animation-delay: 180ms;
-    animation-timing-function: var(--ease-out);
-    animation-fill-mode: backwards;
   }
 }
 @media (prefers-reduced-motion: reduce) {

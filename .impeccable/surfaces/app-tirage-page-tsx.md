@@ -19,7 +19,7 @@ OWN-WORLD: New Wave title cards translated to a dark screen. Near-black `#0b0b0d
 
 STORY: The visitor understands in a second that one film will be picked from what they own, presses once, watches the room go dark and posters cut by, sees the chosen poster hold for a moment, then reads everything needed to press play, or starts the screening where the lights go out.
 
-FIRST VIEWPORT: Result state. Poster at full height on the left; right column: title in large uppercase off-white with the year in yellow, a red rule, red labels over light-weight duration and rating, outlined offer tags, short synopsis, yellow "Regarder ce film". A transparent bottom control bar holds source, max duration, the seen checkbox and a yellow "Relancer". Start state: no film, one prompt and one yellow button. Draw state: the room dims, the poster sits centered.
+FIRST VIEWPORT: Result state. Poster at full height on the left; right column: title in large uppercase off-white with the year in yellow, a red rule, red labels over light-weight duration and rating, offer links with logo and brand color, short synopsis. A transparent bottom control bar holds source, max duration, the seen checkbox and a yellow "Relancer". Start state: no film, one prompt and one yellow button. Draw state: the room dims, the poster sits centered.
 
 FORM: Title-card world (assigned direction, position 5 of the grounded list), owner's palette and type replacing the first blue, white and red. seed: 9e35093fa4787856. Raises kept: rank by weight and case with one body size (timetable), one message per screen (airport signage), light tabular figures for durations (cassette j-card).
 

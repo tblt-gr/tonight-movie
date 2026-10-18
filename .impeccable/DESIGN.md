@@ -252,7 +252,6 @@ Every animation is subordinate to film grammar.
 - **Cut:** state changes are 90ms stepped transitions (`steps(2)`) on background, color and border. No tweening.
 - **Slide:** during a draw the poster travels to center and back to the left over 0.7s, and the info column fades out and offsets 48px left.
 - **Draw sequence:** the room dims (240ms), the poster swaps starting at 70ms between swaps, slowing by 13% each time until it passes 330ms; the winner holds for 1s inside a 3px yellow frame (offset 8px); then the lights return and the title wipes in with the details.
-- **Screening mode:** "Regarder ce film" turns the lights out. The black layer fades in over 220ms, the poster scales from 0.86 to 1 over 380ms, the bar rises 16px over 360ms. Escape or "Rallumer les lumières" restores focus to the trigger.
 - **Reduced motion:** all animation and transition are off. The hidden start state of reveal blocks exists only under `prefers-reduced-motion: no-preference`; the draw resolves instantly.
 
 ## Do's and Don'ts
