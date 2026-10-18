@@ -82,7 +82,7 @@ export function DrawMachine() {
   // Moves focus to the outcome once a draw settles, so keyboard users land on it.
   const settled = state.phase === "result" || state.phase === "none" || state.phase === "error";
   useEffect(() => {
-    if (settled) headingRef.current?.focus();
+    if (settled) headingRef.current?.focus({ preventScroll: true });
   }, [settled, state]);
 
   const drawing = state.phase === "drawing";
@@ -113,7 +113,7 @@ export function DrawMachine() {
 
   const screeningWasOpen = useRef(false);
   useEffect(() => {
-    if (screeningWasOpen.current && !screening) watchRef.current?.focus();
+    if (screeningWasOpen.current && !screening) watchRef.current?.focus({ preventScroll: true });
     screeningWasOpen.current = screening;
   }, [screening]);
 
@@ -248,22 +248,22 @@ export function DrawMachine() {
           )}
           {(state.phase === "idle" || drawing) && (
             <div className="draw-outcome">
-              <h1 className="title-stack">
+              <h1 className="title-stack is-in">
                 <span>Qu’est-ce qu’on</span>
                 <span className="title-accent">regarde ce soir ?</span>
               </h1>
               <p className="draw-lead">
                 Un film, tiré au sort parmi ceux que vous pouvez regarder ce soir.
               </p>
-              {state.phase === "idle" && (
-                <button
-                  type="button"
-                  className="button primary draw-trigger"
-                  onClick={() => void run()}
-                >
-                  Tirer un film
-                </button>
-              )}
+              <button
+                type="button"
+                className={`button primary draw-trigger${drawing ? " is-away" : ""}`}
+                disabled={drawing}
+                aria-hidden={drawing ? "true" : undefined}
+                onClick={() => void run()}
+              >
+                Tirer un film
+              </button>
             </div>
           )}
           <p role="status" className="sr-only">
@@ -272,62 +272,67 @@ export function DrawMachine() {
         </div>
       </div>
 
-      {loaded && (
-        <div className="draw-player" role="group" aria-label="Réglages du tirage">
-          <div className="field">
-            <label htmlFor={`${ids}-source`}>Source</label>
-            <select
-              id={`${ids}-source`}
-              value={sourceValue}
-              onChange={(event) => change({ sources: [event.target.value] })}
-            >
-              {sourceValue === MANY_SOURCES && (
-                <option value={MANY_SOURCES} disabled>
-                  Plusieurs sources
-                </option>
-              )}
-              {sourceOptions(lists).map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor={`${ids}-duration`}>Durée max</label>
-            <select
-              id={`${ids}-duration`}
-              value={settings.maxDuration ?? ""}
-              onChange={(event) =>
-                change({ maxDuration: event.target.value ? Number(event.target.value) : null })
-              }
-            >
-              <option value="">Sans limite</option>
-              {durationOptions(settings.maxDuration).map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {durationLabel(minutes)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {hasSeen && (
-            <div className="field field-check">
-              <input
-                id={`${ids}-seen`}
-                type="checkbox"
-                checked={settings.excludeSeen}
-                onChange={(event) => change({ excludeSeen: event.target.checked })}
-              />
-              <label htmlFor={`${ids}-seen`}>Exclure les films déjà vus</label>
-            </div>
-          )}
-          {state.phase !== "idle" && !drawing && (
-            <button type="button" className="button draw-go" onClick={() => void run()}>
-              Relancer
-            </button>
-          )}
+      <div
+        className="draw-player"
+        role="group"
+        aria-label="Réglages du tirage"
+        data-pending={loaded ? undefined : ""}
+      >
+        <div className="filter">
+          <label htmlFor={`${ids}-source`}>Source</label>
+          <select
+            className="select"
+            id={`${ids}-source`}
+            value={sourceValue}
+            onChange={(event) => change({ sources: [event.target.value] })}
+          >
+            {sourceValue === MANY_SOURCES && (
+              <option value={MANY_SOURCES} disabled>
+                Plusieurs sources
+              </option>
+            )}
+            {sourceOptions(lists).map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </select>
         </div>
-      )}
+        <div className="filter">
+          <label htmlFor={`${ids}-duration`}>Durée maximale</label>
+          <select
+            className="select"
+            id={`${ids}-duration`}
+            value={settings.maxDuration ?? ""}
+            onChange={(event) =>
+              change({ maxDuration: event.target.value ? Number(event.target.value) : null })
+            }
+          >
+            <option value="">Sans limite</option>
+            {durationOptions(settings.maxDuration).map((minutes) => (
+              <option key={minutes} value={minutes}>
+                {durationLabel(minutes)}
+              </option>
+            ))}
+          </select>
+        </div>
+        {hasSeen && (
+          <div className="check">
+            <input
+              id={`${ids}-seen`}
+              type="checkbox"
+              checked={settings.excludeSeen}
+              onChange={(event) => change({ excludeSeen: event.target.checked })}
+            />
+            <label htmlFor={`${ids}-seen`}>Masquer les films déjà vus</label>
+          </div>
+        )}
+        {state.phase !== "idle" && !drawing && (
+          <button type="button" className="button draw-go" onClick={() => void run()}>
+            Relancer
+          </button>
+        )}
+      </div>
 
       {screening && state.phase === "result" && (
         <Screening film={state.film} services={services} onClose={closeScreening} />
@@ -366,7 +371,7 @@ function Result({
         </div>
       </dl>
       <FilmOffers film={film} services={services} />
-      <p className="result-synopsis">{film.overview || "Synopsis indisponible."}</p>
+      <Synopsis key={film.tmdbId} text={film.overview || "Synopsis indisponible."} />
       <button type="button" className="button primary" ref={watchRef} onClick={onWatch}>
         Regarder ce film
       </button>
@@ -374,6 +379,43 @@ function Result({
         Pas ce qui vous convient ? <Link href="/films">Parcourir les films</Link>
       </p>
     </article>
+  );
+}
+
+function Synopsis({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [open, setOpen] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  const id = useId();
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    function measure() {
+      if (node && !open) setClamped(node.scrollHeight > node.clientHeight + 1);
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [text, open]);
+
+  return (
+    <div className="result-synopsis">
+      <p id={id} ref={ref} className={open ? undefined : "is-clamped"}>
+        {text}
+      </p>
+      {(clamped || open) && (
+        <button
+          type="button"
+          className="link-button"
+          aria-expanded={open}
+          aria-controls={id}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Voir moins" : "Voir plus"}
+        </button>
+      )}
+    </div>
   );
 }
 
