@@ -130,7 +130,6 @@ svg {
   justify-content: center;
   width: 44px;
   height: 44px;
-  border: 2px solid var(--text);
   transition: background-color var(--cut) steps(2);
 }
 .gear:hover {
@@ -202,14 +201,21 @@ svg {
 .services-group {
   min-width: 0;
   margin: 0;
-  padding: var(--s5) 0 0;
+  padding: 0;
   border: 0;
-  border-top: 2px solid var(--text);
   display: grid;
   gap: var(--s4);
 }
 .services-title {
-  padding: 0;
+  width: 100%;
+  padding: var(--s5) 0 0;
+  border-top: 2px solid var(--text);
+  font-size: 22px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.page-note {
+  margin: var(--s2) 0 0;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -262,7 +268,7 @@ svg {
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 2px solid var(--live-ink);
+  border: 0;
   border-radius: 0;
   background: transparent;
   color: inherit;
@@ -377,10 +383,8 @@ svg {
 }
 .reset h2 {
   margin: 0;
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  font-size: 22px;
   text-transform: uppercase;
-  color: var(--muted);
 }
 .reset-confirm {
   display: flex;
@@ -458,7 +462,7 @@ svg {
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 2px solid var(--text);
+  border: 0;
   background: transparent;
   color: var(--text);
   transition: background-color var(--cut) steps(2);
@@ -1077,8 +1081,81 @@ body:has(.draw-page[data-room="dark"]) .site-footer,
 .browse-source a {
   font-weight: 700;
 }
-.browse-filters {
-  margin-top: var(--s5);
+.select {
+  min-height: 48px;
+  max-width: 100%;
+  padding: var(--s3) 44px var(--s3) var(--s4);
+  border: 2px solid var(--text);
+  border-radius: 0;
+  appearance: none;
+  background: transparent
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 6l4.5 4.5L12.5 6' fill='none' stroke='%23f4f1ea' stroke-width='2'/%3E%3C/svg%3E")
+    no-repeat right var(--s3) center / 16px;
+  color: var(--text);
+  font-weight: 700;
+  transition: background-color var(--cut) steps(2);
+}
+.select option {
+  background: var(--bg);
+  color: var(--text);
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: 48px;
+  font-weight: 600;
+}
+.check input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--text);
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s3) var(--s4);
+  margin: var(--s5) 0;
+  padding: var(--s4) 0;
+  border-top: 2px solid var(--text);
+  border-bottom: 1px solid var(--line);
+}
+.filter {
+  display: grid;
+  gap: 6px;
+  min-width: 170px;
+}
+.filter label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.filter input[type="search"] {
+  min-height: 48px;
+  padding: var(--s3) var(--s4);
+  border: 2px solid var(--text);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+}
+.filters-count {
+  margin-left: auto;
+  font-size: 36px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.filters-count .label {
+  margin-left: var(--s1);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 .view-toggle {
   display: flex;
@@ -1314,20 +1391,27 @@ body:has(.draw-page[data-room="dark"]) .site-footer,
   .film-dialog-poster {
     max-width: 160px;
   }
-  .browse-filters {
+  .filters {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--s4);
   }
-  .browse-filters .field-wide,
-  .browse-filters > .button {
+  .filter,
+  .filters > .button {
+    min-width: 0;
+  }
+  .filters .check,
+  .filters > .button {
     grid-column: 1 / -1;
+  }
+  .filters-count {
+    display: none;
   }
   .view-toggle .button {
     flex: 1;
     justify-content: center;
   }
-  .browse-filters > .button,
+  .filters > .button,
   .browse-more {
     width: 100%;
   }
