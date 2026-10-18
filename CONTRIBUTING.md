@@ -63,9 +63,11 @@ Label every pull request with one type and at least one area:
 - **Type**: `enhancement` for `feat`, `bug` for `fix`, `documentation` for `docs`, `refactor`, `perf`, `security` or `accessibility` when that is the main point. Dependency and CI updates use `dependencies`, `javascript`, `github_actions` or `docker`.
 - **Area**: `area:home`, `area:settings`, `area:browse`, `area:draw`, `area:import`, `area:storage`, `area:data`, `area:architecture`, `area:design` or `area:docs`. Use several when the change spans screens.
 
+Also set the milestone of the next release (the open milestone with the highest version; a merged pull request keeps the milestone of the release it ships in).
+
 ```bash
-gh pr create --base main --label enhancement --label area:home ...
-gh pr edit <number> --add-label bug --add-label area:draw
+gh pr create --base main --label enhancement --label area:home --milestone v1.1.0 ...
+gh api -X PATCH repos/<owner>/<repo>/issues/<number> -F milestone=<milestone number>
 ```
 
 ```bash
