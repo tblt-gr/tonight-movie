@@ -120,6 +120,7 @@ export function DrawMachine() {
   async function run() {
     if (running.current) return;
     running.current = true;
+    setMoreOpen(false);
     dispatch({ type: "start" });
     setSlot({ poster: null, framed: false });
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
