@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { FilmPoster } from "@/components/FilmPoster";
 import { HomeRedirect } from "@/components/HomeRedirect";
 import { REEL_PROVIDERS, pickReel } from "@/lib/home-reel";
@@ -16,9 +17,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { meta } = getDictionary(lang);
   return { title: meta.homeTitle, description: meta.homeDescription };
 }
-
-/** The reel is rebuilt from TMDB at most once a day, like the data behind it. */
-export const revalidate = 86400;
 
 const REEL_TONES = ["tone-3", "tone-1", "tone-2"];
 
@@ -40,6 +38,9 @@ export default async function HomePage({ params }: Props) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const t = getDictionary(lang);
+  // Rendered per request: a build has no TMDB key (Docker), and a failed lookup would stay in
+  // the page for a day. The TMDB responses themselves are cached for a day.
+  await connection();
   const reel = await loadReel(lang);
   return (
     <>
