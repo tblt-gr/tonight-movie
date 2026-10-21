@@ -40,6 +40,8 @@ const details = (patch: Partial<MovieDetails> = {}): MovieDetails => ({
   overview: null,
   runtime: 100,
   genres: ["Drame"],
+  directors: [],
+  cast: [],
   offers: [{ id: "8", name: "Netflix", icon: null, type: "FLATRATE", url: null }],
   availabilityStatus: "verified",
   offersUrl: null,

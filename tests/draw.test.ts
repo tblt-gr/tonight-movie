@@ -33,6 +33,8 @@ function details(tmdbId: number, patch: Partial<MovieDetails> = {}): MovieDetail
     overview: null,
     runtime: 100,
     genres: [],
+    directors: [],
+    cast: [],
     offers: [offer("8")],
     availabilityStatus: "verified",
     offersUrl: null,

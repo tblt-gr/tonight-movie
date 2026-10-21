@@ -839,6 +839,26 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
+.result-credits {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--s2) var(--s4);
+  margin: 0;
+}
+.result-credits div {
+  display: contents;
+}
+.result-credits dt {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 0.2em;
+}
+.result-credits dd {
+  margin: 0;
+}
 .result-synopsis {
   margin: 0;
   max-width: 60ch;
@@ -854,6 +874,23 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   width: 100%;
   max-height: 100%;
   min-height: 0;
+}
+.result-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s5);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.result-body > .offers,
+.result-body .offers-more {
+  flex: none;
+  min-height: auto;
+  overflow: visible;
 }
 .offers {
   display: flex;
@@ -1540,6 +1577,9 @@ html[data-home-redirect] .home-steps {
   }
   .draw-page[data-room="dark"] .draw-side {
     transform: none;
+  }
+  .result-body {
+    overflow: visible;
   }
   .draw-player {
     position: sticky;

@@ -26,7 +26,7 @@ export default async function RootLayout({ children, params }: Readonly<Props>) 
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   return (
-    <html lang={lang}>
+    <html lang={lang} suppressHydrationWarning>
       <body>
         <script dangerouslySetInnerHTML={{ __html: HIDE_BEFORE_PAINT }} />
         <I18nProvider lang={lang}>
