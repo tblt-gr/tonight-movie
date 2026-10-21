@@ -1,7 +1,9 @@
 name: Nightly scan
 
-# The pull-request gate ignores unfixable base-image CVEs and only scans the
-# changed commits for secrets. This workflow runs the strict versions daily.
+# The pull-request gate only scans the changed commits for secrets and the image
+# as built. This workflow rescans the image daily, so a CVE fixed upstream after
+# the last merge still fails. Base-image CVEs with no fix are ignored: nothing
+# in this repository can resolve them.
 # GitHub runs `schedule` only from the default branch and disables it after 60
 # days without repository activity; a `workflow_dispatch` run re-arms it.
 
@@ -19,7 +21,7 @@ concurrency:
 
 jobs:
   image-scan-strict:
-    name: Strict container image scan
+    name: Container image scan
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -31,7 +33,7 @@ jobs:
         with:
           image-ref: tonight-movie:nightly
           severity: CRITICAL,HIGH
-          ignore-unfixed: false
+          ignore-unfixed: true
           exit-code: "1"
 
   secrets:
