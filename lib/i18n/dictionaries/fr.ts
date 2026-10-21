@@ -128,7 +128,7 @@ export const fr = {
     erase: "Effacer mes données",
   },
   import: {
-    title: "Importer vos films Letterboxd",
+    title: "Importer vos films Letterboxd (facultatif)",
     optional:
       "Facultatif. Sans import, le tirage choisit parmi tous les films disponibles sur vos services.",
     drop: "Déposez votre archive .zip ou un fichier .csv ici",
