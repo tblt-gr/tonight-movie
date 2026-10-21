@@ -127,7 +127,7 @@ export const en: Dictionary = {
     erase: "Erase my data",
   },
   import: {
-    title: "Import your Letterboxd films",
+    title: "Import your Letterboxd films (optional)",
     optional: "Optional. Without an import, the draw picks from every movie on your services.",
     drop: "Drop your .zip archive or a .csv file here",
     dropAction: "or choose a file",
