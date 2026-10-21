@@ -876,20 +876,20 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   min-height: 0;
 }
 .result-body {
-  display: grid;
+  display: flex;
   flex: 1 1 auto;
-  align-content: start;
-  justify-items: start;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--s5);
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
 }
-.result-body .offers {
-  flex: none;
-}
+.result-body > .offers,
 .result-body .offers-more {
+  flex: none;
+  min-height: auto;
   overflow: visible;
 }
 .offers {
