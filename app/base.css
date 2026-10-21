@@ -875,6 +875,23 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   max-height: 100%;
   min-height: 0;
 }
+.result-body {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  justify-items: start;
+  gap: var(--s5);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.result-body .offers {
+  flex: none;
+}
+.result-body .offers-more {
+  overflow: visible;
+}
 .offers {
   display: flex;
   flex: 0 1 auto;
@@ -1560,6 +1577,9 @@ html[data-home-redirect] .home-steps {
   }
   .draw-page[data-room="dark"] .draw-side {
     transform: none;
+  }
+  .result-body {
+    overflow: visible;
   }
   .draw-player {
     position: sticky;

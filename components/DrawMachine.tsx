@@ -337,30 +337,32 @@ function Result({
         <span>{film.title}</span>
         {film.year && <span className="title-accent">{film.year}</span>}
       </h1>
-      <FilmCredits film={film} />
-      <dl className="result-figures">
-        <div>
-          <dt>{t.common.duration}</dt>
-          <dd>{formatMinutes(film.runtime, t)}</dd>
-        </div>
-        <div>
-          <dt>{t.common.tmdbRating}</dt>
-          <dd>{formatRating(film.rating, t)}</dd>
-        </div>
-      </dl>
-      <FilmOffers
-        film={film}
-        services={services}
-        directLinks
-        between={
-          <Accordion key={film.tmdbId} title={t.draw.synopsis} defaultOpen>
-            <p className="result-synopsis">{film.overview || t.draw.noSynopsis}</p>
-          </Accordion>
-        }
-      />
-      <p className="result-escape">
-        {t.draw.escape} <Link href={href("films")}>{t.draw.escapeLink}</Link>
-      </p>
+      <div className="result-body">
+        <FilmCredits film={film} />
+        <dl className="result-figures">
+          <div>
+            <dt>{t.common.duration}</dt>
+            <dd>{formatMinutes(film.runtime, t)}</dd>
+          </div>
+          <div>
+            <dt>{t.common.tmdbRating}</dt>
+            <dd>{formatRating(film.rating, t)}</dd>
+          </div>
+        </dl>
+        <FilmOffers
+          film={film}
+          services={services}
+          directLinks
+          between={
+            <Accordion key={film.tmdbId} title={t.draw.synopsis} defaultOpen>
+              <p className="result-synopsis">{film.overview || t.draw.noSynopsis}</p>
+            </Accordion>
+          }
+        />
+        <p className="result-escape">
+          {t.draw.escape} <Link href={href("films")}>{t.draw.escapeLink}</Link>
+        </p>
+      </div>
     </article>
   );
 }
