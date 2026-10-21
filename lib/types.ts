@@ -55,6 +55,10 @@ export type MovieDetails = MovieSummary & {
   overview: string | null;
   runtime: number | null;
   genres: string[];
+  /** Directors, as TMDB credits them. */
+  directors: string[];
+  /** Top-billed cast, at most `CAST_LIMIT` names. */
+  cast: string[];
   offers: Offer[];
   /** `unknown` renders as À vérifier: TMDB has no usable French offer data. */
   availabilityStatus: "verified" | "unknown";

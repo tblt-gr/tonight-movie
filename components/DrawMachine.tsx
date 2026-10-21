@@ -337,6 +337,7 @@ function Result({
         <span>{film.title}</span>
         {film.year && <span className="title-accent">{film.year}</span>}
       </h1>
+      <FilmCredits film={film} />
       <dl className="result-figures">
         <div>
           <dt>{t.common.duration}</dt>
@@ -361,5 +362,25 @@ function Result({
         {t.draw.escape} <Link href={href("films")}>{t.draw.escapeLink}</Link>
       </p>
     </article>
+  );
+}
+
+function FilmCredits({ film }: { film: MovieDetails }) {
+  const { t } = useI18n();
+  const rows = [
+    [t.common.genres, film.genres.map((genre) => t.genres[genre] ?? genre)],
+    [t.common.director, film.directors],
+    [t.common.cast, film.cast],
+  ].filter(([, names]) => names.length > 0);
+  if (rows.length === 0) return null;
+  return (
+    <dl className="result-credits">
+      {rows.map(([label, names]) => (
+        <div key={label as string}>
+          <dt>{label}</dt>
+          <dd>{(names as string[]).join(", ")}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

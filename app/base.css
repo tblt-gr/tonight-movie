@@ -839,6 +839,26 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
+.result-credits {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--s2) var(--s4);
+  margin: 0;
+}
+.result-credits div {
+  display: contents;
+}
+.result-credits dt {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 0.2em;
+}
+.result-credits dd {
+  margin: 0;
+}
 .result-synopsis {
   margin: 0;
   max-width: 60ch;

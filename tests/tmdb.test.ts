@@ -166,7 +166,7 @@ describe("routes", () => {
     expect(url.origin).toBe("https://api.themoviedb.org");
     expect(url.pathname).toBe("/3/movie/603");
     expect(url.searchParams.get("language")).toBe("fr-FR");
-    expect(url.searchParams.get("append_to_response")).toBe("watch/providers");
+    expect(url.searchParams.get("append_to_response")).toBe("watch/providers,credits");
   });
 
   it("asks TMDB for English text on request and keeps genres under their stored name", async () => {
@@ -317,6 +317,30 @@ describe("routes", () => {
     expect(new URL(fetchMock.mock.calls[2][0]).searchParams.get("with_watch_providers")).toBe(
       "8|119",
     );
+  });
+
+  it("maps the directors and the top-billed cast", () => {
+    const details = mapMovie({
+      id: 1,
+      title: "X",
+      credits: {
+        cast: [
+          { name: "E", order: 4 },
+          { name: "A", order: 0 },
+          { name: "B", order: 1 },
+          { name: "B", order: 2 },
+          { name: "C", order: 3 },
+        ],
+        crew: [
+          { name: "Dir", job: "Director" },
+          { name: "Dir", job: "Director" },
+          { name: "Cam", job: "Cinematography" },
+        ],
+      },
+    });
+    expect(details?.directors).toEqual(["Dir"]);
+    expect(details?.cast).toEqual(["A", "B", "C", "E"]);
+    expect(mapMovie({ id: 1, title: "X" })?.cast).toEqual([]);
   });
 
   it("hides adult titles and untrusted offer links", async () => {

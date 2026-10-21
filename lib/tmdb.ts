@@ -21,6 +21,8 @@ const REGION = "FR";
 const REVALIDATE_SECONDS = 24 * 60 * 60;
 const TIMEOUT_MS = 8_000;
 
+const CAST_LIMIT = 4;
+
 const IMAGE_SIZES = { poster: "w342", logo: "w92" } as const;
 
 const OFFER_TYPES = [
@@ -43,6 +45,10 @@ type TmdbMovie = {
   overview?: string;
   runtime?: number | null;
   genres?: { id?: number; name?: string }[];
+  credits?: {
+    cast?: { name?: string; order?: number }[];
+    crew?: { name?: string; job?: string }[];
+  };
   "watch/providers"?: { results?: Record<string, TmdbRegionProviders | undefined> };
 };
 
@@ -194,6 +200,11 @@ function genreKey(genre: { id?: number; name?: string }): string | null {
   return known?.name ?? genre.name ?? null;
 }
 
+function uniqueNames(people: { name?: string }[] | undefined): string[] {
+  const names = (people ?? []).flatMap((person) => person.name?.trim() || []);
+  return [...new Set(names)];
+}
+
 export function mapMovie(movie: TmdbMovie): MovieDetails | null {
   const summary = summarize(movie);
   if (!summary) return null;
@@ -204,6 +215,10 @@ export function mapMovie(movie: TmdbMovie): MovieDetails | null {
     overview: movie.overview?.trim() || null,
     runtime: movie.runtime || null,
     genres: (movie.genres ?? []).flatMap((genre) => genreKey(genre) ?? []),
+    directors: uniqueNames(movie.credits?.crew?.filter((member) => member.job === "Director")),
+    cast: uniqueNames(
+      [...(movie.credits?.cast ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    ).slice(0, CAST_LIMIT),
     offers,
     availabilityStatus: offers.length > 0 ? "verified" : "unknown",
     offersUrl: offers.length > 0 ? tmdbPageUrl(region?.link) : null,
@@ -248,7 +263,7 @@ export async function searchMovies(title: string, year: number | null): Promise<
 export async function getMovie(id: number, lang: Locale = DEFAULT_LOCALE): Promise<MovieDetails> {
   const movie = await tmdbGet<TmdbMovie>(
     `/movie/${id}`,
-    { language: TMDB_LANGUAGE[lang], append_to_response: "watch/providers" },
+    { language: TMDB_LANGUAGE[lang], append_to_response: "watch/providers,credits" },
     { notFound: true },
   );
   // include_adult only filters search and discover, not a direct lookup.
