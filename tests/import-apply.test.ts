@@ -6,6 +6,7 @@ import {
   matchStats,
   planImport,
   summarizeImport,
+  listIgnoredFilms,
   listUnsureFilms,
   summarizeLibrary,
 } from "@/lib/import/apply";
@@ -238,5 +239,30 @@ describe("listUnsureFilms", () => {
       "Alien 1986",
       "Zodiac 2007",
     ]);
+  });
+});
+
+describe("ignored entries", () => {
+  const entry = (key: string, patch: Partial<StoredFilm> = {}): StoredFilm => ({
+    key,
+    title: key,
+    year: 2000,
+    tmdbId: null,
+    confidence: 0,
+    lists: ["watchlist"],
+    seen: false,
+    ...patch,
+  });
+
+  it("leaves ignored entries out of the films to check and the figures", () => {
+    const films = [entry("Series", { ignored: true }), entry("Unknown")];
+    expect(listUnsureFilms(films).map((f) => f.key)).toEqual(["Unknown"]);
+    expect(summarizeLibrary(films, []).summary.total).toBe(1);
+    expect(summarizeLibrary(films, []).stats.toCheck).toBe(1);
+  });
+
+  it("lists the ignored entries so one can be restored", () => {
+    const films = [entry("Zeta", { ignored: true }), entry("Alpha", { ignored: true }), entry("B")];
+    expect(listIgnoredFilms(films).map((f) => f.key)).toEqual(["Alpha", "Zeta"]);
   });
 });

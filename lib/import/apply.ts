@@ -55,13 +55,14 @@ export function summarizeImport(result: ImportResult): ImportSummary {
 }
 
 export function matchStats(films: StoredFilm[], keys: ReadonlySet<string>): MatchStats {
-  const imported = films.filter((film) => keys.has(film.key));
+  const imported = films.filter((film) => keys.has(film.key) && !film.ignored);
   const drawable = imported.filter(isDrawable).length;
   return { drawable, toCheck: imported.length - drawable };
 }
 
 /** The figures of everything stored, so they outlive the import that produced them. */
-export function summarizeLibrary(films: StoredFilm[], lists: StoredList[]): ImportOutcome {
+export function summarizeLibrary(allFilms: StoredFilm[], lists: StoredList[]): ImportOutcome {
+  const films = allFilms.filter((film) => !film.ignored);
   const inList = (id: string) => films.filter((film) => film.lists.includes(id)).length;
   const stats = matchStats(films, new Set(films.map((film) => film.key)));
   return {
@@ -184,15 +185,19 @@ export async function importExport(
 
 /** Films the draw cannot use yet: never matched, or matched without certainty. */
 export const unsureFilms = (films: StoredFilm[]) =>
-  films.filter((film) => film.confidence === null || !isDrawable(film));
+  films.filter((film) => !film.ignored && (film.confidence === null || !isDrawable(film)));
 
 const byTitle = new Intl.Collator("fr", { sensitivity: "base", numeric: true });
 
+const byReadingOrder = (a: StoredFilm, b: StoredFilm) =>
+  byTitle.compare(a.title, b.title) || (a.year ?? 0) - (b.year ?? 0);
+
 /** The unsure films as a visitor reads them: alphabetical, then oldest first. */
-export const listUnsureFilms = (films: StoredFilm[]) =>
-  unsureFilms(films).sort(
-    (a, b) => byTitle.compare(a.title, b.title) || (a.year ?? 0) - (b.year ?? 0),
-  );
+export const listUnsureFilms = (films: StoredFilm[]) => unsureFilms(films).sort(byReadingOrder);
+
+/** Entries the visitor set aside, in reading order. */
+export const listIgnoredFilms = (films: StoredFilm[]) =>
+  films.filter((film) => film.ignored).sort(byReadingOrder);
 
 /**
  * Searches again for every film that is not a sure match, so a better search corrects

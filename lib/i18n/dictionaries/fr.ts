@@ -147,6 +147,13 @@ export const fr = {
     unsure: (count: number) =>
       `${count} ${count > 1 ? "films ne sont pas associés" : "film n’est pas associé"} avec certitude à TMDB : ils n’ont ni affiche ni durée et le tirage les ignore.`,
     unsureList: "Voir les films à vérifier",
+    ignoreHint:
+      "Une série ou un autre contenu qui n’est pas un film ? Ignorez-le : il ne sera plus compté ni proposé.",
+    ignore: "Ignorer",
+    ignoreFilm: (title: string) => `Ignorer ${title}`,
+    ignoredList: (count: number) => `Voir les entrées ignorées (${count})`,
+    restore: "Rétablir",
+    restoreFilm: (title: string) => `Rétablir ${title}`,
     recheck: "Relancer la recherche",
     done: "Vos films importés",
     films: "Films",

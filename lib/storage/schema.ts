@@ -47,6 +47,8 @@ export type StoredFilm = {
   /** Ids of the lists that contain the film. */
   lists: string[];
   seen: boolean;
+  /** The visitor set this entry aside, for example a series: it is left out of every count. */
+  ignored?: boolean;
 };
 
 export type StoredList = {
@@ -159,7 +161,8 @@ export function parseFilm(value: unknown): StoredFilm | null {
     confidence === null || (typeof confidence === "number" && confidence >= 0 && confidence <= 1);
   if (!key || !title || !lists || year === undefined || tmdbId === undefined) return null;
   if (!validConfidence || typeof value.seen !== "boolean") return null;
-  return { key, title, year, tmdbId, confidence, lists, seen: value.seen };
+  const film: StoredFilm = { key, title, year, tmdbId, confidence, lists, seen: value.seen };
+  return value.ignored === true ? { ...film, ignored: true } : film;
 }
 
 export function parseList(value: unknown): StoredList | null {

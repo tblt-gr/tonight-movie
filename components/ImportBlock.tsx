@@ -8,6 +8,7 @@ import {
   describeImportError,
   importExport,
   recheckFilms,
+  listIgnoredFilms,
   listUnsureFilms,
   summarizeLibrary,
   type ImportOutcome,
@@ -17,10 +18,16 @@ import { onReset } from "@/lib/storage";
 import { library } from "@/lib/storage/library";
 import type { StoredFilm, StoredList } from "@/lib/storage/schema";
 
-type Stored = ImportOutcome & { unsure: StoredFilm[] };
+type Stored = ImportOutcome & { unsure: StoredFilm[]; ignored: StoredFilm[] };
 
 const snapshot = (films: StoredFilm[], lists: StoredList[]): Stored | null =>
-  films.length > 0 ? { ...summarizeLibrary(films, lists), unsure: listUnsureFilms(films) } : null;
+  films.length > 0
+    ? {
+        ...summarizeLibrary(films, lists),
+        unsure: listUnsureFilms(films),
+        ignored: listIgnoredFilms(films),
+      }
+    : null;
 
 export function ImportBlock() {
   const ids = useId();
@@ -52,6 +59,11 @@ export function ImportBlock() {
   async function refresh() {
     const [films, lists] = await Promise.all([library.getFilms(), library.getLists()]);
     setStored(snapshot(films, lists));
+  }
+
+  async function setIgnored(film: StoredFilm, ignored: boolean) {
+    await library.upsertFilms([{ ...film, ignored }]);
+    await refresh();
   }
 
   async function recheck() {
@@ -176,16 +188,50 @@ export function ImportBlock() {
           </button>
           <details className="import-unsure">
             <summary>{t.import.unsureList}</summary>
+            <p>{t.import.ignoreHint}</p>
             <ul>
               {stored?.unsure.map((film) => (
                 <li key={film.key}>
-                  {film.title}
-                  {film.year !== null && <span> ({film.year})</span>}
+                  <span>
+                    {film.title}
+                    {film.year !== null && <span> ({film.year})</span>}
+                  </span>
+                  <button
+                    type="button"
+                    className="button"
+                    aria-label={t.import.ignoreFilm(film.title)}
+                    onClick={() => void setIgnored(film, true)}
+                  >
+                    {t.import.ignore}
+                  </button>
                 </li>
               ))}
             </ul>
           </details>
         </div>
+      )}
+      {stored && stored.ignored.length > 0 && !busy && (
+        <details className="import-unsure">
+          <summary>{t.import.ignoredList(stored.ignored.length)}</summary>
+          <ul>
+            {stored.ignored.map((film) => (
+              <li key={film.key}>
+                <span>
+                  {film.title}
+                  {film.year !== null && <span> ({film.year})</span>}
+                </span>
+                <button
+                  type="button"
+                  className="button"
+                  aria-label={t.import.restoreFilm(film.title)}
+                  onClick={() => void setIgnored(film, false)}
+                >
+                  {t.import.restore}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       {stored && !busy && (
         <div className="import-summary" role="status">
