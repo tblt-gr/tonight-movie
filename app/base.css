@@ -377,7 +377,7 @@ svg {
   cursor: pointer;
 }
 .multiselect-clear:hover {
-  background: var(--panel);
+  box-shadow: inset 0 0 0 2px var(--text);
 }
 .multiselect-clear svg {
   width: 20px;
