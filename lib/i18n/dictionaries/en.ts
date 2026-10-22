@@ -144,7 +144,8 @@ export const en: Dictionary = {
     unsure: (count: number) =>
       `${count} ${count > 1 ? "films aren’t" : "film isn’t"} matched to TMDB with certainty: ${count > 1 ? "they have" : "it has"} no poster or runtime, and the draw skips ${count > 1 ? "them" : "it"}.`,
     recheck: "Search again",
-    done: "Import complete",
+    done: "Your imported films",
+    films: "Films",
     watchlist: "Watchlist",
     lists: "Lists",
     likes: "Likes",
