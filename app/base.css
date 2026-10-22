@@ -573,10 +573,14 @@ svg {
   border: 2px solid var(--text);
 }
 .import-unsure li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
   padding: var(--s2) var(--s4);
   border-bottom: 1px solid var(--line);
 }
-.import-unsure li span {
+.import-unsure li span span {
   color: var(--muted);
 }
 .import p {
