@@ -1,0 +1,36 @@
+.services-message {
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
+  margin: 0;
+}
+.services-message p {
+  margin: 0;
+}
+.services > .button {
+  justify-self: start;
+}
+.reset {
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
+  margin-top: var(--s7);
+  padding-top: var(--s5);
+  border-top: 2px solid var(--text);
+}
+.reset h2 {
+  margin: 0;
+  font-size: 22px;
+  text-transform: uppercase;
+}
+.reset-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+}
+.reset-confirm p {
+  flex-basis: 100%;
+  color: var(--text);
+  font-weight: 700;
+}
