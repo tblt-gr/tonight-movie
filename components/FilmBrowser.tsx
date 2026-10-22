@@ -333,8 +333,10 @@ export function FilmBrowser() {
     lang,
   ]);
 
+  // Cards show the offers on the visitor's services and on any service the filter picked.
+  const cardServices = new Set([...services, ...filters.services]);
   const cardOffers = (detail: Parameters<typeof offersToShow>[0] | undefined) =>
-    detail ? offersToShow(detail, services).map(({ name, icon }) => ({ name, icon })) : [];
+    detail ? offersToShow(detail, cardServices).map(({ name, icon }) => ({ name, icon })) : [];
 
   const cards: CardFilm[] = useMemo(() => {
     if (mode === "lists") {
@@ -367,8 +369,18 @@ export function FilmBrowser() {
         uncertain: false,
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `cardOffers` only reads `services`.
-  }, [mode, plan, filters.sort, filters.hideSeen, global, globalKey, films, services]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `cardOffers` only reads `services` and `filters.services`.
+  }, [
+    mode,
+    plan,
+    filters.sort,
+    filters.hideSeen,
+    global,
+    globalKey,
+    films,
+    services,
+    filters.services,
+  ]);
 
   const serviceOptions: ProviderInfo[] = [
     ...(mode === "lists" ? [{ id: SERVICE_ANY, name: t.browse.anyService, logo: null }] : []),
