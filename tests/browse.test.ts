@@ -157,6 +157,19 @@ describe("classifyListFilm", () => {
     );
   });
 
+  it("shows a film streaming on a service the visitor does not own when that service is chosen", () => {
+    const film = stored({ title: "A" });
+    const elsewhere = details({
+      offers: [{ id: "99", name: "Autre", icon: null, type: "FLATRATE", url: null }],
+    });
+    expect(classifyListFilm(film, elsewhere, filters({ services: ["99"] }), mine).verdict).toBe(
+      "show",
+    );
+    expect(classifyListFilm(film, details(), filters({ services: ["99"] }), mine).verdict).toBe(
+      "hide",
+    );
+  });
+
   it("filters on duration, treating an unknown runtime as too long", () => {
     const film = stored({ title: "A" });
     const limit = filters({ maxDuration: 90 });
