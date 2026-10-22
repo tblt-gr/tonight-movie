@@ -494,6 +494,10 @@ export function FilmBrowser() {
               onChange={(next) => update({ services: [...next] })}
               emptyMessage={t.services.empty}
               removeLabel={t.services.remove}
+              clearLabel={t.services.clear}
+              sectionLabels={{ mine: t.services.mine, others: t.services.others }}
+              owned={services}
+              pinnedId={SERVICE_ANY}
               summary={servicesSummary}
             />
           </div>

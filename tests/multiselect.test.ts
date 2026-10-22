@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lastSelectedId, moveActive, toggleId } from "@/lib/multiselect";
+import { arrangeOptions, lastSelectedId, moveActive, toggleId } from "@/lib/multiselect";
 
 describe("toggleId", () => {
   it("adds an id that is not selected", () => {
@@ -56,5 +56,37 @@ describe("moveActive", () => {
 
   it("returns -1 when there are no options", () => {
     expect(moveActive(0, 0, "ArrowDown")).toBe(-1);
+  });
+});
+
+describe("arrangeOptions", () => {
+  const option = (id: string, name: string) => ({ id, name, logo: null });
+  const options = [
+    option("337", "Disney+"),
+    option("8", "Netflix"),
+    option("119", "Prime Video"),
+    option("381", "Canal+"),
+    option("all", "Peu importe"),
+  ];
+
+  it("puts selected options first, then sorts alphabetically in each section", () => {
+    const { mine, others } = arrangeOptions(
+      options,
+      new Set(["119"]),
+      new Set(["8", "119", "337"]),
+    );
+    expect(mine.map((o) => o.name)).toEqual(["Prime Video", "Disney+", "Netflix"]);
+    expect(others.map((o) => o.name)).toEqual(["Canal+", "Peu importe"]);
+  });
+
+  it("keeps the pinned option first in the visitor's section", () => {
+    const { mine } = arrangeOptions(options, new Set(["8"]), new Set(["8", "337"]), "all");
+    expect(mine.map((o) => o.name)).toEqual(["Peu importe", "Netflix", "Disney+"]);
+  });
+
+  it("does not mutate the incoming options", () => {
+    const copy = [...options];
+    arrangeOptions(options, new Set(), new Set());
+    expect(options).toEqual(copy);
   });
 });
