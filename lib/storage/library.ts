@@ -52,6 +52,8 @@ function mergeFilm(existing: StoredFilm | undefined, input: FilmInput): StoredFi
     lists,
     // A film already seen stays seen: a plain list import carries no diary data.
     seen: existing.seen || input.seen,
+    // A plain import carries no choice about ignoring, so the visitor's choice stays.
+    ignored: input.ignored ?? existing.ignored,
   };
 }
 
@@ -61,6 +63,7 @@ const sameFilm = (a: StoredFilm, b: StoredFilm) =>
   a.tmdbId === b.tmdbId &&
   a.confidence === b.confidence &&
   a.seen === b.seen &&
+  !!a.ignored === !!b.ignored &&
   a.lists.length === b.lists.length &&
   a.lists.every((list, index) => list === b.lists[index]);
 

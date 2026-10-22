@@ -100,7 +100,7 @@ export function FilmBrowser() {
   );
   const mode: BrowseMode = listIds.size > 0 ? "lists" : "services";
   const listFilms = useMemo(
-    () => films.filter((film) => film.lists.some((id) => listIds.has(id))),
+    () => films.filter((film) => !film.ignored && film.lists.some((id) => listIds.has(id))),
     [films, listIds],
   );
   const services = useMemo(() => new Set(settings.services), [settings.services]);
