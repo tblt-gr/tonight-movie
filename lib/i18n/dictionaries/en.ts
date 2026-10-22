@@ -144,6 +144,13 @@ export const en: Dictionary = {
     unsure: (count: number) =>
       `${count} ${count > 1 ? "films aren’t" : "film isn’t"} matched to TMDB with certainty: ${count > 1 ? "they have" : "it has"} no poster or runtime, and the draw skips ${count > 1 ? "them" : "it"}.`,
     unsureList: "Show the films to check",
+    ignoreHint:
+      "A series or something that isn’t a film? Ignore it: it will no longer be counted or drawn.",
+    ignore: "Ignore",
+    ignoreFilm: (title: string) => `Ignore ${title}`,
+    ignoredList: (count: number) => `Show the ignored entries (${count})`,
+    restore: "Restore",
+    restoreFilm: (title: string) => `Restore ${title}`,
     recheck: "Search again",
     done: "Your imported films",
     films: "Films",

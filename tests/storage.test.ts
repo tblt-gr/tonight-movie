@@ -246,6 +246,16 @@ describe("library", () => {
     expect((await lib.getFilms())[0].seen).toBe(true);
   });
 
+  it("keeps an ignored entry ignored across a re-import until it is restored", async () => {
+    const lib = createLibrary(() => factory);
+    await lib.upsertFilms([film()]);
+    await lib.upsertFilms([film({ ignored: true })]);
+    await lib.upsertFilms([film()]);
+    expect((await lib.getFilms())[0].ignored).toBe(true);
+    await lib.upsertFilms([film({ ignored: false })]);
+    expect((await lib.getFilms())[0].ignored).toBeUndefined();
+  });
+
   it("stores and updates list metadata idempotently", async () => {
     const lib = createLibrary(() => factory);
     const list: StoredList = { id: "watchlist", name: "Watchlist", importedAt: 1 };
