@@ -6,6 +6,7 @@ import {
   matchStats,
   planImport,
   summarizeImport,
+  listUnsureFilms,
   summarizeLibrary,
 } from "@/lib/import/apply";
 import { ImportError, type ImportResult } from "@/lib/import/letterboxd";
@@ -211,5 +212,31 @@ describe("summarizeLibrary", () => {
 
   it("reports nothing for an empty library", () => {
     expect(summarizeLibrary([], []).summary.total).toBe(0);
+  });
+});
+
+describe("listUnsureFilms", () => {
+  const film = (title: string, year: number | null, sure: boolean): StoredFilm => ({
+    key: `${title}-${year}`,
+    title,
+    year,
+    tmdbId: sure ? 1 : null,
+    confidence: sure ? 1 : null,
+    lists: [],
+    seen: false,
+  });
+
+  it("keeps only films that are not a sure match, alphabetically then by year", () => {
+    const films = [
+      film("Zodiac", 2007, false),
+      film("Heat", 1995, true),
+      film("Alien", 1986, false),
+      film("Alien", 1979, false),
+    ];
+    expect(listUnsureFilms(films).map((f) => `${f.title} ${f.year}`)).toEqual([
+      "Alien 1979",
+      "Alien 1986",
+      "Zodiac 2007",
+    ]);
   });
 });
