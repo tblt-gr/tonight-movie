@@ -2,3 +2,4 @@ node_modules
 .next
 .cache
 package-lock.json
+.claude
