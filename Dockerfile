@@ -30,4 +30,7 @@ COPY --from=builder /app/public ./public
 RUN chown -R node:node /app
 USER node
 EXPOSE 3000
+# The runtime image has no curl, so the probe uses node's own fetch.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
 CMD ["node", "server.js"]
