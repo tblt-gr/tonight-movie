@@ -93,7 +93,15 @@
 .header-links + .gear {
   margin-left: var(--s4);
 }
-.gear:hover {
+.menu-toggle,
+.gear-label {
+  display: none;
+}
+.site-menu {
+  display: contents;
+}
+.gear:hover,
+.menu-toggle:hover {
   background: var(--text);
   color: var(--bg);
 }

@@ -15,6 +15,7 @@ export const fr = {
   },
   nav: {
     pages: "Pages",
+    menu: "Menu",
     draw: "Tirage",
     films: "Films",
     about: "À propos",

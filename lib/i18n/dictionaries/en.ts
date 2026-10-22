@@ -16,6 +16,7 @@ export const en: Dictionary = {
   },
   nav: {
     pages: "Pages",
+    menu: "Menu",
     draw: "Draw",
     films: "Films",
     about: "About",
