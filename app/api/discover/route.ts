@@ -6,9 +6,9 @@ export const runtime = "nodejs";
 
 export function GET(request: Request) {
   return handle(request, () => {
-    const { providers, maxRuntime, filters, page, sort, lang } = parseDiscover(
+    const { providers, maxRuntime, filters, page, sort, lang, region } = parseDiscover(
       new URL(request.url).searchParams,
     );
-    return discoverMovies(providers, maxRuntime, page, sort, filters, lang);
+    return discoverMovies(providers, maxRuntime, page, sort, filters, lang, region);
   });
 }

@@ -1,8 +1,9 @@
+import { DEFAULT_REGION } from "@/lib/regions";
+
 const WATCHMODE_API = "https://api.watchmode.com/v1";
 const TIMEOUT_MS = 5_000;
 // Free-plan terms: cached data must be refreshed within 30 days.
 const REVALIDATE_SECONDS = 7 * 24 * 60 * 60;
-const REGION = "FR";
 
 /** Watchmode has its own source ids, so a link is matched to TMDB providers by its host. */
 const HOST_PROVIDERS: ReadonlyArray<readonly [string, readonly string[]]> = [
@@ -50,11 +51,14 @@ export function mapWatchLinks(sources: WatchmodeSource[]): Record<string, string
  * past the monthly quota or on any failure the result is `null` and the caller falls back.
  * An empty object means Watchmode answered and knows no link for the film.
  */
-export async function getWatchLinks(tmdbId: number): Promise<Record<string, string> | null> {
+export async function getWatchLinks(
+  tmdbId: number,
+  region = DEFAULT_REGION,
+): Promise<Record<string, string> | null> {
   const key = process.env.WATCHMODE_API_KEY?.trim();
   if (!key) return null;
   const url = new URL(`${WATCHMODE_API}/title/movie-${tmdbId}/sources/`);
-  url.searchParams.set("regions", REGION);
+  url.searchParams.set("regions", region);
   try {
     const response = await fetch(url, {
       headers: { Accept: "application/json", "X-API-Key": key },

@@ -1,3 +1,5 @@
+import { DEFAULT_REGION } from "@/lib/regions";
+
 const WATCH_LINKS_KEY = "tonight-movie:watch-links";
 // Watchmode's free plan asks for cached data to be refreshed within 30 days.
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -17,9 +19,17 @@ function read(): Record<string, Entry> {
   }
 }
 
+/** France keeps the bare film id, so links remembered before the country existed stay valid. */
+const entryKey = (tmdbId: number, region: string) =>
+  region === DEFAULT_REGION ? String(tmdbId) : `${region}:${tmdbId}`;
+
 /** The remembered direct links of a film, or `null` once missing or older than a week. */
-export function loadWatchLinks(tmdbId: number, now = Date.now()): Links | null {
-  const entry = read()[tmdbId];
+export function loadWatchLinks(
+  tmdbId: number,
+  now = Date.now(),
+  region = DEFAULT_REGION,
+): Links | null {
+  const entry = read()[entryKey(tmdbId, region)];
   const links = entry?.links;
   if (!entry || typeof entry.at !== "number" || now - entry.at > TTL_MS) return null;
   if (!links || typeof links !== "object" || Array.isArray(links)) return null;
@@ -29,8 +39,16 @@ export function loadWatchLinks(tmdbId: number, now = Date.now()): Links | null {
 }
 
 /** Remembers a film's direct links, an empty list included, so the lookup is not repeated. */
-export function saveWatchLinks(tmdbId: number, links: Links, now = Date.now()) {
-  const all: Record<string, Entry> = { ...read(), [tmdbId]: { at: now, links } };
+export function saveWatchLinks(
+  tmdbId: number,
+  links: Links,
+  now = Date.now(),
+  region = DEFAULT_REGION,
+) {
+  const all: Record<string, Entry> = {
+    ...read(),
+    [entryKey(tmdbId, region)]: { at: now, links },
+  };
   const entries = Object.entries(all)
     .filter(([, entry]) => typeof entry?.at === "number" && now - entry.at <= TTL_MS)
     .sort(([, a], [, b]) => b.at - a.at)

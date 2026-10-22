@@ -21,6 +21,7 @@ import {
   type Shown,
 } from "@/lib/browse";
 import { fetchProviders } from "@/lib/browse-client";
+import { browserRegion } from "@/lib/regions";
 import { SERVICES_SOURCE_ID, effectiveSources } from "@/lib/draw";
 import { offersToShow } from "@/lib/draw-state";
 import { useGlobalSource } from "@/lib/use-global-source";
@@ -52,6 +53,7 @@ export function FilmBrowser() {
   const [films, setFilms] = useState<StoredFilm[]>([]);
   const [ready, setReady] = useState(false);
   const [providerInfo, setProviderInfo] = useState<Map<string, ProviderInfo>>(new Map());
+  const region = browserRegion(settings.region);
   const [paging, setPaging] = useState({ key: filterKey, limit: PAGE_SIZE });
   const [retry, setRetry] = useState(0);
   const [selected, setSelected] = useState<CardFilm | null>(null);
@@ -86,11 +88,12 @@ export function FilmBrowser() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchProviders(controller.signal, lang)
+    if (!ready) return;
+    fetchProviders(controller.signal, lang, region)
       .then(setProviderInfo)
       .catch(() => undefined);
     return () => controller.abort();
-  }, [lang]);
+  }, [lang, region, ready]);
 
   const sources = effectiveSources(filters.source ? [filters.source] : settings.sources, lists);
   const sourceKey = sources.join("|");
@@ -124,6 +127,7 @@ export function FilmBrowser() {
     services,
     limit,
     lang,
+    region,
     details,
     failedKeys,
   });
@@ -133,6 +137,7 @@ export function FilmBrowser() {
     filters,
     limit,
     lang,
+    region,
     retry,
     details,
     onDetail: bumpDetails,
@@ -301,6 +306,7 @@ export function FilmBrowser() {
         <FilmDialog
           film={selected}
           services={services}
+          region={region}
           onClose={() => setSelected(null)}
           opener={openerRef}
         />

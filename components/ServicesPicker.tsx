@@ -5,6 +5,7 @@ import { useEffect, useId, useState, type FormEvent, type ReactNode } from "reac
 import { useI18n } from "@/components/I18nProvider";
 import { MultiSelect } from "@/components/MultiSelect";
 import { langParam } from "@/lib/i18n/config";
+import { browserRegion, regionOptions, regionParam } from "@/lib/regions";
 import { summarizeNames, validateServices } from "@/lib/services";
 import { resetAll } from "@/lib/storage";
 import { loadSettings, updateSettings } from "@/lib/storage/settings";
@@ -22,12 +23,14 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
   const [selected, setSelected] = useState<ReadonlySet<string>>(
     () => new Set(loadSettings().services),
   );
+  const [region, setRegion] = useState(() => browserRegion(loadSettings().region));
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/providers${langParam(lang) ? `?${langParam(lang)}` : ""}`, {
+    const query = [langParam(lang), regionParam(region)].filter(Boolean).join("&");
+    fetch(`/api/providers${query ? `?${query}` : ""}`, {
       signal: controller.signal,
     })
       .then((response) => (response.ok ? (response.json() as Promise<ProvidersResponse>) : null))
@@ -40,7 +43,7 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
         if (!(reason instanceof DOMException && reason.name === "AbortError")) setStatus("error");
       });
     return () => controller.abort();
-  }, [attempt, lang]);
+  }, [attempt, lang, region]);
 
   function change(next: ReadonlySet<string>) {
     setError(null);
@@ -52,7 +55,7 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
     const problem = validateServices(selected) === "none" ? t.services.needOne : null;
     setError(problem);
     if (problem) return;
-    updateSettings({ services: [...selected] });
+    updateSettings({ services: [...selected], region });
     router.push(href("draw"));
   }
 
@@ -89,6 +92,23 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
               <button type="button" className="button ghost" onClick={retry}>
                 {t.common.retry}
               </button>
+            </div>
+          )}
+          {status === "ready" && (
+            <div className="filter">
+              <label htmlFor={`${ids}-country`}>{t.services.country}</label>
+              <select
+                className="select"
+                id={`${ids}-country`}
+                value={region}
+                onChange={(event) => setRegion(event.target.value)}
+              >
+                {regionOptions(lang).map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
           {status === "ready" && (

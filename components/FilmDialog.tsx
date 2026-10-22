@@ -16,11 +16,14 @@ type Loaded = { id: string; detail: MovieDetails | "failed" };
 export function FilmDialog({
   film,
   services,
+  region,
   onClose,
   opener,
 }: {
   film: CardFilm;
   services: ReadonlySet<string>;
+  /** Country of the offers. */
+  region: string;
   onClose: () => void;
   /** The card that opened the dialog, focused again on close. */
   opener: React.RefObject<HTMLElement | null>;
@@ -30,17 +33,17 @@ export function FilmDialog({
   const { tmdbId } = film;
 
   useEffect(() => {
-    if (tmdbId === null || cachedDetails(tmdbId, lang)) return;
+    if (tmdbId === null || cachedDetails(tmdbId, lang, region)) return;
     const controller = new AbortController();
-    fetchDetails(tmdbId, controller.signal, lang)
+    fetchDetails(tmdbId, controller.signal, lang, region)
       .then((detail) => setLoaded({ id: film.id, detail }))
       .catch(() => {
         if (!controller.signal.aborted) setLoaded({ id: film.id, detail: "failed" });
       });
     return () => controller.abort();
-  }, [film.id, tmdbId, lang]);
+  }, [film.id, tmdbId, lang, region]);
 
-  const known = tmdbId === null ? undefined : cachedDetails(tmdbId, lang);
+  const known = tmdbId === null ? undefined : cachedDetails(tmdbId, lang, region);
   const state = known ?? (loaded?.id === film.id ? loaded.detail : undefined);
   const detail = typeof state === "object" ? state : null;
   const waiting = tmdbId !== null && state === undefined;
