@@ -60,6 +60,22 @@ export function matchStats(films: StoredFilm[], keys: ReadonlySet<string>): Matc
   return { drawable, toCheck: imported.length - drawable };
 }
 
+/** The figures of everything stored, so they outlive the import that produced them. */
+export function summarizeLibrary(films: StoredFilm[], lists: StoredList[]): ImportOutcome {
+  const inList = (id: string) => films.filter((film) => film.lists.includes(id)).length;
+  const stats = matchStats(films, new Set(films.map((film) => film.key)));
+  return {
+    summary: {
+      watchlist: inList(WATCHLIST_ID),
+      lists: lists.filter((list) => list.id.startsWith(LIST_PREFIX)).length,
+      liked: inList(LIKED_ID),
+      seen: films.filter((film) => film.seen).length,
+      total: films.length,
+    },
+    stats,
+  };
+}
+
 function listIdentity(membership: string): { id: string; name: string } | null {
   if (membership === "watchlist") return { id: WATCHLIST_ID, name: "Watchlist" };
   if (membership === "liked") return { id: LIKED_ID, name: "Films aimés" };

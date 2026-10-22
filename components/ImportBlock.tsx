@@ -8,7 +8,7 @@ import {
   describeImportError,
   importExport,
   recheckFilms,
-  unsureFilms,
+  summarizeLibrary,
   type ImportOutcome,
   type ImportProgress,
 } from "@/lib/import/apply";
@@ -19,21 +19,22 @@ export function ImportBlock() {
   const ids = useId();
   const { t } = useI18n();
   const [progress, setProgress] = useState<ImportProgress | null>(null);
-  const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
+  const [stored, setStored] = useState<ImportOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [unsure, setUnsure] = useState(0);
   const running = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let alive = true;
-    const count = () =>
-      void library.getFilms().then((films) => alive && setUnsure(unsureFilms(films).length));
-    count();
+    const load = () =>
+      void Promise.all([library.getFilms(), library.getLists()]).then(
+        ([films, lists]) =>
+          alive && setStored(films.length > 0 ? summarizeLibrary(films, lists) : null),
+      );
+    load();
     const stop = onReset(() => {
-      setOutcome(null);
       setError(null);
-      count();
+      load();
     });
     return () => {
       alive = false;
@@ -42,12 +43,16 @@ export function ImportBlock() {
     };
   }, []);
 
+  async function refresh() {
+    const [films, lists] = await Promise.all([library.getFilms(), library.getLists()]);
+    setStored(films.length > 0 ? summarizeLibrary(films, lists) : null);
+  }
+
   async function recheck() {
     if (running.current) return;
     const controller = new AbortController();
     running.current = controller;
     setError(null);
-    setOutcome(null);
     setProgress({ phase: "reading" });
     try {
       await recheckFilms(library, {
@@ -56,9 +61,7 @@ export function ImportBlock() {
           if (!controller.signal.aborted) setProgress(next);
         },
       });
-      if (!controller.signal.aborted) {
-        setUnsure(unsureFilms(await library.getFilms()).length);
-      }
+      if (!controller.signal.aborted) await refresh();
     } catch (reason) {
       if (!controller.signal.aborted) setError(describeImportError(reason, t));
     } finally {
@@ -72,19 +75,15 @@ export function ImportBlock() {
     const controller = new AbortController();
     running.current = controller;
     setError(null);
-    setOutcome(null);
     setProgress({ phase: "reading" });
     try {
-      const result = await importExport(file, library, {
+      await importExport(file, library, {
         signal: controller.signal,
         onProgress: (next) => {
           if (!controller.signal.aborted) setProgress(next);
         },
       });
-      if (!controller.signal.aborted) {
-        setOutcome(result);
-        setUnsure(result.stats.toCheck);
-      }
+      if (!controller.signal.aborted) await refresh();
     } catch (reason) {
       if (!controller.signal.aborted) setError(describeImportError(reason, t));
     } finally {
@@ -106,6 +105,7 @@ export function ImportBlock() {
   }
 
   const busy = progress !== null;
+  const unsure = stored?.stats.toCheck ?? 0;
 
   return (
     <section className="import" aria-labelledby={`${ids}-title`}>
@@ -170,30 +170,34 @@ export function ImportBlock() {
           </button>
         </div>
       )}
-      {outcome && !busy && (
+      {stored && !busy && (
         <div className="import-summary" role="status">
           <h3>{t.import.done}</h3>
           <dl className="import-figures">
             <div>
+              <dt>{t.import.films}</dt>
+              <dd>{stored.summary.total}</dd>
+            </div>
+            <div>
               <dt>{t.import.watchlist}</dt>
-              <dd>{outcome.summary.watchlist}</dd>
+              <dd>{stored.summary.watchlist}</dd>
             </div>
             <div>
               <dt>{t.import.lists}</dt>
-              <dd>{outcome.summary.lists}</dd>
+              <dd>{stored.summary.lists}</dd>
             </div>
             <div>
               <dt>{t.import.likes}</dt>
-              <dd>{outcome.summary.liked}</dd>
+              <dd>{stored.summary.liked}</dd>
             </div>
             <div>
               <dt>{t.import.seen}</dt>
-              <dd>{outcome.summary.seen}</dd>
+              <dd>{stored.summary.seen}</dd>
             </div>
           </dl>
           <p>
-            {t.import.usable(outcome.stats.drawable)}
-            {outcome.stats.toCheck > 0 && t.import.toCheck(outcome.stats.toCheck)}
+            {t.import.usable(stored.stats.drawable)}
+            {stored.stats.toCheck > 0 && t.import.toCheck(stored.stats.toCheck)}
           </p>
         </div>
       )}

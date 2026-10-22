@@ -6,10 +6,12 @@ import {
   matchStats,
   planImport,
   summarizeImport,
+  summarizeLibrary,
 } from "@/lib/import/apply";
 import { ImportError, type ImportResult } from "@/lib/import/letterboxd";
 import { getDictionary } from "@/lib/i18n";
 import { createLibrary } from "@/lib/storage/library";
+import type { StoredFilm } from "@/lib/storage/schema";
 
 const result: ImportResult = {
   lists: ["Horror night"],
@@ -176,5 +178,38 @@ describe("importExport", () => {
     });
     expect(await store.getFilms()).toEqual([]);
     expect(await store.getLists()).toEqual([]);
+  });
+});
+
+describe("summarizeLibrary", () => {
+  const film = (key: string, patch: Partial<StoredFilm> = {}): StoredFilm => ({
+    key,
+    title: key,
+    year: 2000,
+    tmdbId: 1,
+    confidence: 1,
+    lists: [],
+    seen: false,
+    ...patch,
+  });
+
+  it("counts what is stored, whatever import produced it", () => {
+    const films = [
+      film("a", { lists: ["watchlist", "list:Horror"], seen: true }),
+      film("b", { lists: ["watchlist", "liked"] }),
+      film("c", { tmdbId: null, confidence: null, lists: ["list:Horror"] }),
+    ];
+    const lists = [
+      { id: "watchlist", name: "Watchlist", importedAt: 1 },
+      { id: "list:Horror", name: "Horror", importedAt: 1 },
+    ];
+    expect(summarizeLibrary(films, lists)).toEqual({
+      summary: { watchlist: 2, lists: 1, liked: 1, seen: 1, total: 3 },
+      stats: { drawable: 2, toCheck: 1 },
+    });
+  });
+
+  it("reports nothing for an empty library", () => {
+    expect(summarizeLibrary([], []).summary.total).toBe(0);
   });
 });

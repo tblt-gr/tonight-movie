@@ -147,7 +147,8 @@ export const fr = {
     unsure: (count: number) =>
       `${count} ${count > 1 ? "films ne sont pas associés" : "film n’est pas associé"} avec certitude à TMDB : ils n’ont ni affiche ni durée et le tirage les ignore.`,
     recheck: "Relancer la recherche",
-    done: "Import terminé",
+    done: "Vos films importés",
+    films: "Films",
     watchlist: "Watchlist",
     lists: "Listes",
     likes: "Likes",
