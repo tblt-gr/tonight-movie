@@ -2,7 +2,13 @@
 
 import { Check, X } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { lastSelectedId, moveActive, toggleId, type ListKey } from "@/lib/multiselect";
+import {
+  arrangeOptions,
+  lastSelectedId,
+  moveActive,
+  toggleId,
+  type ListKey,
+} from "@/lib/multiselect";
 import { brandFor } from "@/lib/brand-color";
 import type { Brand } from "@/lib/provider-colors";
 import { filterProviders } from "@/lib/services";
@@ -15,6 +21,12 @@ type Props = {
   onChange: (next: ReadonlySet<string>) => void;
   emptyMessage: (query: string) => string;
   removeLabel: (name: string) => string;
+  clearLabel: string;
+  sectionLabels: { mine: string; others: string };
+  /** The visitor's own services; defaults to the selection, so ticking a service moves it up. */
+  owned?: ReadonlySet<string>;
+  /** An option that always leads the list, such as « any service ». */
+  pinnedId?: string;
   /** Written inside the field in place of the chips, for a bar with little room. */
   summary?: string;
 };
@@ -75,6 +87,10 @@ export function MultiSelect({
   onChange,
   emptyMessage,
   removeLabel,
+  clearLabel,
+  sectionLabels,
+  owned,
+  pinnedId,
   summary,
 }: Props) {
   const ids = useId();
@@ -82,15 +98,22 @@ export function MultiSelect({
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(-1);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const visible = useMemo(() => filterProviders(options, query), [options, query]);
+  const sections = useMemo(
+    () => arrangeOptions(filterProviders(options, query), selected, owned ?? selected, pinnedId),
+    [options, query, selected, owned, pinnedId],
+  );
+  const visible = useMemo(() => [...sections.mine, ...sections.others], [sections]);
   const chosen = useMemo(
-    () => options.filter((option) => selected.has(option.id)),
-    [options, selected],
+    () =>
+      arrangeOptions(options, selected, selected, pinnedId).mine.filter((o) => selected.has(o.id)),
+    [options, selected, pinnedId],
   );
   const optionId = (id: string) => `${ids}-option-${id}`;
+  const active = visible.findIndex((option) => option.id === activeId);
   const activeOption = open && active >= 0 ? visible[active] : undefined;
+  const setActive = (index: number) => setActiveId(visible[index]?.id ?? null);
 
   useEffect(() => {
     if (!activeOption) return;
@@ -111,10 +134,21 @@ export function MultiSelect({
     onChange(toggleId(selected, id));
   }
 
+  function clear() {
+    onChange(new Set());
+    inputRef.current?.focus();
+  }
+
   function search(value: string) {
     setQuery(value);
     setOpen(true);
-    setActive(value.trim() ? 0 : -1);
+    const first = arrangeOptions(
+      filterProviders(options, value),
+      selected,
+      owned ?? selected,
+      pinnedId,
+    );
+    setActiveId(value.trim() ? ([...first.mine, ...first.others][0]?.id ?? null) : null);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -166,27 +200,39 @@ export function MultiSelect({
           ))}
         </ul>
       )}
-      <input
-        ref={inputRef}
-        id={`${ids}-input`}
-        className="multiselect-input"
-        type="text"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={`${ids}-listbox`}
-        aria-autocomplete="list"
-        aria-activedescendant={activeOption ? optionId(activeOption.id) : undefined}
-        autoComplete="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        value={query}
-        placeholder={summary}
-        title={summary}
-        onChange={(event) => search(event.target.value)}
-        onClick={() => setOpen(true)}
-        onFocus={() => setOpen(true)}
-        onKeyDown={onKeyDown}
-      />
+      <div className="multiselect-field">
+        <input
+          ref={inputRef}
+          id={`${ids}-input`}
+          className="multiselect-input"
+          type="text"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={`${ids}-listbox`}
+          aria-autocomplete="list"
+          aria-activedescendant={activeOption ? optionId(activeOption.id) : undefined}
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          value={query}
+          placeholder={summary}
+          title={summary}
+          onChange={(event) => search(event.target.value)}
+          onClick={() => setOpen(true)}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+        />
+        {selected.size > 0 && (
+          <button
+            type="button"
+            className="multiselect-clear"
+            aria-label={clearLabel}
+            onClick={clear}
+          >
+            <X aria-hidden="true" />
+          </button>
+        )}
+      </div>
       <div className="multiselect-popup" hidden={!open}>
         <ul
           id={`${ids}-listbox`}
@@ -197,25 +243,36 @@ export function MultiSelect({
           // Keeps focus in the input so a click does not close the list or move the caret.
           onMouseDown={(event) => event.preventDefault()}
         >
-          {visible.map((option, index) => {
-            const isSelected = selected.has(option.id);
-            return (
-              <li
-                key={option.id}
-                id={optionId(option.id)}
-                role="option"
-                aria-selected={isSelected}
-                className="multiselect-option"
-                data-active={index === active || undefined}
-                onClick={() => toggle(option.id)}
-                onMouseMove={() => active !== index && setActive(index)}
-              >
-                <Logo option={option} />
-                <span className="multiselect-name">{option.name}</span>
-                <Check className="multiselect-tick" aria-hidden="true" />
+          {(["mine", "others"] as const).map((key) =>
+            sections[key].length === 0 ? null : (
+              <li key={key} role="presentation" className="multiselect-section">
+                <span id={`${ids}-${key}`} className="multiselect-section-title">
+                  {sectionLabels[key]}
+                </span>
+                <ul role="group" aria-labelledby={`${ids}-${key}`} className="multiselect-group">
+                  {sections[key].map((option) => {
+                    const isSelected = selected.has(option.id);
+                    return (
+                      <li
+                        key={option.id}
+                        id={optionId(option.id)}
+                        role="option"
+                        aria-selected={isSelected}
+                        className="multiselect-option"
+                        data-active={option.id === activeId || undefined}
+                        onClick={() => toggle(option.id)}
+                        onMouseMove={() => activeId !== option.id && setActiveId(option.id)}
+                      >
+                        <Logo option={option} />
+                        <span className="multiselect-name">{option.name}</span>
+                        <Check className="multiselect-tick" aria-hidden="true" />
+                      </li>
+                    );
+                  })}
+                </ul>
               </li>
-            );
-          })}
+            ),
+          )}
         </ul>
         {open && visible.length === 0 && (
           <p role="status" className="multiselect-empty">

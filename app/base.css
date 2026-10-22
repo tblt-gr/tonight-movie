@@ -353,6 +353,53 @@ svg {
   color: var(--text);
   opacity: 1;
 }
+.multiselect-field {
+  position: relative;
+  display: grid;
+}
+.multiselect-field .multiselect-input {
+  padding-right: 56px;
+}
+.multiselect-clear {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.multiselect-clear:hover {
+  background: var(--panel);
+}
+.multiselect-clear svg {
+  width: 20px;
+  height: 20px;
+}
+.multiselect-section {
+  list-style: none;
+}
+.multiselect-section-title {
+  display: block;
+  padding: var(--s2) var(--s4);
+  background: var(--panel2);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.multiselect-group {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 .multiselect-popup {
   position: absolute;
   top: 100%;
