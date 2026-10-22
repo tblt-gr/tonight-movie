@@ -77,8 +77,10 @@ describe("settings", () => {
       genres: ["Drame"],
       excludeSeen: false,
       recentDraws: [],
+      region: "BE",
     });
     expect(loadSettings()).toMatchObject({
+      region: "BE",
       services: ["8"],
       maxDuration: 120,
       minRating: 7,
@@ -102,7 +104,30 @@ describe("settings", () => {
       minDuration: null,
       minRating: null,
       genres: [],
+      region: "FR",
     });
+  });
+
+  it("starts without a country so the browser language can suggest one", () => {
+    expect(loadSettings().region).toBeNull();
+  });
+
+  it("rejects a country TMDB does not cover", () => {
+    storage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({
+        version: 1,
+        data: {
+          services: ["8"],
+          sources: [],
+          maxDuration: 90,
+          excludeSeen: true,
+          recentDraws: [],
+          region: "ZZ",
+        },
+      }),
+    );
+    expect(loadSettings().services).toEqual([]);
   });
 
   it("keeps the last five distinct draws, newest first", () => {

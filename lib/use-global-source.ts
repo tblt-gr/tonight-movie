@@ -30,6 +30,7 @@ type Input = {
   filters: BrowseFilters;
   limit: number;
   lang: Locale;
+  region: string;
   /** Changes to run the search again after a failure. */
   retry: number;
   details: Map<number, DetailState>;
@@ -44,6 +45,7 @@ export function useGlobalSource({
   filters,
   limit,
   lang,
+  region,
   retry,
   details,
   onDetail,
@@ -95,6 +97,7 @@ export function useGlobalSource({
             discoverFilters,
             signal,
             lang,
+            region,
           );
         } catch {
           if (!signal.aborted) {
@@ -118,7 +121,7 @@ export function useGlobalSource({
           4,
           async (movie) => {
             try {
-              details.set(movie.tmdbId, await fetchDetails(movie.tmdbId, signal, lang));
+              details.set(movie.tmdbId, await fetchDetails(movie.tmdbId, signal, lang, region));
             } catch {
               return;
             }
@@ -140,6 +143,7 @@ export function useGlobalSource({
     discoverFilters,
     retry,
     lang,
+    region,
     details,
     onDetail,
   ]);

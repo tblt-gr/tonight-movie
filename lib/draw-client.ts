@@ -9,6 +9,7 @@ import {
 import { fetchWithRetry, type RetryOptions } from "@/lib/fetch-retry";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { isDrawable } from "@/lib/match";
+import { DEFAULT_REGION } from "@/lib/regions";
 import type { DiscoverResponse, MovieDetails, SearchResponse } from "@/lib/types";
 import { MAX_PROVIDERS } from "@/lib/validation";
 
@@ -23,6 +24,7 @@ export function createDrawClient(
   fetcher: typeof fetch = (...args) => fetch(...args),
   retry: Pick<RetryOptions, "sleep" | "baseDelayMs"> = {},
   lang: Locale = DEFAULT_LOCALE,
+  region = DEFAULT_REGION,
 ) {
   let succeeded = 0;
   let failed = 0;
@@ -46,8 +48,13 @@ export function createDrawClient(
       if (year !== null) params.set("year", String(year));
       return (await get<SearchResponse>(`/api/search?${params}`)).results;
     },
-    getDetails: (tmdbId) =>
-      get<MovieDetails>(`/api/movie/${tmdbId}${lang === DEFAULT_LOCALE ? "" : `?lang=${lang}`}`),
+    getDetails(tmdbId) {
+      const params = new URLSearchParams();
+      if (lang !== DEFAULT_LOCALE) params.set("lang", lang);
+      if (region !== DEFAULT_REGION) params.set("region", region);
+      const query = params.toString();
+      return get<MovieDetails>(`/api/movie/${tmdbId}${query ? `?${query}` : ""}`);
+    },
     discover(providers, maxRuntime, page, filters) {
       const params = new URLSearchParams({ providers: providers.join(",") });
       if (maxRuntime !== null) params.set("maxRuntime", String(maxRuntime));
@@ -58,6 +65,7 @@ export function createDrawClient(
       if (filters?.genres.length) params.set("genres", filters.genres.join(","));
       params.set("page", String(page));
       if (lang !== DEFAULT_LOCALE) params.set("lang", lang);
+      if (region !== DEFAULT_REGION) params.set("region", region);
       return get<DiscoverResponse>(`/api/discover?${params}`);
     },
   };

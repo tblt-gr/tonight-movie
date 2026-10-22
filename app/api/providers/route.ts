@@ -1,9 +1,12 @@
 import { handle } from "@/lib/route";
 import { getProviders } from "@/lib/tmdb";
-import { parseLangOnly } from "@/lib/validation";
+import { parseContext } from "@/lib/validation";
 
 export const runtime = "nodejs";
 
 export function GET(request: Request) {
-  return handle(request, () => getProviders(parseLangOnly(new URL(request.url).searchParams)));
+  return handle(request, () => {
+    const { lang, region } = parseContext(new URL(request.url).searchParams);
+    return getProviders(lang, region);
+  });
 }

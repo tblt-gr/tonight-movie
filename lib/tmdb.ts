@@ -10,6 +10,7 @@ import type {
   ProvidersResponse,
   SearchResponse,
 } from "@/lib/types";
+import { DEFAULT_REGION } from "@/lib/regions";
 import { MAX_PAGE, type DiscoverSort } from "@/lib/validation";
 
 const TMDB_API = "https://api.themoviedb.org/3";
@@ -17,7 +18,6 @@ const TMDB_SITE = "https://www.themoviedb.org";
 const TMDB_IMAGES = "https://image.tmdb.org/t/p/";
 const LANGUAGE = TMDB_LANGUAGE.fr;
 const ENGLISH = TMDB_LANGUAGE.en;
-const REGION = "FR";
 const REVALIDATE_SECONDS = 24 * 60 * 60;
 const TIMEOUT_MS = 8_000;
 
@@ -164,7 +164,7 @@ function summarizeAll(movies: TmdbMovie[] | undefined): MovieSummary[] {
   return (movies ?? []).flatMap((movie) => summarize(movie) ?? []);
 }
 
-/** Maps TMDB's French offers. Prime Video and each Prime Video Channel keep their own provider id. */
+/** Maps TMDB's offers for one country. Prime Video and each Prime Video Channel keep their own provider id. */
 export function mapOffers(region: TmdbRegionProviders | undefined): Offer[] {
   if (!region) return [];
   const offers: Offer[] = [];
@@ -205,10 +205,10 @@ function uniqueNames(people: { name?: string }[] | undefined): string[] {
   return [...new Set(names)];
 }
 
-export function mapMovie(movie: TmdbMovie): MovieDetails | null {
+export function mapMovie(movie: TmdbMovie, regionCode = DEFAULT_REGION): MovieDetails | null {
   const summary = summarize(movie);
   if (!summary) return null;
-  const region = movie["watch/providers"]?.results?.[REGION];
+  const region = movie["watch/providers"]?.results?.[regionCode];
   const offers = mapOffers(region);
   return {
     ...summary,
@@ -260,7 +260,11 @@ export async function searchMovies(title: string, year: number | null): Promise<
   return { results };
 }
 
-export async function getMovie(id: number, lang: Locale = DEFAULT_LOCALE): Promise<MovieDetails> {
+export async function getMovie(
+  id: number,
+  lang: Locale = DEFAULT_LOCALE,
+  regionCode = DEFAULT_REGION,
+): Promise<MovieDetails> {
   const movie = await tmdbGet<TmdbMovie>(
     `/movie/${id}`,
     { language: TMDB_LANGUAGE[lang], append_to_response: "watch/providers,credits" },
@@ -268,16 +272,19 @@ export async function getMovie(id: number, lang: Locale = DEFAULT_LOCALE): Promi
   );
   // include_adult only filters search and discover, not a direct lookup.
   if (movie.adult) throw new ApiFailure("not_found", 404, "Film not found");
-  const details = mapMovie(movie);
+  const details = mapMovie(movie, regionCode);
   if (!details)
     throw new ApiFailure("upstream_error", 502, "The film service sent incomplete data");
   return details;
 }
 
-export async function getProviders(lang: Locale = DEFAULT_LOCALE): Promise<ProvidersResponse> {
+export async function getProviders(
+  lang: Locale = DEFAULT_LOCALE,
+  regionCode = DEFAULT_REGION,
+): Promise<ProvidersResponse> {
   const data = await tmdbGet<{
     results?: (TmdbProvider & { display_priorities?: Record<string, number> })[];
-  }>("/watch/providers/movie", { language: TMDB_LANGUAGE[lang], watch_region: REGION });
+  }>("/watch/providers/movie", { language: TMDB_LANGUAGE[lang], watch_region: regionCode });
   const providers = (data.results ?? [])
     .flatMap((provider) =>
       typeof provider.provider_id === "number" && provider.provider_name
@@ -288,7 +295,7 @@ export async function getProviders(lang: Locale = DEFAULT_LOCALE): Promise<Provi
                 name: provider.provider_name,
                 logo: imageUrl(provider.logo_path, "logo"),
               },
-              priority: provider.display_priorities?.[REGION] ?? Number.MAX_SAFE_INTEGER,
+              priority: provider.display_priorities?.[regionCode] ?? Number.MAX_SAFE_INTEGER,
             },
           ]
         : [],
@@ -313,10 +320,11 @@ export async function discoverMovies(
   sort: DiscoverSort = "popularity",
   filters: Partial<DiscoverFilters> = {},
   lang: Locale = DEFAULT_LOCALE,
+  regionCode = DEFAULT_REGION,
 ): Promise<DiscoverResponse> {
   const data = await tmdbGet<TmdbPage>("/discover/movie", {
     language: TMDB_LANGUAGE[lang],
-    watch_region: REGION,
+    watch_region: regionCode,
     with_watch_providers: providers.join("|"),
     with_watch_monetization_types: "flatrate|free|ads",
     include_adult: "false",
@@ -350,7 +358,7 @@ export async function popularOnProvider(
 ): Promise<MovieSummary[]> {
   const data = await tmdbGet<TmdbPage>("/discover/movie", {
     language: TMDB_LANGUAGE[lang],
-    watch_region: REGION,
+    watch_region: DEFAULT_REGION,
     with_watch_providers: String(providerId),
     with_watch_monetization_types: "flatrate",
     include_adult: "false",
