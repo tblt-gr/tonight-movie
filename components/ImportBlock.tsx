@@ -8,18 +8,25 @@ import {
   describeImportError,
   importExport,
   recheckFilms,
+  listUnsureFilms,
   summarizeLibrary,
   type ImportOutcome,
   type ImportProgress,
 } from "@/lib/import/apply";
 import { onReset } from "@/lib/storage";
 import { library } from "@/lib/storage/library";
+import type { StoredFilm, StoredList } from "@/lib/storage/schema";
+
+type Stored = ImportOutcome & { unsure: StoredFilm[] };
+
+const snapshot = (films: StoredFilm[], lists: StoredList[]): Stored | null =>
+  films.length > 0 ? { ...summarizeLibrary(films, lists), unsure: listUnsureFilms(films) } : null;
 
 export function ImportBlock() {
   const ids = useId();
   const { t } = useI18n();
   const [progress, setProgress] = useState<ImportProgress | null>(null);
-  const [stored, setStored] = useState<ImportOutcome | null>(null);
+  const [stored, setStored] = useState<Stored | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const running = useRef<AbortController | null>(null);
@@ -28,8 +35,7 @@ export function ImportBlock() {
     let alive = true;
     const load = () =>
       void Promise.all([library.getFilms(), library.getLists()]).then(
-        ([films, lists]) =>
-          alive && setStored(films.length > 0 ? summarizeLibrary(films, lists) : null),
+        ([films, lists]) => alive && setStored(snapshot(films, lists)),
       );
     load();
     const stop = onReset(() => {
@@ -45,7 +51,7 @@ export function ImportBlock() {
 
   async function refresh() {
     const [films, lists] = await Promise.all([library.getFilms(), library.getLists()]);
-    setStored(films.length > 0 ? summarizeLibrary(films, lists) : null);
+    setStored(snapshot(films, lists));
   }
 
   async function recheck() {
@@ -168,6 +174,17 @@ export function ImportBlock() {
           <button type="button" className="button" onClick={() => void recheck()}>
             {t.import.recheck}
           </button>
+          <details className="import-unsure">
+            <summary>{t.import.unsureList}</summary>
+            <ul>
+              {stored?.unsure.map((film) => (
+                <li key={film.key}>
+                  {film.title}
+                  {film.year !== null && <span> ({film.year})</span>}
+                </li>
+              ))}
+            </ul>
+          </details>
         </div>
       )}
       {stored && !busy && (

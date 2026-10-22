@@ -186,6 +186,14 @@ export async function importExport(
 export const unsureFilms = (films: StoredFilm[]) =>
   films.filter((film) => film.confidence === null || !isDrawable(film));
 
+const byTitle = new Intl.Collator("fr", { sensitivity: "base", numeric: true });
+
+/** The unsure films as a visitor reads them: alphabetical, then oldest first. */
+export const listUnsureFilms = (films: StoredFilm[]) =>
+  unsureFilms(films).sort(
+    (a, b) => byTitle.compare(a.title, b.title) || (a.year ?? 0) - (b.year ?? 0),
+  );
+
 /**
  * Searches again for every film that is not a sure match, so a better search corrects
  * matches stored by an older one.
