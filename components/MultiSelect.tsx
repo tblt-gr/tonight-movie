@@ -1,7 +1,15 @@
 "use client";
 
 import { Check, X } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import {
   arrangeOptions,
   lastSelectedId,
@@ -100,16 +108,19 @@ export function MultiSelect({
   const [open, setOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  const arrange = useCallback(
+    (list: ProviderInfo[]) => arrangeOptions(list, selected, owned ?? selected, pinnedId),
+    [selected, owned, pinnedId],
+  );
   const sections = useMemo(
-    () => arrangeOptions(filterProviders(options, query), selected, owned ?? selected, pinnedId),
-    [options, query, selected, owned, pinnedId],
+    () => arrange(filterProviders(options, query)),
+    [arrange, options, query],
   );
   const visible = useMemo(() => [...sections.mine, ...sections.others], [sections]);
-  const chosen = useMemo(
-    () =>
-      arrangeOptions(options, selected, selected, pinnedId).mine.filter((o) => selected.has(o.id)),
-    [options, selected, pinnedId],
-  );
+  const chosen = useMemo(() => {
+    const all = arrange(options);
+    return [...all.mine, ...all.others].filter((o) => selected.has(o.id));
+  }, [arrange, options, selected]);
   const optionId = (id: string) => `${ids}-option-${id}`;
   const active = visible.findIndex((option) => option.id === activeId);
   const activeOption = open && active >= 0 ? visible[active] : undefined;
@@ -142,12 +153,7 @@ export function MultiSelect({
   function search(value: string) {
     setQuery(value);
     setOpen(true);
-    const first = arrangeOptions(
-      filterProviders(options, value),
-      selected,
-      owned ?? selected,
-      pinnedId,
-    );
+    const first = arrange(filterProviders(options, value));
     setActiveId(value.trim() ? ([...first.mine, ...first.others][0]?.id ?? null) : null);
   }
 
@@ -173,7 +179,7 @@ export function MultiSelect({
       }
     } else if (key === "Backspace" && !query) {
       const id = lastSelectedId(
-        options.map((option) => option.id),
+        chosen.map((option) => option.id),
         selected,
       );
       if (id) toggle(id);
