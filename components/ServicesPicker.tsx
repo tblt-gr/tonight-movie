@@ -95,7 +95,7 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
             </div>
           )}
           {status === "ready" && (
-            <div className="filter">
+            <div className="filter services-country">
               <label htmlFor={`${ids}-country`}>{t.services.country}</label>
               <select
                 className="select"

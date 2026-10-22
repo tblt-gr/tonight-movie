@@ -33,3 +33,9 @@
   margin: 0;
   color: var(--muted);
 }
+.services-country {
+  max-width: 560px;
+}
+.services-country .select {
+  width: 100%;
+}
