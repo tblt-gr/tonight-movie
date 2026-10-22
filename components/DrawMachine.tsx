@@ -1,14 +1,11 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useId, useReducer, useRef, useState } from "react";
-import { Accordion } from "@/components/Accordion";
 import { DrawFilters } from "@/components/DrawFilters";
-import { FilmOffers } from "@/components/FilmOffers";
+import { DrawResult } from "@/components/DrawResult";
 import { FilmPoster } from "@/components/FilmPoster";
 import { useI18n } from "@/components/I18nProvider";
-import { formatMinutes, formatRating } from "@/lib/catalog";
 import { drawFilm, effectiveSources } from "@/lib/draw";
 import { collectSwapPosters, createDrawClient } from "@/lib/draw-client";
 import {
@@ -24,7 +21,6 @@ import { onReset } from "@/lib/storage";
 import { library } from "@/lib/storage/library";
 import { DEFAULT_SETTINGS, type Settings, type StoredList } from "@/lib/storage/schema";
 import { loadSettings, recordDraw, updateSettings } from "@/lib/storage/settings";
-import type { MovieDetails } from "@/lib/types";
 
 const NEUTRAL_MS = 600;
 const POSTER_WAIT_MS = 1200;
@@ -223,7 +219,7 @@ export function DrawMachine() {
 
         <div className="draw-side">
           {state.phase === "result" && !drawing && (
-            <Result film={state.film} services={services} headingRef={headingRef} />
+            <DrawResult film={state.film} services={services} headingRef={headingRef} />
           )}
           {state.phase === "none" && (
             <div className="draw-outcome">
@@ -318,71 +314,5 @@ export function DrawMachine() {
         )}
       </div>
     </div>
-  );
-}
-
-function Result({
-  film,
-  services,
-  headingRef,
-}: {
-  film: MovieDetails;
-  services: ReadonlySet<string>;
-  headingRef: React.RefObject<HTMLHeadingElement | null>;
-}) {
-  const { t, href } = useI18n();
-  return (
-    <article className="result">
-      <h1 tabIndex={-1} ref={headingRef} className="title-stack is-in">
-        <span>{film.title}</span>
-        {film.year && <span className="title-accent">{film.year}</span>}
-      </h1>
-      <div className="result-body">
-        <FilmCredits film={film} />
-        <dl className="result-figures">
-          <div>
-            <dt>{t.common.duration}</dt>
-            <dd>{formatMinutes(film.runtime, t)}</dd>
-          </div>
-          <div>
-            <dt>{t.common.tmdbRating}</dt>
-            <dd>{formatRating(film.rating, t)}</dd>
-          </div>
-        </dl>
-        <FilmOffers
-          film={film}
-          services={services}
-          directLinks
-          between={
-            <Accordion key={film.tmdbId} title={t.draw.synopsis} defaultOpen>
-              <p className="result-synopsis">{film.overview || t.draw.noSynopsis}</p>
-            </Accordion>
-          }
-        />
-        <p className="result-escape">
-          {t.draw.escape} <Link href={href("films")}>{t.draw.escapeLink}</Link>
-        </p>
-      </div>
-    </article>
-  );
-}
-
-function FilmCredits({ film }: { film: MovieDetails }) {
-  const { t } = useI18n();
-  const rows = [
-    [t.common.genres, film.genres.map((genre) => t.genres[genre] ?? genre)],
-    [t.common.director, film.directors],
-    [t.common.cast, film.cast],
-  ].filter(([, names]) => names.length > 0);
-  if (rows.length === 0) return null;
-  return (
-    <dl className="result-credits">
-      {rows.map(([label, names]) => (
-        <div key={label as string}>
-          <dt>{label}</dt>
-          <dd>{(names as string[]).join(", ")}</dd>
-        </div>
-      ))}
-    </dl>
   );
 }
