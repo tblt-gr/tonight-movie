@@ -375,6 +375,7 @@ export function FilmBrowser() {
     ...settings.services.map(
       (id) => providerInfo.get(id) ?? { id, name: t.browse.serviceFallback(id), logo: null },
     ),
+    ...[...providerInfo.values()].filter((provider) => !services.has(provider.id)),
   ];
   const serviceSelected = useMemo(
     () => new Set(filters.services.filter((id) => serviceOptions.some((o) => o.id === id))),
