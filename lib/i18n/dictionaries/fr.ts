@@ -118,6 +118,7 @@ export const fr = {
       `${count} service${count > 1 ? "s" : ""} choisi${count > 1 ? "s" : ""}`,
     loading: "Chargement des services…",
     loadError: "Impossible de charger la liste des services.",
+    country: "Pays",
     searchLabel: "Rechercher un service",
     empty: (query: string) => `Aucun service ne correspond à « ${query} ».`,
     remove: (name: string) => `Retirer ${name}`,

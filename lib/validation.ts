@@ -1,6 +1,7 @@
 import { ApiFailure } from "@/lib/errors";
 import { MAX_GENRES } from "@/lib/genres";
 import { DEFAULT_LOCALE, hasLocale, type Locale } from "@/lib/i18n/config";
+import { DEFAULT_REGION, isRegion } from "@/lib/regions";
 import type { DiscoverFilters } from "@/lib/types";
 
 export const MAX_PAGE = 500;
@@ -64,8 +65,24 @@ function locale(raw: string | null): Locale {
   return raw;
 }
 
+/** The country whose offers are asked for, France when the caller does not say. */
+function region(raw: string | null): string {
+  if (raw === null) return DEFAULT_REGION;
+  if (!isRegion(raw)) throw bad("region is not supported");
+  return raw;
+}
+
 export function parseLangOnly(searchParams: URLSearchParams): Locale {
   return locale(pick(searchParams, ["lang"])("lang"));
+}
+
+export function parseContext(searchParams: URLSearchParams) {
+  const get = pick(searchParams, ["lang", "region"]);
+  return { lang: locale(get("lang")), region: region(get("region")) };
+}
+
+export function parseRegionOnly(searchParams: URLSearchParams): string {
+  return region(pick(searchParams, ["region"])("region"));
 }
 
 function genreList(raw: string): number[] {
@@ -88,6 +105,7 @@ export function parseDiscover(searchParams: URLSearchParams) {
     "page",
     "sort",
     "lang",
+    "region",
   ]);
   const rawProviders = get("providers");
   if (!rawProviders) throw bad("providers is required");
@@ -125,5 +143,6 @@ export function parseDiscover(searchParams: URLSearchParams) {
     page: rawPage === null ? 1 : integer(rawPage, "page", 1, MAX_PAGE),
     sort: sort as DiscoverSort,
     lang: locale(get("lang")),
+    region: region(get("region")),
   };
 }

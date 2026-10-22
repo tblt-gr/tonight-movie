@@ -1,4 +1,5 @@
 import { MAX_GENRES } from "@/lib/genres";
+import { DEFAULT_REGION, isRegion } from "@/lib/regions";
 import { MAX_RUNTIME } from "@/lib/validation";
 
 export const SETTINGS_KEY = "tonight-movie:settings";
@@ -33,6 +34,8 @@ export type Settings = {
   excludeSeen: boolean;
   /** Film keys, newest first, capped at `RECENT_DRAWS_LIMIT`. */
   recentDraws: string[];
+  /** Country of the offers, `null` until the visitor chooses: the browser language suggests one. */
+  region: string | null;
 };
 
 /** Compact on purpose: no poster, no synopsis. */
@@ -69,6 +72,7 @@ export const DEFAULT_SETTINGS: Settings = {
   genres: [],
   excludeSeen: true,
   recentDraws: [],
+  region: null,
 };
 
 type Json = Record<string, unknown>;
@@ -131,6 +135,13 @@ export function parseSettings(value: unknown): Settings | null {
     null,
   );
   const genres = optional(value.genres, (v) => textList(v, MAX_GENRES) ?? undefined, []);
+  // Settings saved before the country existed were made for France and keep it.
+  const region = optional(
+    value.region,
+    (v) => (v === null ? null : isRegion(v) ? v : undefined),
+    DEFAULT_REGION,
+  );
+  if (region === undefined) return null;
   if (!services || !sources || !recentDraws || !genres) return null;
   if (maxDuration === undefined || typeof value.excludeSeen !== "boolean") return null;
   if (minDuration === undefined || minRating === undefined) return null;
@@ -146,6 +157,7 @@ export function parseSettings(value: unknown): Settings | null {
     genres,
     excludeSeen: value.excludeSeen,
     recentDraws,
+    region,
   };
 }
 

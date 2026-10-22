@@ -23,6 +23,7 @@ type Input = {
   services: ReadonlySet<string>;
   limit: number;
   lang: Locale;
+  region: string;
   /** Details looked up so far, a mutable cache owned by the caller so both sources share one cache. */
   details: Map<number, DetailState>;
   /** Film keys whose search failed, so they are not searched again until a reset. */
@@ -37,6 +38,7 @@ export function useListPlan({
   services,
   limit,
   lang,
+  region,
   details,
   failedKeys,
 }: Input) {
@@ -92,7 +94,7 @@ export function useListPlan({
           async (film) => {
             const tmdbId = film.tmdbId!;
             try {
-              details.set(tmdbId, await fetchDetails(tmdbId, signal, lang));
+              details.set(tmdbId, await fetchDetails(tmdbId, signal, lang, region));
             } catch {
               if (!signal.aborted) details.set(tmdbId, "failed");
             }
@@ -102,7 +104,7 @@ export function useListPlan({
       }
     })();
     return () => controller.abort();
-  }, [enabled, listFilms, filters, services, limit, lang, details, failedKeys]);
+  }, [enabled, listFilms, filters, services, limit, lang, region, details, failedKeys]);
 
   return { plan, busy };
 }

@@ -117,6 +117,7 @@ export const en: Dictionary = {
     count: (count: number) => `${count} service${count > 1 ? "s" : ""} selected`,
     loading: "Loading services…",
     loadError: "Couldn’t load the list of services.",
+    country: "Country",
     searchLabel: "Search for a service",
     empty: (query: string) => `No service matches “${query}”.`,
     remove: (name: string) => `Remove ${name}`,

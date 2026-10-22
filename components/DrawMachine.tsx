@@ -8,6 +8,7 @@ import { FilmPoster } from "@/components/FilmPoster";
 import { useI18n } from "@/components/I18nProvider";
 import { drawFilm, effectiveSources } from "@/lib/draw";
 import { collectSwapPosters, createDrawClient } from "@/lib/draw-client";
+import { browserRegion } from "@/lib/regions";
 import {
   buildDrawInput,
   countActiveFilters,
@@ -122,13 +123,14 @@ export function DrawMachine() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     try {
       const [films, savedLists] = await Promise.all([library.getFilms(), library.getLists()]);
+      const saved = loadSettings();
       const input = buildDrawInput(
-        loadSettings(),
+        saved,
         films,
         savedLists,
         state.phase === "result" ? state.film : null,
       );
-      const client = createDrawClient(undefined, undefined, lang);
+      const client = createDrawClient(undefined, undefined, lang, browserRegion(saved.region));
       const drawingPromise = drawFilm(input, client.deps);
       let scanned = false;
       void drawingPromise.then(() => {
