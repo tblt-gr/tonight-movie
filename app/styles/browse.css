@@ -99,6 +99,10 @@
   gap: var(--s4) var(--s5);
   padding-top: var(--s3);
 }
+.browse-filters-reset {
+  justify-self: start;
+  padding-inline: var(--s5);
+}
 .view-toggle {
   display: flex;
   margin-left: auto;
