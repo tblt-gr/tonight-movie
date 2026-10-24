@@ -99,6 +99,13 @@
   gap: var(--s4) var(--s5);
   padding-top: var(--s3);
 }
+/* The label can wrap on a narrow screen, so the fixed bar height must not clip it. */
+.filters .browse-filters-reset {
+  justify-self: start;
+  height: auto;
+  min-height: 48px;
+  padding: var(--s3) var(--s5);
+}
 .view-toggle {
   display: flex;
   margin-left: auto;

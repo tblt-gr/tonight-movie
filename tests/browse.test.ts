@@ -98,20 +98,29 @@ describe("classifyListFilm", () => {
     ).toEqual({ verdict: "pending", uncertain: false });
   });
 
-  it("keeps a weak match visible and flagged, whatever the filters say", () => {
+  it("keeps a weak match visible and flagged when any service will do", () => {
     const weak = stored({ title: "A", confidence: 0.5 });
     const result = classifyListFilm(
       weak,
       undefined,
-      filters({ maxDuration: 60, genres: ["X"] }),
+      filters({ maxDuration: 60, genres: ["X"], services: ["all"] }),
       mine,
     );
     expect(result).toEqual({ verdict: "show", uncertain: true });
   });
 
-  it("keeps a film whose details failed to load, flagged", () => {
-    const result = classifyListFilm(stored({ title: "A" }), "failed", filters(), mine);
-    expect(result).toEqual({ verdict: "show", uncertain: true });
+  it("hides a weak match when filtering on services", () => {
+    const weak = stored({ title: "A", confidence: 0.5 });
+    expect(classifyListFilm(weak, undefined, filters(), mine).verdict).toBe("hide");
+  });
+
+  it("flags a film whose details failed to load when any service will do, else hides it", () => {
+    const film = stored({ title: "A" });
+    expect(classifyListFilm(film, "failed", filters({ services: ["all"] }), mine)).toEqual({
+      verdict: "show",
+      uncertain: true,
+    });
+    expect(classifyListFilm(film, "failed", filters(), mine).verdict).toBe("hide");
   });
 
   it("shows a film available on the visitor's services", () => {
@@ -139,12 +148,13 @@ describe("classifyListFilm", () => {
     expect(classifyListFilm(stored({ title: "A" }), rental, filters(), mine).verdict).toBe("hide");
   });
 
-  it("flags an unknown offer instead of hiding the film", () => {
+  it("hides an unknown offer when filtering on services", () => {
     const unknown = details({ offers: [], availabilityStatus: "unknown" });
-    expect(classifyListFilm(stored({ title: "A" }), unknown, filters(), mine)).toEqual({
-      verdict: "show",
-      uncertain: true,
-    });
+    const film = stored({ title: "A" });
+    expect(classifyListFilm(film, unknown, filters(), mine).verdict).toBe("hide");
+    expect(classifyListFilm(film, unknown, filters({ services: ["8"] }), mine).verdict).toBe(
+      "hide",
+    );
   });
 
   it("filters on one service", () => {

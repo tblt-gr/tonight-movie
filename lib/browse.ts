@@ -136,7 +136,8 @@ const inYears = (value: number | null, filters: BrowseFilters) =>
 
 /**
  * Whether an imported film belongs in the results. A weak match, a failed lookup or an
- * unknown offer is shown flagged (`uncertain`) and is never counted as available.
+ * unknown offer is never counted as available: it is hidden when the visitor filters on
+ * services, and shown flagged (`uncertain`) when any service will do.
  */
 export function classifyListFilm(
   film: StoredFilm,
@@ -149,10 +150,12 @@ export function classifyListFilm(
     return HIDE;
   }
   if (!inYears(film.year, filters)) return HIDE;
+  const anyService = filters.services.includes(SERVICE_ANY);
+  const unsure = anyService ? FLAGGED : HIDE;
   if (film.confidence === null) return PENDING;
-  if (film.confidence < 1 || film.tmdbId === null) return FLAGGED;
+  if (film.confidence < 1 || film.tmdbId === null) return unsure;
   if (detail === undefined) return PENDING;
-  if (detail === "failed") return FLAGGED;
+  if (detail === "failed") return unsure;
 
   if (filters.minDuration !== null || filters.maxDuration !== null) {
     if (detail.runtime === null) return HIDE;
@@ -167,8 +170,8 @@ export function classifyListFilm(
     return HIDE;
   }
 
-  if (filters.services.includes(SERVICE_ANY)) return SHOW;
-  if (detail.availabilityStatus === "unknown") return FLAGGED;
+  if (anyService) return SHOW;
+  if (detail.availabilityStatus === "unknown") return unsure;
   const onService =
     filters.services.length === 0
       ? availabilityOn(detail, services) === "available"
