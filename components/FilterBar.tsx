@@ -2,9 +2,9 @@
 
 import { ChevronDown, LayoutGrid, List } from "lucide-react";
 import { useId, useMemo, useState } from "react";
+import { AdvancedFilters } from "@/components/AdvancedFilters";
 import { useI18n } from "@/components/I18nProvider";
 import { MultiSelect } from "@/components/MultiSelect";
-import { RangeField } from "@/components/RangeField";
 import {
   DEFAULT_FILTERS,
   SERVICE_ANY,
@@ -13,19 +13,7 @@ import {
   type BrowseMode,
   type BrowseSort,
 } from "@/lib/browse";
-import { GENRES } from "@/lib/genres";
-import {
-  DURATION_SCALE,
-  RATING_SCALE,
-  durationLabel,
-  durationOptions,
-  hoursLabel,
-  keepOrder,
-  limitAt,
-  positionOf,
-  sourceOptions,
-  yearScale,
-} from "@/lib/draw-state";
+import { sourceOptions } from "@/lib/draw-state";
 import { summarizeNames } from "@/lib/services";
 import type { StoredList } from "@/lib/storage/schema";
 import type { ProviderInfo } from "@/lib/types";
@@ -88,7 +76,6 @@ export function FilterBar({
   );
   const chosenNames = serviceOptions.filter((o) => serviceSelected.has(o.id)).map((o) => o.name);
   const servicesSummary = summarizeNames(chosenNames, t.browse.allMine);
-  const years = yearScale();
   const sourceValue = sources.length === 1 ? sources[0] : "many";
   const advancedCount =
     (filters.maxDuration !== null ? 1 : 0) +
@@ -99,29 +86,6 @@ export function FilterBar({
     (filters.maxYear !== null ? 1 : 0) +
     (filters.genres.length > 0 ? 1 : 0);
 
-  function moveDuration(side: "minDuration" | "maxDuration", value: number) {
-    const limit = limitAt(value, side === "minDuration" ? DURATION_SCALE.min : DURATION_SCALE.max);
-    update(
-      keepOrder(
-        { minDuration: filters.minDuration, maxDuration: filters.maxDuration, [side]: limit },
-        side,
-        side === "minDuration" ? "maxDuration" : "minDuration",
-        side === "minDuration",
-      ),
-    );
-  }
-
-  function moveYear(side: "minYear" | "maxYear", value: number) {
-    const limit = limitAt(value, side === "minYear" ? years.min : years.max);
-    update(
-      keepOrder(
-        { minYear: filters.minYear, maxYear: filters.maxYear, [side]: limit },
-        side,
-        side === "minYear" ? "maxYear" : "minYear",
-        side === "minYear",
-      ),
-    );
-  }
   const sortOptions = sortsFor(mode);
   const sortValue = sortOptions.includes(filters.sort) ? filters.sort : DEFAULT_FILTERS.sort;
 
@@ -225,117 +189,16 @@ export function FilterBar({
         <ChevronDown aria-hidden="true" />
       </button>
       {advancedOpen && (
-        <div
-          className="browse-filters-panel"
+        <AdvancedFilters
           id={`${ids}-advanced`}
-          role="group"
-          aria-label={t.filters.advanced}
-        >
-          <div className="filter">
-            <label htmlFor={`${ids}-duration`}>{t.filters.maxDuration}</label>
-            <select
-              className="select"
-              id={`${ids}-duration`}
-              value={filters.maxDuration ?? ""}
-              onChange={(event) =>
-                update({ maxDuration: event.target.value ? Number(event.target.value) : null })
-              }
-            >
-              <option value="">{t.filters.maxDurationNone}</option>
-              {durationOptions(filters.maxDuration).map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {durationLabel(minutes, t)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {hasSeen && (
-            <div className="check">
-              <input
-                id={`${ids}-seen`}
-                type="checkbox"
-                checked={filters.hideSeen}
-                onChange={(event) => update({ hideSeen: event.target.checked })}
-              />
-              <label htmlFor={`${ids}-seen`}>{t.common.hideSeen}</label>
-            </div>
-          )}
-          <RangeField
-            label={t.filters.minDuration}
-            display={
-              filters.minDuration === null
-                ? t.filters.minDurationNone
-                : hoursLabel(filters.minDuration, t)
-            }
-            value={positionOf(
-              filters.minDuration,
-              DURATION_SCALE.min,
-              DURATION_SCALE.min,
-              DURATION_SCALE.max,
-            )}
-            {...DURATION_SCALE}
-            onChange={(value) => moveDuration("minDuration", value)}
-          />
-          <RangeField
-            label={t.filters.minRating}
-            display={
-              filters.minRating === null
-                ? t.filters.minRatingNone
-                : `${filters.minRating.toLocaleString(t.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`
-            }
-            value={positionOf(
-              filters.minRating,
-              RATING_SCALE.min,
-              RATING_SCALE.min,
-              RATING_SCALE.max,
-            )}
-            {...RATING_SCALE}
-            onChange={(value) => update({ minRating: limitAt(value, RATING_SCALE.min) })}
-          />
-          <RangeField
-            label={t.filters.minYear}
-            display={filters.minYear === null ? t.filters.minYearNone : String(filters.minYear)}
-            value={positionOf(filters.minYear, years.min, years.min, years.max)}
-            {...years}
-            onChange={(value) => moveYear("minYear", value)}
-          />
-          <RangeField
-            label={t.filters.maxYear}
-            display={filters.maxYear === null ? t.filters.maxYearNone : String(filters.maxYear)}
-            value={positionOf(filters.maxYear, years.max, years.min, years.max)}
-            {...years}
-            onChange={(value) => moveYear("maxYear", value)}
-          />
-          <fieldset className="genre-field">
-            <legend>{t.filters.genres}</legend>
-            <div className="genre-chips">
-              {GENRES.map((genre) => (
-                <label key={genre.id} className="genre-chip">
-                  <input
-                    type="checkbox"
-                    checked={filters.genres.includes(genre.name)}
-                    onChange={(event) =>
-                      update({
-                        genres: event.target.checked
-                          ? [...filters.genres, genre.name]
-                          : filters.genres.filter((name) => name !== genre.name),
-                      })
-                    }
-                  />
-                  <span>{t.genres[genre.name] ?? genre.name}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <button
-            type="button"
-            className="button browse-filters-reset"
-            disabled={!filtersChanged}
-            onClick={onReset}
-          >
-            {t.filters.reset}
-          </button>
-        </div>
+          className="browse-filters-panel"
+          resetClassName="browse-filters-reset"
+          values={filters}
+          hasSeen={hasSeen}
+          onChange={update}
+          onReset={onReset}
+          resetDisabled={!filtersChanged}
+        />
       )}
     </div>
   );

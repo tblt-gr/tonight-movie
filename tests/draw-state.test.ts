@@ -8,7 +8,6 @@ import {
   keepOrder,
   limitAt,
   positionOf,
-  durationOptions,
   noneMessage,
   offersToShow,
   roomLight,
@@ -125,12 +124,6 @@ describe("options", () => {
       "Liked films",
       "Ma liste",
     ]);
-  });
-
-  it("keeps a saved duration that is not a preset, in order", () => {
-    expect(durationOptions(100)).toContain(100);
-    expect(durationOptions(100)).toEqual([...durationOptions(100)].sort((a, b) => a - b));
-    expect(durationOptions(null)).toEqual(durationOptions(null).filter(Boolean));
   });
 });
 

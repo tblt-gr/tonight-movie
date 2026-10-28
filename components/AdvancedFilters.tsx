@@ -10,26 +10,48 @@ import {
   yearScale,
 } from "@/lib/draw-state";
 import { GENRES } from "@/lib/genres";
-import type { Settings } from "@/lib/storage/schema";
+
+export type AdvancedValues = {
+  hideSeen: boolean;
+  minDuration: number | null;
+  maxDuration: number | null;
+  minRating: number | null;
+  minYear: number | null;
+  maxYear: number | null;
+  genres: string[];
+};
 
 type Props = {
   id: string;
-  settings: Settings;
-  /** Films were imported as seen, so hiding them can change the draw. */
+  values: AdvancedValues;
+  /** Films were imported as seen, so hiding them can change the results. */
   hasSeen: boolean;
-  onChange: (patch: Partial<Settings>) => void;
+  onChange: (patch: Partial<AdvancedValues>) => void;
   onReset: () => void;
+  resetDisabled?: boolean;
+  /** Layout of the panel, which the draw and the film browser place differently. */
+  className: string;
+  resetClassName: string;
 };
 
-/** The fine draw filters, in a panel the visitor opens from the settings bar. */
-export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props) {
+/** The fine filters shared by the draw and the film browser, so both list them in the same order. */
+export function AdvancedFilters({
+  id,
+  values,
+  hasSeen,
+  onChange,
+  onReset,
+  resetDisabled = false,
+  className,
+  resetClassName,
+}: Props) {
   const { t } = useI18n();
   const duration = DURATION_SCALE;
   const years = yearScale();
 
   function moveDuration(side: "minDuration" | "maxDuration", value: number) {
     const limit = limitAt(value, side === "minDuration" ? duration.min : duration.max);
-    const pair = { minDuration: settings.minDuration, maxDuration: settings.maxDuration };
+    const pair = { minDuration: values.minDuration, maxDuration: values.maxDuration };
     onChange(
       keepOrder(
         { ...pair, [side]: limit },
@@ -42,7 +64,7 @@ export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props)
 
   function moveYear(side: "minYear" | "maxYear", value: number) {
     const limit = limitAt(value, side === "minYear" ? years.min : years.max);
-    const pair = { minYear: settings.minYear, maxYear: settings.maxYear };
+    const pair = { minYear: values.minYear, maxYear: values.maxYear };
     onChange(
       keepOrder(
         { ...pair, [side]: limit },
@@ -54,56 +76,56 @@ export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props)
   }
 
   function toggleGenre(name: string, checked: boolean) {
-    const others = settings.genres.filter((genre) => genre !== name);
+    const others = values.genres.filter((genre) => genre !== name);
     onChange({ genres: checked ? [...others, name] : others });
   }
 
   return (
-    <div className="draw-filters" id={id} role="group" aria-label={t.filters.advanced}>
+    <div className={className} id={id} role="group" aria-label={t.filters.advanced}>
       <RangeField
         label={t.filters.minDuration}
         display={
-          settings.minDuration === null
+          values.minDuration === null
             ? t.filters.minDurationNone
-            : hoursLabel(settings.minDuration, t)
+            : hoursLabel(values.minDuration, t)
         }
-        value={positionOf(settings.minDuration, duration.min, duration.min, duration.max)}
+        value={positionOf(values.minDuration, duration.min, duration.min, duration.max)}
         {...duration}
         onChange={(value) => moveDuration("minDuration", value)}
       />
       <RangeField
         label={t.filters.maxDuration}
         display={
-          settings.maxDuration === null
+          values.maxDuration === null
             ? t.filters.maxDurationNone
-            : hoursLabel(settings.maxDuration, t)
+            : hoursLabel(values.maxDuration, t)
         }
-        value={positionOf(settings.maxDuration, duration.max, duration.min, duration.max)}
+        value={positionOf(values.maxDuration, duration.max, duration.min, duration.max)}
         {...duration}
         onChange={(value) => moveDuration("maxDuration", value)}
       />
       <RangeField
         label={t.filters.minRating}
         display={
-          settings.minRating === null
+          values.minRating === null
             ? t.filters.minRatingNone
-            : `${settings.minRating.toLocaleString(t.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`
+            : `${values.minRating.toLocaleString(t.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 10`
         }
-        value={positionOf(settings.minRating, RATING_SCALE.min, RATING_SCALE.min, RATING_SCALE.max)}
+        value={positionOf(values.minRating, RATING_SCALE.min, RATING_SCALE.min, RATING_SCALE.max)}
         {...RATING_SCALE}
         onChange={(value) => onChange({ minRating: limitAt(value, RATING_SCALE.min) })}
       />
       <RangeField
         label={t.filters.minYear}
-        display={settings.minYear === null ? t.filters.minYearNone : String(settings.minYear)}
-        value={positionOf(settings.minYear, years.min, years.min, years.max)}
+        display={values.minYear === null ? t.filters.minYearNone : String(values.minYear)}
+        value={positionOf(values.minYear, years.min, years.min, years.max)}
         {...years}
         onChange={(value) => moveYear("minYear", value)}
       />
       <RangeField
         label={t.filters.maxYear}
-        display={settings.maxYear === null ? t.filters.maxYearNone : String(settings.maxYear)}
-        value={positionOf(settings.maxYear, years.max, years.min, years.max)}
+        display={values.maxYear === null ? t.filters.maxYearNone : String(values.maxYear)}
+        value={positionOf(values.maxYear, years.max, years.min, years.max)}
         {...years}
         onChange={(value) => moveYear("maxYear", value)}
       />
@@ -112,8 +134,8 @@ export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props)
           <input
             id={`${id}-seen`}
             type="checkbox"
-            checked={settings.excludeSeen}
-            onChange={(event) => onChange({ excludeSeen: event.target.checked })}
+            checked={values.hideSeen}
+            onChange={(event) => onChange({ hideSeen: event.target.checked })}
           />
           <label htmlFor={`${id}-seen`}>{t.common.hideSeen}</label>
         </div>
@@ -125,7 +147,7 @@ export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props)
             <label key={genre.id} className="genre-chip">
               <input
                 type="checkbox"
-                checked={settings.genres.includes(genre.name)}
+                checked={values.genres.includes(genre.name)}
                 onChange={(event) => toggleGenre(genre.name, event.target.checked)}
               />
               <span>{t.genres[genre.name] ?? genre.name}</span>
@@ -133,7 +155,12 @@ export function DrawFilters({ id, settings, hasSeen, onChange, onReset }: Props)
           ))}
         </div>
       </fieldset>
-      <button type="button" className="button draw-filters-reset" onClick={onReset}>
+      <button
+        type="button"
+        className={`button ${resetClassName}`}
+        disabled={resetDisabled}
+        onClick={onReset}
+      >
         {t.filters.reset}
       </button>
     </div>
