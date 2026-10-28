@@ -42,8 +42,6 @@ export const fr = {
   format: {
     runtime: (minutes: number) =>
       `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}`,
-    runtimeMax: (minutes: number) =>
-      `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} maximum`,
     runtimeUnknown: "Durée inconnue",
     ratingUnknown: "Pas encore notée",
   },

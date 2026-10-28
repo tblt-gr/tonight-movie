@@ -90,21 +90,6 @@ export function sourceOptions(lists: StoredList[], t: Dictionary) {
   ];
 }
 
-const DURATION_PRESETS = [90, 120, 150, 180];
-
-/** The presets, plus a saved limit that is not one of them. */
-export function durationOptions(current: number | null): number[] {
-  const all =
-    current !== null && !DURATION_PRESETS.includes(current)
-      ? [...DURATION_PRESETS, current]
-      : DURATION_PRESETS;
-  return [...all].sort((a, b) => a - b);
-}
-
-export function durationLabel(minutes: number, t: Dictionary) {
-  return t.format.runtimeMax(minutes);
-}
-
 /** Scale shared by the minimum and maximum runtime sliders; either end means "no limit". */
 export const DURATION_SCALE = { min: 30, max: 240, step: 5 };
 /** Rating slider; the lowest step means "no limit". */

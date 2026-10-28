@@ -2,7 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { useEffect, useId, useReducer, useRef, useState } from "react";
-import { DrawFilters } from "@/components/DrawFilters";
+import { AdvancedFilters, type AdvancedValues } from "@/components/AdvancedFilters";
 import { DrawResult } from "@/components/DrawResult";
 import { FilmPoster } from "@/components/FilmPoster";
 import { useI18n } from "@/components/I18nProvider";
@@ -109,6 +109,10 @@ export function DrawMachine() {
     window.addEventListener("resize", place);
     return () => window.removeEventListener("resize", place);
   }, [drawing, slot.poster, slot.framed]);
+
+  function changeAdvanced({ hideSeen, ...patch }: Partial<AdvancedValues>) {
+    change(hideSeen === undefined ? patch : { ...patch, excludeSeen: hideSeen });
+  }
 
   function change(patch: Partial<Settings>) {
     setSettings(updateSettings(patch));
@@ -306,11 +310,13 @@ export function DrawMachine() {
           </button>
         )}
         {moreOpen && (
-          <DrawFilters
+          <AdvancedFilters
             id={`${ids}-more`}
-            settings={settings}
+            className="draw-filters"
+            resetClassName="draw-filters-reset"
+            values={{ ...settings, hideSeen: settings.excludeSeen }}
             hasSeen={hasSeen}
-            onChange={change}
+            onChange={changeAdvanced}
             onReset={() => change(NO_FINE_FILTERS)}
           />
         )}

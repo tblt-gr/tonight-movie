@@ -42,8 +42,6 @@ export const en: Dictionary = {
   format: {
     runtime: (minutes: number) =>
       `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`,
-    runtimeMax: (minutes: number) =>
-      `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m max`,
     runtimeUnknown: "Unknown runtime",
     ratingUnknown: "Not rated yet",
   },
