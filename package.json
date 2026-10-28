@@ -1,6 +1,6 @@
 {
   "name": "tonight-movie",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "private": true,
   "description": "Explore public Letterboxd lists, find where films stream in France, and pick tonight's movie.",
   "license": "MIT",
