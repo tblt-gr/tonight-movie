@@ -107,10 +107,13 @@ export function MultiSelect({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // The list keeps its order while open: ticking an option must not move it and scroll the list.
+  const [settled, setSettled] = useState(selected);
+  if (!open && settled !== selected) setSettled(selected);
 
   const arrange = useCallback(
-    (list: ProviderInfo[]) => arrangeOptions(list, selected, owned ?? selected, pinnedId),
-    [selected, owned, pinnedId],
+    (list: ProviderInfo[]) => arrangeOptions(list, settled, owned ?? settled, pinnedId),
+    [settled, owned, pinnedId],
   );
   const sections = useMemo(
     () => arrange(filterProviders(options, query)),
