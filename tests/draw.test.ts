@@ -38,6 +38,7 @@ function details(tmdbId: number, patch: Partial<MovieDetails> = {}): MovieDetail
     offers: [offer("8")],
     availabilityStatus: "verified",
     offersUrl: null,
+    trailer: null,
     ...patch,
   };
 }

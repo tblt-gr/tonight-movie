@@ -45,6 +45,7 @@ const details = (patch: Partial<MovieDetails> = {}): MovieDetails => ({
   offers: [{ id: "8", name: "Netflix", icon: null, type: "FLATRATE", url: null }],
   availabilityStatus: "verified",
   offersUrl: null,
+  trailer: null,
   ...patch,
 });
 

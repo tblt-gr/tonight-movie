@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { CardFilm } from "@/components/FilmCard";
 import { FilmOffers } from "@/components/FilmOffers";
 import { FilmPoster } from "@/components/FilmPoster";
+import { TrailerButton } from "@/components/TrailerButton";
 import { useI18n } from "@/components/I18nProvider";
 import { cachedDetails, fetchDetails } from "@/lib/browse-client";
 import { formatMinutes, formatRating } from "@/lib/catalog";
@@ -88,6 +89,7 @@ export function FilmDialog({
                 ? t.dialog.loading
                 : detail?.overview || (tmdbId === null ? t.dialog.unmatched : t.draw.noSynopsis)}
             </Dialog.Description>
+            <TrailerButton trailer={detail?.trailer ?? null} title={film.title} />
             {detail ? (
               <FilmOffers film={detail} services={services} directLinks />
             ) : (
