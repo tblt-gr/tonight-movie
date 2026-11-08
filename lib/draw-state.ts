@@ -61,6 +61,20 @@ export function swapDelays(): number[] {
 }
 
 /**
+ * The next poster to flash: never the one on screen when another exists, and the only one
+ * again rather than nothing. `null` only while no poster has arrived yet.
+ */
+export function nextPoster(
+  pool: readonly string[],
+  current: string | null,
+  random: () => number = Math.random,
+): string | null {
+  const others = pool.filter((poster) => poster !== current);
+  const choices = others.length > 0 ? others : pool;
+  return choices[Math.floor(random() * choices.length)] ?? null;
+}
+
+/**
  * The engine input for the saved settings. The film on screen goes first among the
  * recent draws so a redraw cannot return it, even when it came from another source.
  */

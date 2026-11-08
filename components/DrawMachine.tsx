@@ -13,6 +13,7 @@ import {
   buildDrawInput,
   countActiveFilters,
   drawReducer,
+  nextPoster,
   noneMessage,
   roomLight,
   sourceOptions,
@@ -143,16 +144,26 @@ export function DrawMachine() {
 
       if (reduced) await wait(NEUTRAL_MS);
       else {
-        const posters = await Promise.race([
-          collectSwapPosters(input, client.deps),
-          wait(POSTER_WAIT_MS).then(() => [] as string[]),
-        ]);
-        await Promise.all(posters.map(preload));
+        // Posters join the pool as they load: a slow TMDB answer must not leave the slot blank.
+        const pool: string[] = [];
+        void collectSwapPosters(input, client.deps)
+          .then((posters) =>
+            Promise.all(
+              posters.map(async (poster) => {
+                await preload(poster);
+                pool.push(poster);
+              }),
+            ),
+          )
+          .catch(() => undefined);
         let last: string | null = null;
         const swap = async (delay: number) => {
-          const choices = posters.filter((poster) => poster !== last);
-          last = choices[Math.floor(Math.random() * choices.length)] ?? null;
-          setSlot({ poster: last, framed: false });
+          // Once a poster is on screen it stays until the next one replaces it.
+          const next = nextPoster(pool, last);
+          if (next) {
+            last = next;
+            setSlot({ poster: next, framed: false });
+          }
           await wait(delay);
         };
         for (const delay of swapDelays()) {

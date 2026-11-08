@@ -12,6 +12,7 @@ import {
   offersToShow,
   roomLight,
   sourceOptions,
+  nextPoster,
   swapDelays,
   hasOffers,
   offerGroups,
@@ -71,6 +72,22 @@ describe("swapDelays", () => {
     expect(total).toBeLessThanOrEqual(2000);
     expect(delays[0]).toBe(70);
     expect(delays.every((delay, index) => index === 0 || delay > delays[index - 1])).toBe(true);
+  });
+});
+
+describe("nextPoster", () => {
+  it("is empty only while no poster has arrived", () => {
+    expect(nextPoster([], null)).toBeNull();
+    expect(nextPoster([], "a")).toBeNull();
+  });
+
+  it("avoids the poster on screen", () => {
+    for (let run = 0; run < 20; run += 1) expect(nextPoster(["a", "b"], "a")).toBe("b");
+  });
+
+  it("keeps the only poster instead of going blank", () => {
+    expect(nextPoster(["a"], "a")).toBe("a");
+    expect(nextPoster(["a"], null)).toBe("a");
   });
 });
 
