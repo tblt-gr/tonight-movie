@@ -5,7 +5,7 @@ import { GET as movie } from "@/app/api/movie/[id]/route";
 import { GET as providers } from "@/app/api/providers/route";
 import { GET as search } from "@/app/api/search/route";
 import { checkRateLimit, clientKey, resetRateLimit } from "@/lib/rate-limit";
-import { imageUrl, mapMovie, mapOffers } from "@/lib/tmdb";
+import { imageUrl, mapMovie, mapOffers, pickTrailer } from "@/lib/tmdb";
 
 const KEY = "header.payload.signature-do-not-leak";
 const fetchMock = vi.fn();
@@ -166,7 +166,8 @@ describe("routes", () => {
     expect(url.origin).toBe("https://api.themoviedb.org");
     expect(url.pathname).toBe("/3/movie/603");
     expect(url.searchParams.get("language")).toBe("fr-FR");
-    expect(url.searchParams.get("append_to_response")).toBe("watch/providers,credits");
+    expect(url.searchParams.get("append_to_response")).toBe("watch/providers,credits,videos");
+    expect(url.searchParams.get("include_video_language")).toBe("fr,en,null");
   });
 
   it("asks TMDB for English text on request and keeps genres under their stored name", async () => {
@@ -503,5 +504,41 @@ describe("rate limit", () => {
     expect(checkRateLimit("another", now)).toBeNull();
     expect(checkRateLimit("third", now)).not.toBeNull();
     expect(checkRateLimit("ip-0", now)).toBeNull();
+  });
+});
+
+describe("pickTrailer", () => {
+  const video = (over: Record<string, unknown>) => ({
+    key: "abcdef12345",
+    site: "YouTube",
+    type: "Trailer",
+    official: true,
+    iso_639_1: "fr",
+    ...over,
+  });
+
+  it("returns null without a usable YouTube video", () => {
+    expect(pickTrailer(undefined)).toBeNull();
+    expect(pickTrailer([video({ site: "Vimeo" })])).toBeNull();
+    expect(pickTrailer([video({ type: "Clip" })])).toBeNull();
+    expect(pickTrailer([video({ key: "../x" })])).toBeNull();
+  });
+
+  it("prefers the page language, then English", () => {
+    const fr = video({ key: "frfrfrfr1", iso_639_1: "fr" });
+    const en = video({ key: "enenenen1", iso_639_1: "en" });
+    const de = video({ key: "dedededed1", iso_639_1: "de" });
+    expect(pickTrailer([de, en, fr], "fr")?.key).toBe("frfrfrfr1");
+    expect(pickTrailer([de, en, fr], "en")?.key).toBe("enenenen1");
+    expect(pickTrailer([de, en], "fr")?.key).toBe("enenenen1");
+  });
+
+  it("prefers a trailer to a teaser, then an official and recent upload", () => {
+    const teaser = video({ key: "teaserteas1", type: "Teaser" });
+    const trailer = video({ key: "trailertra1", official: false, published_at: "2020-01-01" });
+    const newer = video({ key: "newernewer1", official: false, published_at: "2024-01-01" });
+    expect(pickTrailer([teaser, trailer])?.key).toBe("trailertra1");
+    expect(pickTrailer([trailer, newer])?.key).toBe("newernewer1");
+    expect(pickTrailer([newer, video({ key: "officialoff1" })])?.key).toBe("officialoff1");
   });
 });

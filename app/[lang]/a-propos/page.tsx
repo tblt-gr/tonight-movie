@@ -31,6 +31,7 @@ export default async function AboutPage({ params }: Props) {
             </a>
             {about.watchmodeAfter}
           </p>
+          <p>{about.youtube}</p>
           <p>{about.letterboxd}</p>
         </section>
       </div>

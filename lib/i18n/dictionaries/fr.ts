@@ -103,6 +103,8 @@ export const fr = {
     watchmodeBefore: "Les liens directs vers les plateformes viennent de l’API ",
     watchmodeLink: "Watchmode",
     watchmodeAfter: " (nouvel onglet) lorsqu’elle est configurée.",
+    youtube:
+      "Les bandes-annonces sont des vidéos YouTube, chargées (via youtube-nocookie.com) uniquement lorsque vous ouvrez le lecteur.",
     letterboxd: "Tonight’s Movie est également indépendant de Letterboxd.",
   },
   settings: {
@@ -295,6 +297,10 @@ export const fr = {
     emptyFilters: "Aucun film ne correspond à ces filtres.",
     loading: "Chargement…",
     more: "Afficher plus de films",
+  },
+  trailer: {
+    watch: "Voir la bande-annonce",
+    title: (title: string) => `Bande-annonce : ${title}`,
   },
   dialog: {
     loading: "Chargement de la fiche…",

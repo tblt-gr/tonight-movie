@@ -13,6 +13,10 @@ describe("security headers", () => {
     expect(contentSecurityPolicy(false)).toContain("img-src 'self' data: https://image.tmdb.org;");
   });
 
+  it("only lets frames come from the privacy-enhanced YouTube player", () => {
+    expect(contentSecurityPolicy(false)).toContain("frame-src https://www.youtube-nocookie.com;");
+  });
+
   it("allows eval only in development", () => {
     expect(contentSecurityPolicy(true)).toContain("'unsafe-eval'");
     expect(contentSecurityPolicy(false)).not.toContain("'unsafe-eval'");

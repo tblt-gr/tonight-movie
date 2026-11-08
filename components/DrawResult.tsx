@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Accordion } from "@/components/Accordion";
 import { FilmOffers } from "@/components/FilmOffers";
+import { TrailerButton } from "@/components/TrailerButton";
 import { useI18n } from "@/components/I18nProvider";
 import { formatMinutes, formatRating } from "@/lib/catalog";
 import type { MovieDetails } from "@/lib/types";
@@ -35,6 +36,7 @@ export function DrawResult({
             <dd>{formatRating(film.rating, t)}</dd>
           </div>
         </dl>
+        <TrailerButton trailer={film.trailer} title={film.title} />
         <FilmOffers
           film={film}
           services={services}

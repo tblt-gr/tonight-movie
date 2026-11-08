@@ -1,10 +1,12 @@
 .dialog-overlay {
   position: fixed;
+  z-index: 20;
   inset: 0;
   background: rgb(0 0 0 / 0.8);
 }
 .dialog {
   position: fixed;
+  z-index: 20;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -40,4 +42,14 @@
   position: absolute;
   top: var(--s3);
   right: var(--s3);
+}
+.trailer-dialog {
+  width: min(880px, calc(100% - 32px));
+  justify-items: stretch;
+}
+.trailer-frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  background: var(--panel);
 }

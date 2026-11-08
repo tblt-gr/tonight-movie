@@ -9,6 +9,7 @@ import type {
   Offer,
   ProvidersResponse,
   SearchResponse,
+  Trailer,
 } from "@/lib/types";
 import { DEFAULT_REGION } from "@/lib/regions";
 import { MAX_PAGE, type DiscoverSort } from "@/lib/validation";
@@ -49,7 +50,18 @@ type TmdbMovie = {
     cast?: { name?: string; order?: number }[];
     crew?: { name?: string; job?: string }[];
   };
+  videos?: { results?: TmdbVideo[] };
   "watch/providers"?: { results?: Record<string, TmdbRegionProviders | undefined> };
+};
+
+type TmdbVideo = {
+  key?: string;
+  name?: string;
+  site?: string;
+  type?: string;
+  official?: boolean;
+  iso_639_1?: string;
+  published_at?: string;
 };
 
 type TmdbProvider = { provider_id?: number; provider_name?: string; logo_path?: string | null };
@@ -205,7 +217,44 @@ function uniqueNames(people: { name?: string }[] | undefined): string[] {
   return [...new Set(names)];
 }
 
-export function mapMovie(movie: TmdbMovie, regionCode = DEFAULT_REGION): MovieDetails | null {
+const YOUTUBE_KEY = /^[\w-]{6,20}$/;
+const VIDEO_TYPES = ["Trailer", "Teaser"];
+
+/**
+ * The best YouTube trailer: a trailer before a teaser, then the visitor's language before
+ * English, then an official upload, then the most recent one.
+ */
+export function pickTrailer(
+  videos: TmdbVideo[] | undefined,
+  lang: Locale = DEFAULT_LOCALE,
+): Trailer | null {
+  const candidates = (videos ?? []).filter(
+    (video): video is TmdbVideo & { key: string } =>
+      video.site === "YouTube" &&
+      VIDEO_TYPES.includes(video.type ?? "") &&
+      YOUTUBE_KEY.test(video.key ?? ""),
+  );
+  const rank = (video: TmdbVideo) => {
+    const language = video.iso_639_1 === lang ? 0 : video.iso_639_1 === "en" ? 1 : 2;
+    return [language, VIDEO_TYPES.indexOf(video.type ?? ""), video.official ? 0 : 1];
+  };
+  candidates.sort((a, b) => {
+    const left = rank(a);
+    const right = rank(b);
+    for (let index = 0; index < left.length; index += 1) {
+      if (left[index] !== right[index]) return left[index] - right[index];
+    }
+    return (b.published_at ?? "").localeCompare(a.published_at ?? "");
+  });
+  const best = candidates[0];
+  return best ? { key: best.key, name: best.name?.trim() || null } : null;
+}
+
+export function mapMovie(
+  movie: TmdbMovie,
+  regionCode = DEFAULT_REGION,
+  lang: Locale = DEFAULT_LOCALE,
+): MovieDetails | null {
   const summary = summarize(movie);
   if (!summary) return null;
   const region = movie["watch/providers"]?.results?.[regionCode];
@@ -222,6 +271,7 @@ export function mapMovie(movie: TmdbMovie, regionCode = DEFAULT_REGION): MovieDe
     offers,
     availabilityStatus: offers.length > 0 ? "verified" : "unknown",
     offersUrl: offers.length > 0 ? tmdbPageUrl(region?.link) : null,
+    trailer: pickTrailer(movie.videos?.results, lang),
   };
 }
 
@@ -267,12 +317,17 @@ export async function getMovie(
 ): Promise<MovieDetails> {
   const movie = await tmdbGet<TmdbMovie>(
     `/movie/${id}`,
-    { language: TMDB_LANGUAGE[lang], append_to_response: "watch/providers,credits" },
+    {
+      language: TMDB_LANGUAGE[lang],
+      append_to_response: "watch/providers,credits,videos",
+      // Without it TMDB only returns videos tagged with the page language, often none.
+      include_video_language: `${lang},en,null`,
+    },
     { notFound: true },
   );
   // include_adult only filters search and discover, not a direct lookup.
   if (movie.adult) throw new ApiFailure("not_found", 404, "Film not found");
-  const details = mapMovie(movie, regionCode);
+  const details = mapMovie(movie, regionCode, lang);
   if (!details)
     throw new ApiFailure("upstream_error", 502, "The film service sent incomplete data");
   return details;

@@ -9,6 +9,7 @@ export function contentSecurityPolicy(development: boolean) {
     `script-src 'self' 'unsafe-inline'${development ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://image.tmdb.org",
+    "frame-src https://www.youtube-nocookie.com",
     "font-src 'self' data:",
     "connect-src 'self'",
     "manifest-src 'self'",

@@ -51,6 +51,9 @@ export type MovieSummary = {
   rating: number | null;
 };
 
+/** A YouTube video: `key` is its id, checked against a strict pattern before it is exposed. */
+export type Trailer = { key: string; name: string | null };
+
 export type MovieDetails = MovieSummary & {
   overview: string | null;
   runtime: number | null;
@@ -64,6 +67,8 @@ export type MovieDetails = MovieSummary & {
   availabilityStatus: "verified" | "unknown";
   /** TMDB page crediting JustWatch, where the visitor can open the offers. */
   offersUrl: string | null;
+  /** `null` when TMDB lists no YouTube trailer or teaser. */
+  trailer: Trailer | null;
 };
 
 export type SearchResponse = { results: MovieSummary[] };

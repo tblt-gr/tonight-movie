@@ -103,6 +103,8 @@ export const en: Dictionary = {
     watchmodeBefore: "Direct links to the platforms come from the ",
     watchmodeLink: "Watchmode",
     watchmodeAfter: " API (new tab) when it is configured.",
+    youtube:
+      "Trailers are YouTube videos, loaded (through youtube-nocookie.com) only when you open the player.",
     letterboxd: "Tonight’s Movie is also independent of Letterboxd.",
   },
   settings: {
@@ -291,6 +293,10 @@ export const en: Dictionary = {
     emptyFilters: "No film matches these filters.",
     loading: "Loading…",
     more: "Show more films",
+  },
+  trailer: {
+    watch: "Watch the trailer",
+    title: (title: string) => `Trailer: ${title}`,
   },
   dialog: {
     loading: "Loading the film…",
