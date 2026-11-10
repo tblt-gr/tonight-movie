@@ -97,7 +97,7 @@ export function FilterBar({
           className="select"
           id={`${ids}-source`}
           value={sourceValue}
-          onChange={(event) => update({ source: event.target.value, services: [] })}
+          onChange={(event) => update({ source: event.target.value })}
         >
           {sourceValue === "many" && (
             <option value="many" disabled>
