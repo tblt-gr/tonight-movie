@@ -6,12 +6,13 @@ import { FIRST_YEAR } from "@/lib/draw-state";
 import { GENRES } from "@/lib/genres";
 import { MAX_RUNTIME } from "@/lib/validation";
 
-export const PAGE_SIZE = 24;
+export const PAGE_SIZE = 30;
 
 /** Films looked up per round trip when a page is not full yet. */
 export const LOOKUP_BATCH = 12;
 
 export type BrowseSort = "rank" | "rating" | "runtime" | "title" | "year";
+export type BrowseOrder = "asc" | "desc";
 export type BrowseView = "grid" | "list";
 export type BrowseMode = "lists" | "services";
 
@@ -35,6 +36,7 @@ export type BrowseFilters = {
   source: string;
   hideSeen: boolean;
   sort: BrowseSort;
+  order: BrowseOrder;
   view: BrowseView;
 };
 
@@ -50,12 +52,13 @@ export const DEFAULT_FILTERS: BrowseFilters = {
   source: "",
   hideSeen: false,
   sort: "rank",
+  order: "desc",
   view: "grid",
 };
 
 const LIST_SORTS: BrowseSort[] = ["rank", "rating", "runtime", "title", "year"];
-// TMDB's discover endpoint cannot order by runtime or by French title.
-const SERVICES_SORTS: BrowseSort[] = ["rank", "rating", "year"];
+// Runtime is ordered locally over loaded results; TMDB cannot sort by runtime.
+const SERVICES_SORTS: BrowseSort[] = ["rank", "rating", "runtime", "year"];
 
 export const sortsFor = (mode: BrowseMode): BrowseSort[] =>
   mode === "lists" ? LIST_SORTS : SERVICES_SORTS;
@@ -93,6 +96,12 @@ export function parseFilters(params: URLSearchParams): BrowseFilters {
     source: /^[\w-]{1,64}$/.test(params.get("source") ?? "") ? params.get("source")! : "",
     hideSeen: params.get("seen") === "1",
     sort: LIST_SORTS.includes(sort as BrowseSort) ? (sort as BrowseSort) : DEFAULT_FILTERS.sort,
+    order:
+      params.get("order") === "asc" || params.get("order") === "desc"
+        ? (params.get("order") as BrowseOrder)
+        : sort === "runtime"
+          ? "asc"
+          : "desc",
     view: params.get("view") === "list" ? "list" : "grid",
   };
 }
@@ -111,6 +120,8 @@ export function serializeFilters(filters: BrowseFilters): string {
   if (filters.source) params.set("source", filters.source);
   if (filters.hideSeen) params.set("seen", "1");
   if (filters.sort !== DEFAULT_FILTERS.sort) params.set("sort", filters.sort);
+  if (filters.order !== (filters.sort === "runtime" ? "asc" : "desc"))
+    params.set("order", filters.order);
   if (filters.view !== DEFAULT_FILTERS.view) params.set("view", filters.view);
   return params.toString();
 }
@@ -154,18 +165,22 @@ export function classifyListFilm(
   const unsure = anyService ? FLAGGED : HIDE;
   if (film.confidence === null) return PENDING;
   if (film.confidence < 1 || film.tmdbId === null) return unsure;
+  // The stored facts judge duration, rating and year, so a film they rule out is never looked up.
+  const known = typeof detail === "object" ? detail : film.facts;
+  if (known) {
+    if (filters.minDuration !== null || filters.maxDuration !== null) {
+      if (known.runtime === null) return HIDE;
+      if (filters.minDuration !== null && known.runtime < filters.minDuration) return HIDE;
+      if (filters.maxDuration !== null && known.runtime > filters.maxDuration) return HIDE;
+    }
+    if (filters.minRating !== null && (known.rating === null || known.rating < filters.minRating)) {
+      return HIDE;
+    }
+    if (film.year === null && !inYears(known.year, filters)) return HIDE;
+  }
   if (detail === undefined) return PENDING;
   if (detail === "failed") return unsure;
 
-  if (filters.minDuration !== null || filters.maxDuration !== null) {
-    if (detail.runtime === null) return HIDE;
-    if (filters.minDuration !== null && detail.runtime < filters.minDuration) return HIDE;
-    if (filters.maxDuration !== null && detail.runtime > filters.maxDuration) return HIDE;
-  }
-  if (filters.minRating !== null && (detail.rating === null || detail.rating < filters.minRating)) {
-    return HIDE;
-  }
-  if (film.year === null && !inYears(detail.year, filters)) return HIDE;
   if (filters.genres.length > 0 && !filters.genres.some((name) => detail.genres.includes(name))) {
     return HIDE;
   }
@@ -187,24 +202,43 @@ export type ListPlan = {
   pending: StoredFilm[];
   /** The page is full. */
   done: boolean;
-  /** Every film was judged and the page is still not full. */
+  /** Every film was judged and no further results remain. */
   exhausted: boolean;
+  /** Films already judged out of the whole source, to report the progress of a full sort. */
+  judged: number;
+  total: number;
+  /** The whole source is judged before the first film shows, because some films have no stored facts. */
+  full: boolean;
 };
 
-const byYear = (a: StoredFilm, b: StoredFilm) => (b.year ?? -1) - (a.year ?? -1);
+const factSort = (sort: BrowseSort): sort is "runtime" | "rating" =>
+  sort === "runtime" || sort === "rating";
 
-/** The order to walk the list in: stored data can order it up front, details cannot. */
-function walkOrder(films: StoredFilm[], sort: BrowseSort): StoredFilm[] {
+/**
+ * Duration and rating come from stored facts. Until every film has them, only a pass over
+ * the whole source gives the top of the order; afterwards the order is known with no lookup.
+ */
+export const needsFullSort = (sort: BrowseSort, films: StoredFilm[]) =>
+  factSort(sort) &&
+  films.some(
+    (film) =>
+      !film.facts && (film.confidence === null || (film.confidence === 1 && film.tmdbId !== null)),
+  );
+
+/** Title and year can order the source before any network lookup. */
+function walkOrder(films: StoredFilm[], sort: BrowseSort, order: BrowseOrder): StoredFilm[] {
   if (sort === "title") return [...films].sort((a, b) => collator.compare(a.title, b.title));
-  if (sort === "year") return [...films].sort(byYear);
+  if (sort === "year")
+    return [...films].sort((a, b) => nullsLast(a.year, b.year, order === "asc" ? 1 : -1));
+  if (factSort(sort)) {
+    return [...films].sort((a, b) =>
+      nullsLast(a.facts?.[sort], b.facts?.[sort], order === "asc" ? 1 : -1),
+    );
+  }
   return films;
 }
 
-/**
- * Walks the list until `limit` films are shown. It stops showing at the first film it
- * cannot judge yet, so the page never reorders itself once a lookup answers, and reports
- * the next `batch` films to look up.
- */
+/** Walk only far enough to fill the requested page, with bounded lookups. */
 export function planListPage(
   films: StoredFilm[],
   details: ReadonlyMap<number, DetailState>,
@@ -215,11 +249,29 @@ export function planListPage(
 ): ListPlan {
   const shown: Shown[] = [];
   const pending: StoredFilm[] = [];
-  for (const film of walkOrder(films, filters.sort)) {
-    if (pending.length === 0 && shown.length >= limit) {
-      return { shown, pending, done: true, exhausted: false };
+  const full = needsFullSort(filters.sort, films);
+  const ordered = walkOrder(films, filters.sort, filters.order);
+  let walked = 0;
+  const publish = (done: boolean, exhausted: boolean): ListPlan => {
+    const sorted = sortShown(shown, filters.sort, filters.order);
+    // A partial sort would reorder under the visitor's eyes: show it once every film is judged.
+    const complete = done && full;
+    return {
+      shown: full ? (complete ? sorted.slice(0, limit) : []) : sorted,
+      pending,
+      done,
+      exhausted: complete ? sorted.length <= limit : exhausted,
+      judged: Math.max(0, walked - pending.length),
+      total: ordered.length,
+      full,
+    };
+  };
+  for (const film of ordered) {
+    if (!full && pending.length === 0 && shown.length >= limit) {
+      return publish(true, false);
     }
     if (pending.length >= batch) break;
+    walked++;
     const detail = film.tmdbId === null ? undefined : details.get(film.tmdbId);
     const { verdict, uncertain } = classifyListFilm(film, detail, filters, services);
     if (verdict === "pending") pending.push(film);
@@ -228,12 +280,7 @@ export function planListPage(
     }
   }
   const walkedAll = pending.length < batch;
-  return {
-    shown,
-    pending,
-    done: pending.length === 0,
-    exhausted: pending.length === 0 && walkedAll && shown.length < limit,
-  };
+  return publish(pending.length === 0, pending.length === 0 && walkedAll);
 }
 
 const nullsLast = (a: number | null | undefined, b: number | null | undefined, sign: 1 | -1) => {
@@ -242,21 +289,37 @@ const nullsLast = (a: number | null | undefined, b: number | null | undefined, s
   return (a - b) * sign;
 };
 
-/** Orders what is shown. Rating and duration only know the films whose details are loaded. */
-export function sortShown(items: Shown[], sort: BrowseSort): Shown[] {
-  const sorted = [...items];
-  switch (sort) {
-    case "title":
-      return sorted.sort((a, b) => collator.compare(a.film.title, b.film.title));
-    case "year":
-      return sorted.sort((a, b) => nullsLast(a.film.year, b.film.year, -1));
-    case "rating":
-      return sorted.sort((a, b) => nullsLast(a.detail?.rating, b.detail?.rating, -1));
-    case "runtime":
-      return sorted.sort((a, b) => nullsLast(a.detail?.runtime, b.detail?.runtime, 1));
-    default:
-      return sorted;
-  }
+type SortValues = {
+  title: string;
+  year: number | null;
+  rating?: number | null;
+  runtime?: number | null;
+};
+
+/** Missing values stay last in both directions; stable ties retain the source order. */
+export function compareBrowseFilms(
+  a: SortValues,
+  b: SortValues,
+  sort: BrowseSort,
+  order: BrowseOrder,
+): number {
+  if (sort === "title") return collator.compare(a.title, b.title);
+  if (sort === "rank") return 0;
+  return nullsLast(a[sort], b[sort], order === "asc" ? 1 : -1);
+}
+
+export function sortShown(
+  items: Shown[],
+  sort: BrowseSort,
+  order: BrowseOrder = sort === "runtime" ? "asc" : "desc",
+): Shown[] {
+  const values = ({ film, detail }: Shown): SortValues => ({
+    title: film.title,
+    year: film.year ?? detail?.year ?? null,
+    rating: detail?.rating,
+    runtime: detail?.runtime,
+  });
+  return [...items].sort((a, b) => compareBrowseFilms(values(a), values(b), sort, order));
 }
 
 const titleYear = (title: string, year: number | null) => `${normalizeTitle(title)}|${year ?? ""}`;

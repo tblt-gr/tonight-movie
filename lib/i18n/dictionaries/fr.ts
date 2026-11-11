@@ -145,6 +145,7 @@ export const fr = {
       "Le fichier est lu dans votre navigateur. Rien n’est envoyé à un serveur de Tonight’s Movie.",
     reading: "Lecture du fichier…",
     matching: (done: number, total: number) => `Recherche des films : ${done} sur ${total}`,
+    details: (done: number, total: number) => `Lecture des fiches : ${done} sur ${total}`,
     progress: "Avancement de l’import",
     unsure: (count: number) =>
       `${count} ${count > 1 ? "films ne sont pas associés" : "film n’est pas associé"} avec certitude à TMDB : ils n’ont ni affiche ni durée et le tirage les ignore.`,
@@ -273,6 +274,8 @@ export const fr = {
     genre: "Genre",
     allGenres: "Tous les genres",
     sort: "Tri",
+    order: "Ordre",
+    orders: { asc: "Croissant", desc: "Décroissant" },
     sorts: {
       rank: "Ordre de la source",
       popularity: "Popularité",
@@ -289,14 +292,15 @@ export const fr = {
     films: "films",
     results: "Résultats",
     searching: "Recherche des films en cours…",
+    sorting: (judged: number, total: number) =>
+      `Tri en cours : ${judged} films analysés sur ${total}…`,
     shownMore: (count: number) => `${count} films affichés, recherche de la suite en cours…`,
     shown: (count: number) =>
       `${count} film${count > 1 ? "s" : ""} affiché${count > 1 ? "s" : ""}.`,
-    sortHint: "Ce tri s’applique aux films déjà chargés.",
+    sortHint:
+      "Le tri par durée ou par note analyse toute la source avant d’afficher les premiers films.",
     emptySource: "Cette source ne contient aucun film.",
     emptyFilters: "Aucun film ne correspond à ces filtres.",
-    loading: "Chargement…",
-    more: "Afficher plus de films",
   },
   trailer: {
     watch: "Voir la bande-annonce",

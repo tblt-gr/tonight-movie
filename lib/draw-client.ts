@@ -6,9 +6,11 @@ import {
   type DrawDeps,
   type DrawInput,
 } from "@/lib/draw";
-import { fetchWithRetry, type RetryOptions } from "@/lib/fetch-retry";
+import { type RetryOptions } from "@/lib/fetch-retry";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { isDrawable } from "@/lib/match";
+import { createPublicCache } from "@/lib/storage/public-cache";
+import { createTmdbClient, tmdbClient, METADATA_TTL_MS } from "@/lib/tmdb-client";
 import { DEFAULT_REGION } from "@/lib/regions";
 import type { DiscoverResponse, MovieDetails, SearchResponse } from "@/lib/types";
 import { MAX_PROVIDERS } from "@/lib/validation";
@@ -21,19 +23,27 @@ const SERVICES_POSTERS = 14;
  * failures, so the client counts calls to tell a dead network from an empty result.
  */
 export function createDrawClient(
-  fetcher: typeof fetch = (...args) => fetch(...args),
+  fetcher?: typeof fetch,
   retry: Pick<RetryOptions, "sleep" | "baseDelayMs"> = {},
   lang: Locale = DEFAULT_LOCALE,
   region = DEFAULT_REGION,
 ) {
+  const client = fetcher
+    ? createTmdbClient(
+        fetcher,
+        retry,
+        createPublicCache(() => undefined),
+      )
+    : tmdbClient;
+  client.retryFailures();
   let succeeded = 0;
   let failed = 0;
 
   async function get<T>(url: string): Promise<T> {
     try {
-      // Scanning fires bursts of requests, so a 429 is waited out instead of counted as a miss.
-      const response = await fetchWithRetry(fetcher, url, retry);
-      const body = (await response.json()) as T;
+      const body = url.startsWith("/api/movie/")
+        ? ((await client.getMovie(url)) as T)
+        : await client.get<T>(url, url.startsWith("/api/search?") ? METADATA_TTL_MS : undefined);
       succeeded += 1;
       return body;
     } catch (error) {

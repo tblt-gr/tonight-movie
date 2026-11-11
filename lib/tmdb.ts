@@ -5,6 +5,7 @@ import type {
   DiscoverFilters,
   DiscoverResponse,
   MovieDetails,
+  MovieAvailability,
   MovieSummary,
   Offer,
   ProvidersResponse,
@@ -333,6 +334,23 @@ export async function getMovie(
   return details;
 }
 
+/** Refresh offers without downloading the synopsis, credits or videos again. */
+export async function getMovieOffers(
+  id: number,
+  regionCode = DEFAULT_REGION,
+): Promise<MovieAvailability> {
+  const data = await tmdbGet<{ results?: Record<string, TmdbRegionProviders> }>(
+    `/movie/${id}/watch/providers`,
+  );
+  const region = data.results?.[regionCode];
+  const offers = mapOffers(region);
+  return {
+    offers,
+    availabilityStatus: offers.length > 0 ? "verified" : "unknown",
+    offersUrl: offers.length > 0 ? tmdbPageUrl(region?.link) : null,
+  };
+}
+
 export async function getProviders(
   lang: Locale = DEFAULT_LOCALE,
   regionCode = DEFAULT_REGION,
@@ -365,7 +383,9 @@ const DISCOVER_ORDER: Record<DiscoverSort, Record<string, string>> = {
   popularity: { sort_by: "popularity.desc" },
   // Without a vote floor, films with one perfect vote would top the list.
   rating: { sort_by: "vote_average.desc", "vote_count.gte": "300" },
+  "rating-asc": { sort_by: "vote_average.asc", "vote_count.gte": "300" },
   year: { sort_by: "primary_release_date.desc" },
+  "year-asc": { sort_by: "primary_release_date.asc" },
 };
 
 export async function discoverMovies(

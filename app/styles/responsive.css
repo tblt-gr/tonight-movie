@@ -157,6 +157,7 @@
   .filters > .button {
     min-width: 0;
   }
+  .filter-services,
   .browse-filters-panel {
     grid-column: 1 / -1;
   }
@@ -176,8 +177,7 @@
     min-width: 0;
     padding-inline: var(--s3);
   }
-  .filters > .button,
-  .browse-more {
+  .filters > .button {
     width: 100%;
   }
   .services > .button,

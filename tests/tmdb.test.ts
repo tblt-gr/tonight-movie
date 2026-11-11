@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as discover } from "@/app/api/discover/route";
 import { GET as health } from "@/app/api/health/route";
+import { GET as movieOffers } from "@/app/api/movie/[id]/offers/route";
 import { GET as movie } from "@/app/api/movie/[id]/route";
 import { GET as providers } from "@/app/api/providers/route";
 import { GET as search } from "@/app/api/search/route";
@@ -281,6 +282,17 @@ describe("routes", () => {
     expect(params[2].get("sort_by")).toBe("primary_release_date.desc");
   });
 
+  it.each([
+    ["rating-asc", "vote_average.asc"],
+    ["year-asc", "primary_release_date.asc"],
+  ])("passes ascending %s to TMDB", async (sort, expected) => {
+    reply({ results: [] });
+    expect((await discover(req(`/api/discover?providers=8&sort=${sort}`))).status).toBe(200);
+    const params = new URL(fetchMock.mock.calls[0][0]).searchParams;
+    expect(params.get("sort_by")).toBe(expected);
+    if (sort === "rating-asc") expect(params.get("vote_count.gte")).toBe("300");
+  });
+
   it("passes the fine filters to TMDB discover", async () => {
     reply({ results: [] });
     await discover(
@@ -540,5 +552,50 @@ describe("pickTrailer", () => {
     expect(pickTrailer([teaser, trailer])?.key).toBe("trailertra1");
     expect(pickTrailer([trailer, newer])?.key).toBe("newernewer1");
     expect(pickTrailer([newer, video({ key: "officialoff1" })])?.key).toBe("officialoff1");
+  });
+});
+
+describe("offer-only refresh", () => {
+  it("fetches only providers for the requested country", async () => {
+    reply({
+      results: {
+        FR: { flatrate: [{ provider_id: 8, provider_name: "Netflix" }] },
+        BE: {
+          link: "https://www.themoviedb.org/movie/603/watch?locale=BE",
+          ads: [{ provider_id: 9, provider_name: "Other" }],
+        },
+      },
+    });
+    const response = await movieOffers(req("/api/movie/603/offers?region=BE"), movieParams("603"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      offers: [{ id: "9", type: "ADS" }],
+      availabilityStatus: "verified",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = new URL(fetchMock.mock.calls[0][0]);
+    expect(url.pathname).toBe("/3/movie/603/watch/providers");
+    expect(url.searchParams.has("append_to_response")).toBe(false);
+  });
+
+  it("keeps missing offers unknown", async () => {
+    reply({ results: {} });
+    const response = await movieOffers(req("/api/movie/603/offers"), movieParams("603"));
+    expect(await response.json()).toEqual({
+      offers: [],
+      availabilityStatus: "unknown",
+      offersUrl: null,
+    });
+  });
+
+  it("rejects invalid ids, countries and unknown parameters without calling TMDB", async () => {
+    for (const [path, id] of [
+      ["/api/movie/x/offers", "x"],
+      ["/api/movie/1/offers?region=XX", "1"],
+      ["/api/movie/1/offers?extra=1", "1"],
+    ]) {
+      expect((await movieOffers(req(path), movieParams(id))).status).toBe(400);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

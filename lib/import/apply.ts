@@ -7,6 +7,7 @@ import {
 } from "@/lib/import/letterboxd";
 import type { Dictionary } from "@/lib/i18n";
 import { isDrawable } from "@/lib/match";
+import { enrichFilms, type FactsFetcher } from "@/lib/enrich";
 import { fetchSearch, resolveFilms, type Resolver } from "@/lib/resolve";
 import type { FilmInput } from "@/lib/storage/library";
 import type { StoredFilm, StoredList } from "@/lib/storage/schema";
@@ -33,7 +34,9 @@ export type ImportStore = Resolver & {
 };
 
 export type ImportProgress =
-  { phase: "reading" } | { phase: "matching"; done: number; total: number };
+  | { phase: "reading" }
+  | { phase: "matching"; done: number; total: number }
+  | { phase: "details"; done: number; total: number };
 
 export type ImportOutcome = { summary: ImportSummary; stats: MatchStats };
 
@@ -135,6 +138,8 @@ export type ImportOptions = {
   onProgress?: (progress: ImportProgress) => void;
   signal?: AbortSignal;
   now?: () => number;
+  /** Reads the details of each matched film to keep its runtime, rating and year. */
+  fetchFacts?: FactsFetcher;
 };
 
 const SUPPORTED = /\.(zip|csv)$/i;
@@ -180,6 +185,12 @@ export async function importExport(
     signal: options.signal,
     onProgress: (done, total) => options.onProgress?.({ phase: "matching", done, total }),
   });
+  if (options.fetchFacts) {
+    await enrichFilms(keys, store, options.fetchFacts, {
+      signal: options.signal,
+      onProgress: (done, total) => options.onProgress?.({ phase: "details", done, total }),
+    });
+  }
   return { summary, stats: matchStats(await store.getFilms(), new Set(keys)) };
 }
 

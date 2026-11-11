@@ -37,10 +37,16 @@ const settled = <T>(request: IDBRequest<T>) =>
     request.onerror = () => reject(request.error);
   });
 
+function factsFor(existing: StoredFilm, input: FilmInput, sure: boolean) {
+  const tmdbId = sure ? existing.tmdbId : input.tmdbId;
+  return input.facts ?? (tmdbId === existing.tmdbId ? existing.facts : undefined);
+}
+
 function mergeFilm(existing: StoredFilm | undefined, input: FilmInput): StoredFilm {
   const lists = [...new Set([...(existing?.lists ?? []), ...(input.lists ?? [])])];
   if (!existing) return { ...input, lists };
   const sure = existing.tmdbId !== null && (existing.confidence ?? 0) >= 1;
+  const facts = factsFor(existing, input, sure);
   return {
     key: existing.key,
     title: input.title,
@@ -50,6 +56,8 @@ function mergeFilm(existing: StoredFilm | undefined, input: FilmInput): StoredFi
     tmdbId: sure ? existing.tmdbId : input.tmdbId,
     confidence: sure ? existing.confidence : input.confidence,
     lists,
+    // The facts belong to the matched film: a re-import keeps them, another match drops them.
+    ...(facts ? { facts } : {}),
     // A film already seen stays seen: a plain list import carries no diary data.
     seen: existing.seen || input.seen,
     // A plain import carries no choice about ignoring, so the visitor's choice stays.
@@ -63,6 +71,9 @@ const sameFilm = (a: StoredFilm, b: StoredFilm) =>
   a.tmdbId === b.tmdbId &&
   a.confidence === b.confidence &&
   a.seen === b.seen &&
+  a.facts?.runtime === b.facts?.runtime &&
+  a.facts?.rating === b.facts?.rating &&
+  a.facts?.year === b.facts?.year &&
   !!a.ignored === !!b.ignored &&
   a.lists.length === b.lists.length &&
   a.lists.every((list, index) => list === b.lists[index]);
@@ -73,6 +84,12 @@ export function createLibrary(
   let connection: Promise<IDBDatabase> | null = null;
   /** Set once IndexedDB failed; every later call stays in memory. */
   let memory: Snapshot | null = null;
+  /** The last read of the database: every read used to scan it whole, one per write. */
+  let cached: Promise<Snapshot> | null = null;
+  // Another tab's write makes this copy stale.
+  const channel =
+    typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(`${DB_NAME}:library`);
+  if (channel) channel.onmessage = () => (cached = null);
 
   function open(): Promise<IDBDatabase> {
     connection ??= new Promise<IDBDatabase>((resolve, reject) => {
@@ -131,15 +148,17 @@ export function createLibrary(
   /** Switches to memory, keeping whatever IndexedDB could still read. */
   async function degrade(): Promise<Snapshot> {
     markUnavailable("library");
-    memory ??= await readAll().catch(emptySnapshot);
+    memory ??= await (cached ?? readAll()).catch(emptySnapshot);
     return memory;
   }
 
   async function load(): Promise<Snapshot> {
     if (memory) return memory;
+    cached ??= readAll();
     try {
-      return await readAll();
+      return await cached;
     } catch {
+      cached = null;
       return degrade();
     }
   }
@@ -148,8 +167,13 @@ export function createLibrary(
     if (!memory) {
       try {
         await writeAll(films, lists);
+        const snapshot = await cached?.catch(() => null);
+        for (const film of films) snapshot?.films.set(film.key, film);
+        for (const list of lists) snapshot?.lists.set(list.id, list);
+        channel?.postMessage("changed");
         return;
       } catch {
+        cached = null;
         await degrade();
       }
     }
@@ -191,6 +215,8 @@ export function createLibrary(
     /** Deletes the database and forgets the in-memory copy. */
     async reset() {
       memory = null;
+      cached = null;
+      channel?.postMessage("changed");
       const pending = connection;
       connection = null;
       try {

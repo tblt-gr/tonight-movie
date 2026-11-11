@@ -1,11 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PAGE_SIZE, type BrowseFilters, type BrowseSort, type DetailState } from "@/lib/browse";
-import { fetchDetails, fetchDiscover, mapLimit } from "@/lib/browse-client";
+import {
+  filterGlobalResults,
+  type SeenIndex,
+  type BrowseFilters,
+  type BrowseSort,
+  type DetailState,
+} from "@/lib/browse";
+import { cachedDetails, fetchDetails, fetchDiscover, mapLimit } from "@/lib/browse-client";
 import { genreIds } from "@/lib/genres";
+import { runtimeBounds, startWalk, walkDone, walkStep, type RuntimeWalk } from "@/lib/runtime-walk";
 import type { Locale } from "@/lib/i18n/config";
 import type { MovieSummary } from "@/lib/types";
+import { tmdbClient } from "@/lib/tmdb-client";
 import { MAX_PROVIDERS, type DiscoverSort } from "@/lib/validation";
 
 const DISCOVER_SORT: Record<BrowseSort, DiscoverSort> = {
@@ -21,6 +29,8 @@ export type GlobalState = {
   results: MovieSummary[];
   page: number;
   totalPages: number;
+  /** Set when the results are read in duration order. */
+  walk?: RuntimeWalk;
 };
 
 type Input = {
@@ -28,14 +38,13 @@ type Input = {
   /** The visitor's saved services, used when the filter picks none. */
   ownServices: readonly string[];
   filters: BrowseFilters;
+  seen: SeenIndex;
   limit: number;
   lang: Locale;
   region: string;
   /** Changes to run the search again after a failure. */
   retry: number;
   details: Map<number, DetailState>;
-  /** Called when a film's details arrived, so the caller can redraw its cards. */
-  onDetail: () => void;
 };
 
 /** The global source: TMDB discover pages, then the details of each page for chips and duration. */
@@ -43,16 +52,17 @@ export function useGlobalSource({
   enabled,
   ownServices,
   filters,
+  seen,
   limit,
   lang,
   region,
   retry,
   details,
-  onDetail,
 }: Input) {
   const [global, setGlobal] = useState<GlobalState | null>(null);
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failedKey, setFailedKey] = useState<string | null>(null);
+  const lastRetry = useRef(retry);
   const globalRef = useRef<GlobalState | null>(null);
 
   const providers = useMemo(() => {
@@ -60,8 +70,10 @@ export function useGlobalSource({
     const chosen = filters.services.filter((id) => /^\d+$/.test(id)).map(Number);
     return (chosen.length > 0 ? chosen : own).slice(0, MAX_PROVIDERS);
   }, [ownServices, filters.services]);
-  const discoverSort = DISCOVER_SORT[filters.sort];
-  const pagesWanted = Math.ceil(limit / PAGE_SIZE);
+  const discoverSort: DiscoverSort =
+    filters.order === "asc" && (filters.sort === "rating" || filters.sort === "year")
+      ? `${filters.sort}-asc`
+      : DISCOVER_SORT[filters.sort];
   const discoverFilters = useMemo(
     () => ({
       minRuntime: filters.minDuration,
@@ -72,36 +84,100 @@ export function useGlobalSource({
     }),
     [filters.minDuration, filters.minRating, filters.minYear, filters.maxYear, filters.genres],
   );
-  const key = `${providers.join(",")}|${filters.maxDuration}|${discoverSort}|${JSON.stringify(discoverFilters)}`;
+  const bounds = useMemo(
+    () =>
+      filters.sort === "runtime"
+        ? runtimeBounds(filters.order, filters.minDuration, filters.maxDuration)
+        : null,
+    [filters.sort, filters.order, filters.minDuration, filters.maxDuration],
+  );
+  const key = `${lang}|${region}|${providers.join(",")}|${filters.maxDuration}|${discoverSort}|${JSON.stringify(discoverFilters)}|${bounds ? `${bounds.order}:${bounds.min}:${bounds.max}` : ""}`;
 
   useEffect(() => {
     if (!enabled || providers.length === 0) return;
+    if (lastRetry.current !== retry) {
+      lastRetry.current = retry;
+      tmdbClient.retryFailures();
+    }
     const controller = new AbortController();
     const { signal } = controller;
     void (async () => {
       let state: GlobalState =
         globalRef.current?.key === key
           ? globalRef.current
-          : { key, results: [], page: 0, totalPages: Infinity };
-      setFailed(false);
+          : {
+              key,
+              results: [],
+              page: 0,
+              totalPages: Infinity,
+              ...(bounds ? { walk: startWalk(bounds) } : {}),
+            };
+      setFailedKey(null);
       setGlobal(state);
-      while (state.page < pagesWanted && state.page < state.totalPages) {
+      const enrich = (snapshot: GlobalState) => {
+        return mapLimit(
+          filterGlobalResults(snapshot.results, seen, filters.hideSeen)
+            .slice(0, limit)
+            .filter(
+              (movie) => !details.has(movie.tmdbId) || !cachedDetails(movie.tmdbId, lang, region),
+            ),
+          4,
+          async (movie) => {
+            try {
+              const detail = await fetchDetails(movie.tmdbId, signal, lang, region);
+              if (!signal.aborted) {
+                details.set(movie.tmdbId, detail);
+                setGlobal((current) => (current?.key === key ? { ...current } : current));
+              }
+            } catch {
+              return;
+            }
+          },
+          signal,
+        );
+      };
+      await enrich(state);
+      if (signal.aborted) return;
+      while (
+        filterGlobalResults(state.results, seen, filters.hideSeen).length < limit &&
+        state.page < state.totalPages
+      ) {
         setBusy(true);
-        let response;
+        let step: { results: MovieSummary[]; totalPages: number; walk?: RuntimeWalk };
         try {
-          response = await fetchDiscover(
-            providers,
-            filters.maxDuration,
-            state.page + 1,
-            discoverSort,
-            discoverFilters,
-            signal,
-            lang,
-            region,
-          );
+          if (bounds && state.walk) {
+            const walked = await walkStep(state.walk, bounds, (from, to, page) =>
+              fetchDiscover(
+                providers,
+                to,
+                page,
+                discoverSort,
+                { ...discoverFilters, minRuntime: from },
+                signal,
+                lang,
+                region,
+              ),
+            );
+            step = {
+              results: walked.results,
+              walk: walked.walk,
+              totalPages: walkDone(walked.walk, bounds) ? state.page + 1 : Infinity,
+            };
+          } else {
+            step = await fetchDiscover(
+              providers,
+              filters.maxDuration,
+              state.page + 1,
+              discoverSort,
+              discoverFilters,
+              signal,
+              lang,
+              region,
+            );
+          }
         } catch {
           if (!signal.aborted) {
-            setFailed(true);
+            setFailedKey(key);
             setBusy(false);
           }
           return;
@@ -110,25 +186,15 @@ export function useGlobalSource({
         const known = new Set(state.results.map((movie) => movie.tmdbId));
         state = {
           key,
-          results: [...state.results, ...response.results.filter((m) => !known.has(m.tmdbId))],
+          results: [...state.results, ...step.results.filter((m) => !known.has(m.tmdbId))],
           page: state.page + 1,
-          totalPages: response.totalPages,
+          totalPages: step.totalPages,
+          ...(step.walk ? { walk: step.walk } : {}),
         };
         globalRef.current = state;
         setGlobal(state);
-        void mapLimit(
-          response.results.filter((movie) => !details.has(movie.tmdbId)),
-          4,
-          async (movie) => {
-            try {
-              details.set(movie.tmdbId, await fetchDetails(movie.tmdbId, signal, lang, region));
-            } catch {
-              return;
-            }
-            if (!signal.aborted) onDetail();
-          },
-          signal,
-        );
+        await enrich(state);
+        if (signal.aborted) return;
       }
       setBusy(false);
     })();
@@ -137,16 +203,32 @@ export function useGlobalSource({
     enabled,
     providers,
     key,
-    pagesWanted,
+    limit,
+    seen,
+    filters.hideSeen,
     filters.maxDuration,
     discoverSort,
     discoverFilters,
+    bounds,
     retry,
     lang,
     region,
     details,
-    onDetail,
   ]);
 
-  return { global, key, busy, failed };
+  const current = global?.key === key;
+  const failed = failedKey === key;
+  return {
+    global: current ? global : null,
+    key,
+    busy:
+      enabled &&
+      providers.length > 0 &&
+      !failed &&
+      (!current ||
+        busy ||
+        (filterGlobalResults(global.results, seen, filters.hideSeen).length < limit &&
+          global.page < global.totalPages)),
+    failed,
+  };
 }

@@ -14,8 +14,12 @@ import {
   type ImportOutcome,
   type ImportProgress,
 } from "@/lib/import/apply";
+import { fetchDetails } from "@/lib/browse-client";
+import { factsOf } from "@/lib/enrich";
+import { browserRegion } from "@/lib/regions";
 import { onReset } from "@/lib/storage";
 import { library } from "@/lib/storage/library";
+import { loadSettings } from "@/lib/storage/settings";
 import type { StoredFilm, StoredList } from "@/lib/storage/schema";
 
 type Stored = ImportOutcome & { unsure: StoredFilm[]; ignored: StoredFilm[] };
@@ -31,7 +35,7 @@ const snapshot = (films: StoredFilm[], lists: StoredList[]): Stored | null =>
 
 export function ImportBlock() {
   const ids = useId();
-  const { t } = useI18n();
+  const { lang, t } = useI18n();
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [stored, setStored] = useState<Stored | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +101,8 @@ export function ImportBlock() {
     try {
       await importExport(file, library, {
         signal: controller.signal,
+        fetchFacts: (id, signal) =>
+          fetchDetails(id, signal, lang, browserRegion(loadSettings().region)).then(factsOf),
         onProgress: (next) => {
           if (!controller.signal.aborted) setProgress(next);
         },
@@ -111,9 +117,10 @@ export function ImportBlock() {
   }
 
   function progressLabel(current: ImportProgress) {
-    return current.phase === "reading"
-      ? t.import.reading
-      : t.import.matching(current.done, current.total);
+    if (current.phase === "reading") return t.import.reading;
+    return current.phase === "matching"
+      ? t.import.matching(current.done, current.total)
+      : t.import.details(current.done, current.total);
   }
 
   function drop(event: DragEvent) {
@@ -169,8 +176,8 @@ export function ImportBlock() {
             <span>{progressLabel(progress)}</span>
             <progress
               aria-label={t.import.progress}
-              value={progress.phase === "matching" ? progress.done : undefined}
-              max={progress.phase === "matching" ? progress.total : undefined}
+              value={progress.phase !== "reading" ? progress.done : undefined}
+              max={progress.phase !== "reading" ? progress.total : undefined}
             />
           </>
         )}

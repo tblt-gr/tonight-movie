@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { useI18n } from "@/components/I18nProvider";
 import { MultiSelect } from "@/components/MultiSelect";
-import { langParam } from "@/lib/i18n/config";
-import { browserRegion, regionOptions, regionParam } from "@/lib/regions";
+import { fetchProviders } from "@/lib/browse-client";
+import { tmdbClient } from "@/lib/tmdb-client";
+import { browserRegion, regionOptions } from "@/lib/regions";
 import { summarizeNames, validateServices } from "@/lib/services";
 import { resetAll } from "@/lib/storage";
 import { loadSettings, updateSettings } from "@/lib/storage/settings";
-import type { ProviderInfo, ProvidersResponse } from "@/lib/types";
+import type { ProviderInfo } from "@/lib/types";
 
 type Status = "loading" | "ready" | "error";
 
@@ -29,14 +30,9 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    const query = [langParam(lang), regionParam(region)].filter(Boolean).join("&");
-    fetch(`/api/providers${query ? `?${query}` : ""}`, {
-      signal: controller.signal,
-    })
-      .then((response) => (response.ok ? (response.json() as Promise<ProvidersResponse>) : null))
+    fetchProviders(controller.signal, lang, region)
       .then((data) => {
-        if (!data) return setStatus("error");
-        setProviders(data.providers);
+        setProviders([...data.values()]);
         setStatus("ready");
       })
       .catch((reason: unknown) => {
@@ -60,6 +56,7 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
   }
 
   function retry() {
+    tmdbClient.retryFailures();
     setStatus("loading");
     setAttempt((n) => n + 1);
   }

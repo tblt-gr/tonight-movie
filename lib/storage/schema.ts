@@ -38,6 +38,9 @@ export type Settings = {
   region: string | null;
 };
 
+/** What TMDB says about a film and never changes in practice: lets a list be sorted without a lookup. */
+export type FilmFacts = { runtime: number | null; rating: number | null; year: number | null };
+
 /** Compact on purpose: no poster, no synopsis. */
 export type StoredFilm = {
   /** Letterboxd URI, or `title|year` when the import has none. */
@@ -52,6 +55,8 @@ export type StoredFilm = {
   seen: boolean;
   /** The visitor set this entry aside, for example a series: it is left out of every count. */
   ignored?: boolean;
+  /** Set once the TMDB details were read; dropped when the film is matched to another id. */
+  facts?: FilmFacts;
 };
 
 export type StoredList = {
@@ -161,6 +166,17 @@ export function parseSettings(value: unknown): Settings | null {
   };
 }
 
+function parseFacts(value: unknown): FilmFacts | null | undefined {
+  if (value === undefined) return null;
+  if (!isObject(value)) return undefined;
+  const runtime = integerOrNull(value.runtime, 1, MAX_RUNTIME);
+  const year = integerOrNull(value.year, FIRST_FILM_YEAR, LAST_FILM_YEAR);
+  const rating = ratingOrNull(value.rating);
+  return runtime === undefined || year === undefined || rating === undefined
+    ? undefined
+    : { runtime, rating, year };
+}
+
 export function parseFilm(value: unknown): StoredFilm | null {
   if (!isObject(value)) return null;
   const key = text(value.key);
@@ -173,8 +189,14 @@ export function parseFilm(value: unknown): StoredFilm | null {
     confidence === null || (typeof confidence === "number" && confidence >= 0 && confidence <= 1);
   if (!key || !title || !lists || year === undefined || tmdbId === undefined) return null;
   if (!validConfidence || typeof value.seen !== "boolean") return null;
+  const facts = parseFacts(value.facts);
+  if (facts === undefined) return null;
   const film: StoredFilm = { key, title, year, tmdbId, confidence, lists, seen: value.seen };
-  return value.ignored === true ? { ...film, ignored: true } : film;
+  return {
+    ...film,
+    ...(value.ignored === true ? { ignored: true } : {}),
+    ...(facts ? { facts } : {}),
+  };
 }
 
 export function parseList(value: unknown): StoredList | null {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LOOKUP_BATCH,
   planListPage,
@@ -8,13 +8,22 @@ import {
   type DetailState,
   type ListPlan,
 } from "@/lib/browse";
-import { fetchDetails, mapLimit } from "@/lib/browse-client";
+import { cachedDetails, fetchDetails, mapLimit } from "@/lib/browse-client";
 import type { Locale } from "@/lib/i18n/config";
+import { factsOf } from "@/lib/enrich";
 import { fetchSearch, resolveFilms } from "@/lib/resolve";
 import { library } from "@/lib/storage/library";
 import type { StoredFilm } from "@/lib/storage/schema";
 
-const EMPTY_PLAN: ListPlan = { shown: [], pending: [], done: false, exhausted: false };
+const EMPTY_PLAN: ListPlan = {
+  shown: [],
+  pending: [],
+  done: false,
+  exhausted: false,
+  judged: 0,
+  total: 0,
+  full: false,
+};
 
 type Input = {
   enabled: boolean;
@@ -30,7 +39,7 @@ type Input = {
   failedKeys: Set<string>;
 };
 
-/** Imported lists: match and look up only the films a page needs, a batch at a time. */
+/** Publish each completed lookup batch without waiting for the whole source. */
 export function useListPlan({
   enabled,
   listFilms,
@@ -42,11 +51,17 @@ export function useListPlan({
   details,
   failedKeys,
 }: Input) {
-  const [plan, setPlan] = useState<ListPlan>(EMPTY_PLAN);
-  const [busy, setBusy] = useState(false);
+  const request = useMemo(
+    () => ({ listFilms, filters, services, lang, region }),
+    [listFilms, filters, services, lang, region],
+  );
+  const [result, setResult] = useState({ request, limit: 0, plan: EMPTY_PLAN });
 
   useEffect(() => {
     if (!enabled) return;
+    for (const id of details.keys()) {
+      if (!cachedDetails(id, lang, region)) details.delete(id);
+    }
     const controller = new AbortController();
     const { signal } = controller;
     void (async () => {
@@ -57,12 +72,8 @@ export function useListPlan({
         );
         const next = planListPage(judged, details, filters, services, limit, LOOKUP_BATCH);
         if (signal.aborted) return;
-        setPlan(next);
-        if (next.pending.length === 0) {
-          setBusy(false);
-          return;
-        }
-        setBusy(true);
+        setResult({ request, limit: next.done ? limit : 0, plan: next });
+        if (next.pending.length === 0) return;
 
         const unresolved = next.pending.filter((film) => film.confidence === null);
         if (unresolved.length > 0) {
@@ -88,23 +99,34 @@ export function useListPlan({
             film.tmdbId !== null &&
             !details.has(film.tmdbId),
         );
+        const learned: StoredFilm[] = [];
         await mapLimit(
           wanted,
           4,
           async (film) => {
             const tmdbId = film.tmdbId!;
             try {
-              details.set(tmdbId, await fetchDetails(tmdbId, signal, lang, region));
+              const detail = await fetchDetails(tmdbId, signal, lang, region);
+              details.set(tmdbId, detail);
+              if (!film.facts) learned.push({ ...film, facts: factsOf(detail) });
             } catch {
               if (!signal.aborted) details.set(tmdbId, "failed");
             }
           },
           signal,
         );
+        // One write for the whole batch: each write reads the entire library.
+        if (learned.length > 0) {
+          await library.upsertFilms(learned.map((film) => ({ ...film, lists: [] })));
+        }
       }
     })();
     return () => controller.abort();
-  }, [enabled, listFilms, filters, services, limit, lang, region, details, failedKeys]);
+  }, [enabled, listFilms, filters, services, limit, lang, region, details, failedKeys, request]);
 
-  return { plan, busy };
+  const current = result.request === request;
+  return {
+    plan: current ? result.plan : EMPTY_PLAN,
+    busy: enabled && (!current || result.limit !== limit),
+  };
 }

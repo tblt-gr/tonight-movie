@@ -142,6 +142,7 @@ export const en: Dictionary = {
     privacy: "The file is read in your browser. Nothing is sent to a Tonight’s Movie server.",
     reading: "Reading the file…",
     matching: (done: number, total: number) => `Looking up films: ${done} of ${total}`,
+    details: (done: number, total: number) => `Reading film details: ${done} of ${total}`,
     progress: "Import progress",
     unsure: (count: number) =>
       `${count} ${count > 1 ? "films aren’t" : "film isn’t"} matched to TMDB with certainty: ${count > 1 ? "they have" : "it has"} no poster or runtime, and the draw skips ${count > 1 ? "them" : "it"}.`,
@@ -270,6 +271,8 @@ export const en: Dictionary = {
     genre: "Genre",
     allGenres: "All genres",
     sort: "Sort",
+    order: "Order",
+    orders: { asc: "Ascending", desc: "Descending" },
     sorts: {
       rank: "Source order",
       popularity: "Popularity",
@@ -286,13 +289,13 @@ export const en: Dictionary = {
     films: "films",
     results: "Results",
     searching: "Looking for films…",
+    sorting: (judged: number, total: number) => `Sorting: ${judged} of ${total} films checked…`,
     shownMore: (count: number) => `${count} films shown, looking for more…`,
     shown: (count: number) => `${count} film${count > 1 ? "s" : ""} shown.`,
-    sortHint: "This sort applies to the films already loaded.",
+    sortHint:
+      "Sorting by duration or rating checks the whole source before showing the first films.",
     emptySource: "This source has no films.",
     emptyFilters: "No film matches these filters.",
-    loading: "Loading…",
-    more: "Show more films",
   },
   trailer: {
     watch: "Watch the trailer",

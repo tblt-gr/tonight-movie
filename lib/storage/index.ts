@@ -1,3 +1,4 @@
+import { tmdbClient } from "@/lib/tmdb-client";
 import { library } from "@/lib/storage/library";
 import { resetSettings } from "@/lib/storage/settings";
 import { clearUnavailable } from "@/lib/storage/status";
@@ -16,7 +17,7 @@ export function onReset(listener: () => void) {
 /** Wipes the settings and every imported film this app stored in the browser. */
 export async function resetAll() {
   resetSettings();
-  await library.reset();
+  await Promise.all([library.reset(), tmdbClient.clear()]);
   clearUnavailable();
   clearWatchLinks();
   resetListeners.forEach((listener) => listener());
