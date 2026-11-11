@@ -161,6 +161,8 @@ export const en: Dictionary = {
     lists: "Lists",
     likes: "Likes",
     seen: "Seen",
+    removed: (count: number) =>
+      `${count} ${count > 1 ? "list entries were" : "list entry was"} removed: ${count > 1 ? "they are" : "it is"} no longer in your file.`,
     usable: (count: number) => `The draw can use ${count} ${count > 1 ? "films" : "film"}.`,
     toCheck: (count: number) =>
       ` ${count} ${count > 1 ? "films need" : "film needs"} checking: the match isn’t certain.`,

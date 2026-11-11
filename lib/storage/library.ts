@@ -15,6 +15,9 @@ type Snapshot = { films: Map<string, StoredFilm>; lists: Map<string, StoredList>
 /** Fields a caller may set; membership, seen and resolved ids merge into the stored record. */
 export type FilmInput = Omit<StoredFilm, "lists"> & { lists?: string[] };
 
+/** Memberships a sync takes away from one film. */
+export type MembershipRemoval = { key: string; lists: string[] };
+
 /** Upgrade steps keyed by the version they upgrade from. */
 type Upgrade = (db: IDBDatabase) => void;
 
@@ -130,7 +133,7 @@ export function createLibrary(
     return snapshot;
   }
 
-  async function writeAll(films: StoredFilm[], lists: StoredList[]) {
+  async function writeAll(films: StoredFilm[], lists: StoredList[], removed: string[] = []) {
     const db = await open();
     const transaction = db.transaction([FILMS_STORE, LISTS_STORE], "readwrite");
     const done = new Promise<void>((resolve, reject) => {
@@ -142,6 +145,7 @@ export function createLibrary(
     const listStore = transaction.objectStore(LISTS_STORE);
     films.forEach((film) => filmStore.put(film));
     lists.forEach((list) => listStore.put(list));
+    removed.forEach((key) => filmStore.delete(key));
     await done;
   }
 
@@ -163,13 +167,14 @@ export function createLibrary(
     }
   }
 
-  async function save(films: StoredFilm[], lists: StoredList[]) {
+  async function save(films: StoredFilm[], lists: StoredList[], removed: string[] = []) {
     if (!memory) {
       try {
-        await writeAll(films, lists);
+        await writeAll(films, lists, removed);
         const snapshot = await cached?.catch(() => null);
         for (const film of films) snapshot?.films.set(film.key, film);
         for (const list of lists) snapshot?.lists.set(list.id, list);
+        for (const key of removed) snapshot?.films.delete(key);
         channel?.postMessage("changed");
         return;
       } catch {
@@ -179,6 +184,7 @@ export function createLibrary(
     }
     for (const film of films) memory!.films.set(film.key, film);
     for (const list of lists) memory!.lists.set(list.id, list);
+    for (const key of removed) memory!.films.delete(key);
   }
 
   return {
@@ -201,6 +207,25 @@ export function createLibrary(
         changed.set(merged.key, merged);
       }
       if (changed.size > 0) await save([...changed.values()], []);
+    },
+
+    /**
+     * Takes the given list memberships off the films. A film left in no list that the
+     * visitor has not marked as seen is forgotten; any other keeps its status and match.
+     */
+    async removeMemberships(removals: MembershipRemoval[]) {
+      const { films } = await load();
+      const changed: StoredFilm[] = [];
+      const forgotten: string[] = [];
+      for (const { key, lists } of removals) {
+        const film = films.get(key);
+        if (!film) continue;
+        const left = film.lists.filter((id) => !lists.includes(id));
+        if (left.length === film.lists.length) continue;
+        if (left.length === 0 && !film.seen) forgotten.push(key);
+        else changed.push({ ...film, lists: left });
+      }
+      if (changed.length > 0 || forgotten.length > 0) await save(changed, [], forgotten);
     },
 
     async upsertList(list: StoredList) {

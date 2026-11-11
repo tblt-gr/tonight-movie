@@ -17,6 +17,7 @@ import type { StoredFilm } from "@/lib/storage/schema";
 
 const result: ImportResult = {
   lists: ["Horror night"],
+  sources: ["watchlist", "liked", "list:Horror night"],
   films: [
     { key: "a", title: "Stalker", year: 1979, uri: null, memberships: ["watchlist", "liked"] },
     { key: "b", title: "Heat", year: 1995, uri: null, memberships: ["list:Horror night", "seen"] },
@@ -108,10 +109,58 @@ describe("planImport", () => {
   });
 
   it("keeps a list that has no film rows", () => {
-    const empty: ImportResult = { films: [], lists: ["Vide"] };
+    const empty: ImportResult = { films: [], lists: ["Vide"], sources: ["list:Vide"] };
     expect(planImport(empty, [], [], 1).lists).toEqual([
       { id: "list:Vide", name: "Vide", importedAt: 1 },
     ]);
+  });
+});
+
+describe("planImport removals", () => {
+  const film = (key: string, lists: string[], patch: Partial<StoredFilm> = {}): StoredFilm => ({
+    key,
+    title: key,
+    year: 2000,
+    tmdbId: 1,
+    confidence: 1,
+    lists,
+    seen: false,
+    ...patch,
+  });
+  const file = (...films: [string, string[]][]): ImportResult => ({
+    films: films.map(([key, memberships]) => ({
+      key,
+      title: key,
+      year: 2000,
+      uri: null,
+      memberships,
+    })),
+    lists: films.flatMap(([, m]) => m.filter((x) => x.startsWith("list:")).map((x) => x.slice(5))),
+    sources: [...new Set(films.flatMap(([, m]) => m.filter((x) => x !== "seen")))],
+  });
+
+  it("removes a film from the list it left, and only from that list", () => {
+    const stored = [film("a", ["list:A", "list:B"]), film("b", ["list:A"])];
+    const plan = planImport(file(["b", ["list:A"]]), stored, [], 1);
+    expect(plan.removals).toEqual([{ key: "a", lists: ["list:A"] }]);
+  });
+
+  it("leaves lists absent from the file untouched", () => {
+    const stored = [film("a", ["list:A", "watchlist"]), film("b", ["list:B"])];
+    const plan = planImport(file(["a", ["list:A"]]), stored, [], 1);
+    expect(plan.removals).toEqual([]);
+  });
+
+  it("empties a list the file declares without any film", () => {
+    const stored = [film("a", ["watchlist"])];
+    const plan = planImport({ films: [], lists: [], sources: ["watchlist"] }, stored, [], 1);
+    expect(plan.removals).toEqual([{ key: "a", lists: ["watchlist"] }]);
+  });
+
+  it("does not treat a watched file as a list", () => {
+    const stored = [film("a", ["watchlist"])];
+    const plan = planImport(file(["z", ["seen"]]), stored, [], 1);
+    expect(plan.removals).toEqual([]);
   });
 });
 
@@ -165,6 +214,44 @@ describe("importExport", () => {
     expect(await store.getFilms()).toEqual(films);
     expect(await store.getLists()).toEqual(lists);
     expect(second.summary.total).toBe(1);
+  });
+
+  const listCsv = (name: string, titles: string[]) =>
+    csv(
+      `${name}.csv`,
+      `Letterboxd list export v7\nDate,Name,Tags,URL,Description\n2024-01-01,${name},,https://example.test/${name},\n\nPosition,Name,Year,URL,Description\n` +
+        titles.map((title, i) => `${i + 1},${title},2000,https://boxd.it/${title},`).join("\n") +
+        "\n",
+    );
+
+  it("syncs a re-import: drops the removed film, keeps the other lists and the match", async () => {
+    stubSearch();
+    const store = createLibrary(() => new IDBFactory());
+    await importExport(listCsv("A", ["x", "y"]), store);
+    await importExport(listCsv("B", ["y"]), store);
+    await importExport(csv("watchlist.csv", watchlist), store);
+    const matched = (await store.getFilms()).find((f) => f.title === "y");
+    expect(matched?.lists).toEqual(["list:A", "list:B"]);
+
+    const outcome = await importExport(listCsv("A", ["x"]), store);
+    const films = await store.getFilms();
+    expect(outcome.removed).toBe(1);
+    expect(films.find((f) => f.title === "y")).toEqual({ ...matched, lists: ["list:B"] });
+    expect(films.find((f) => f.title === "x")?.lists).toEqual(["list:A"]);
+    expect(films.find((f) => f.title === "Stalker")?.lists).toEqual(["watchlist"]);
+  });
+
+  it("forgets a film left in no list unless it is seen", async () => {
+    stubSearch();
+    const store = createLibrary(() => new IDBFactory());
+    await importExport(listCsv("A", ["x", "y"]), store);
+    await store.upsertFilms([
+      { ...(await store.getFilms()).find((f) => f.title === "y")!, seen: true },
+    ]);
+    await importExport(listCsv("A", []), store);
+    const films = await store.getFilms();
+    expect(films.map((f) => f.title)).toEqual(["y"]);
+    expect(films[0]).toMatchObject({ lists: [], seen: true });
   });
 
   it.each([

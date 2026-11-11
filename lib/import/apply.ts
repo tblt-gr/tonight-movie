@@ -9,7 +9,7 @@ import type { Dictionary } from "@/lib/i18n";
 import { isDrawable } from "@/lib/match";
 import { enrichFilms, type FactsFetcher } from "@/lib/enrich";
 import { fetchSearch, resolveFilms, type Resolver } from "@/lib/resolve";
-import type { FilmInput } from "@/lib/storage/library";
+import type { FilmInput, MembershipRemoval } from "@/lib/storage/library";
 import type { StoredFilm, StoredList } from "@/lib/storage/schema";
 
 export const WATCHLIST_ID = "watchlist";
@@ -30,6 +30,7 @@ export type MatchStats = { drawable: number; toCheck: number };
 
 export type ImportStore = Resolver & {
   getLists(): Promise<StoredList[]>;
+  removeMemberships(removals: MembershipRemoval[]): Promise<void>;
   upsertList(list: StoredList): Promise<void>;
 };
 
@@ -38,7 +39,12 @@ export type ImportProgress =
   | { phase: "matching"; done: number; total: number }
   | { phase: "details"; done: number; total: number };
 
-export type ImportOutcome = { summary: ImportSummary; stats: MatchStats };
+export type ImportOutcome = {
+  summary: ImportSummary;
+  stats: MatchStats;
+  /** Memberships the file no longer contains, taken off the stored films. */
+  removed?: number;
+};
 
 /** A user-facing sentence, in the visitor's language, for any failure raised by an import. */
 export function describeImportError(error: unknown, t: Dictionary): string {
@@ -92,14 +98,16 @@ function listIdentity(membership: string): { id: string; name: string } | null {
 /**
  * Turns a parsed export into the records to store. Importing the same file again
  * yields no new list record, so stored data stays exactly as it was; a newer
- * file merges by film key through the library.
+ * file merges by film key through the library. The file is authoritative only for the
+ * lists it contains: a stored membership of such a list that the file drops is removed,
+ * while lists the file does not mention are left alone, so a partial export erases nothing.
  */
 export function planImport(
   result: ImportResult,
   existingFilms: StoredFilm[],
   existingLists: StoredList[],
   now: number,
-): { films: FilmInput[]; lists: StoredList[] } {
+): { films: FilmInput[]; lists: StoredList[]; removals: MembershipRemoval[] } {
   const known = new Map(existingFilms.map((film) => [film.key, film]));
   const names = new Map(existingLists.map((list) => [list.id, list.name]));
   const grown = new Set<string>();
@@ -127,10 +135,21 @@ export function planImport(
   // A list without any film row is still the visitor's list.
   for (const name of result.lists) present.set(`${LIST_PREFIX}${name}`, name);
 
+  const scope = new Set(present.keys());
+  for (const membership of result.sources) {
+    const identity = listIdentity(membership);
+    if (identity) scope.add(identity.id);
+  }
+  const kept = new Map(films.map((film) => [film.key, new Set(film.lists)]));
+  const removals = existingFilms.flatMap((film) => {
+    const stale = film.lists.filter((id) => scope.has(id) && !kept.get(film.key)?.has(id));
+    return stale.length > 0 ? [{ key: film.key, lists: stale }] : [];
+  });
+
   const lists = [...present]
     .filter(([id, name]) => grown.has(id) || names.get(id) !== name)
     .map(([id, name]) => ({ id, name, importedAt: now }));
-  return { films, lists };
+  return { films, lists, removals };
 }
 
 export type ImportOptions = {
@@ -178,6 +197,7 @@ export async function importExport(
     (options.now ?? Date.now)(),
   );
   await store.upsertFilms(plan.films);
+  await store.removeMemberships(plan.removals);
   for (const list of plan.lists) await store.upsertList(list);
 
   const keys = result.films.map((film) => film.key);
@@ -191,7 +211,11 @@ export async function importExport(
       onProgress: (done, total) => options.onProgress?.({ phase: "details", done, total }),
     });
   }
-  return { summary, stats: matchStats(await store.getFilms(), new Set(keys)) };
+  return {
+    summary,
+    stats: matchStats(await store.getFilms(), new Set(keys)),
+    removed: plan.removals.reduce((total, { lists }) => total + lists.length, 0),
+  };
 }
 
 /** Films the draw cannot use yet: never matched, or matched without certainty. */

@@ -60,6 +60,11 @@ export type ImportResult = {
   films: ImportedFilm[];
   /** Names of the visitor's own lists found in the file. */
   lists: string[];
+  /**
+   * Memberships the file speaks about, even when it holds no film for them: a header-only
+   * watchlist still means "empty". Watched films are not a list and never appear here.
+   */
+  sources: string[];
 };
 
 type Source = { membership: string; text: string; fallbackName: string };
@@ -120,6 +125,7 @@ function listName(rows: string[][], header: number) {
 class Collector {
   private readonly films = new Map<string, ImportedFilm>();
   readonly lists: string[] = [];
+  private readonly sources = new Set<string>();
 
   constructor(private readonly limits: ImportLimits) {}
 
@@ -135,6 +141,7 @@ class Collector {
       membership = `list:${name}`;
       if (!this.lists.includes(name)) this.lists.push(name);
     }
+    if (membership !== "seen") this.sources.add(membership);
     for (const row of rows.slice(layout.header + 1)) {
       const title = cell(row[layout.name]);
       if (!title || title.length > MAX_TITLE) continue;
@@ -154,7 +161,7 @@ class Collector {
 
   result(): ImportResult {
     if (this.films.size === 0 && this.lists.length === 0) return fail("unrecognized");
-    return { films: [...this.films.values()], lists: this.lists };
+    return { films: [...this.films.values()], lists: this.lists, sources: [...this.sources] };
   }
 }
 
