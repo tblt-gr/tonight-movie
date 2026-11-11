@@ -243,6 +243,44 @@ describe("library", () => {
     put.mockRestore();
   });
 
+  it("keeps the TMDB facts through a re-import and drops them when the match changes", async () => {
+    const lib = createLibrary(() => factory);
+    const facts = { runtime: 163, rating: 8.1, year: 1979 };
+    await lib.upsertFilms([film({ tmdbId: 42, confidence: 1, facts })]);
+    await lib.upsertFilms([film({ tmdbId: null, confidence: null })]);
+    expect((await lib.getFilms())[0].facts).toEqual(facts);
+    await lib.upsertFilms([film({ tmdbId: 7, confidence: 0.5, facts: undefined })]);
+    expect((await lib.getFilms())[0].facts).toEqual(facts);
+  });
+
+  it("drops the facts of a weak match that is replaced by another film", async () => {
+    const lib = createLibrary(() => factory);
+    await lib.upsertFilms([
+      film({ tmdbId: 5, confidence: 0.5, facts: { runtime: 90, rating: 6, year: 1979 } }),
+    ]);
+    await lib.upsertFilms([film({ tmdbId: 6, confidence: 0.8 })]);
+    expect((await lib.getFilms())[0].facts).toBeUndefined();
+  });
+
+  it("reads the database once and serves later reads and writes from memory", async () => {
+    const lib = createLibrary(() => factory);
+    await lib.upsertFilms([film()]);
+    const read = vi.spyOn(IDBObjectStore.prototype, "getAll");
+    await lib.upsertFilms([film({ key: "Solaris|1972", title: "Solaris", year: 1972 })]);
+    await lib.upsertFilms([film({ key: "Mirror|1975", title: "Mirror", year: 1975 })]);
+    expect(await lib.getFilms()).toHaveLength(3);
+    expect(read).not.toHaveBeenCalled();
+    read.mockRestore();
+    expect(await createLibrary(() => factory).getFilms()).toHaveLength(3);
+  });
+
+  it("reads the database again after a reset", async () => {
+    const lib = createLibrary(() => factory);
+    await lib.upsertFilms([film()]);
+    await lib.reset();
+    expect(await lib.getFilms()).toEqual([]);
+  });
+
   it("keeps the resolved TMDB id and merges list memberships", async () => {
     const lib = createLibrary(() => factory);
     await lib.upsertFilms([film({ tmdbId: 42, confidence: 1 })]);

@@ -149,18 +149,8 @@
 .browse-empty p {
   margin: 0;
 }
-.browse-more {
-  display: block;
-  margin: var(--s6) auto 0;
-}
-.browse-more[aria-disabled="true"] {
-  border-color: var(--line);
-  color: var(--muted);
-  cursor: progress;
-}
-.browse-more[aria-disabled="true"]:hover {
-  background: transparent;
-  color: var(--muted);
+.browse-sentinel {
+  height: 1px;
 }
 .film-grid {
   display: grid;
@@ -282,4 +272,25 @@
 }
 .film-dialog > .button {
   grid-column: 1 / -1;
+}
+
+.film-skeleton .film-card-poster,
+.film-skeleton-title,
+.film-skeleton-meta {
+  background: var(--panel2);
+}
+.film-skeleton .film-card-open {
+  pointer-events: none;
+}
+.film-skeleton-title,
+.film-skeleton-meta {
+  display: block;
+  min-height: var(--s4);
+}
+.film-skeleton-title {
+  width: 80%;
+}
+.film-skeleton-meta {
+  width: 60%;
+  margin-top: var(--s1);
 }

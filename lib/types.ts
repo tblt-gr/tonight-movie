@@ -71,6 +71,8 @@ export type MovieDetails = MovieSummary & {
   trailer: Trailer | null;
 };
 
+export type MovieAvailability = Pick<MovieDetails, "offers" | "availabilityStatus" | "offersUrl">;
+
 export type SearchResponse = { results: MovieSummary[] };
 
 export type ProviderInfo = { id: string; name: string; logo: string | null };

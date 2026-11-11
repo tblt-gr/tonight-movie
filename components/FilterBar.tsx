@@ -12,6 +12,7 @@ import {
   type BrowseFilters,
   type BrowseMode,
   type BrowseSort,
+  type BrowseOrder,
 } from "@/lib/browse";
 import { sourceOptions } from "@/lib/draw-state";
 import { summarizeNames } from "@/lib/services";
@@ -145,7 +146,12 @@ export function FilterBar({
           className="select"
           id={`${ids}-sort`}
           value={sortValue}
-          onChange={(event) => update({ sort: event.target.value as BrowseSort })}
+          onChange={(event) =>
+            update({
+              sort: event.target.value as BrowseSort,
+              order: event.target.value === "runtime" ? "asc" : "desc",
+            })
+          }
         >
           {sortOptions.map((sort) => (
             <option key={sort} value={sort}>
@@ -156,6 +162,20 @@ export function FilterBar({
           ))}
         </select>
       </div>
+      {(sortValue === "runtime" || sortValue === "year" || sortValue === "rating") && (
+        <div className="filter">
+          <label htmlFor={`${ids}-order`}>{t.browse.order}</label>
+          <select
+            className="select"
+            id={`${ids}-order`}
+            value={filters.order}
+            onChange={(event) => update({ order: event.target.value as BrowseOrder })}
+          >
+            <option value="asc">{t.browse.orders.asc}</option>
+            <option value="desc">{t.browse.orders.desc}</option>
+          </select>
+        </div>
+      )}
       <div className="view-toggle" role="group" aria-label={t.browse.view}>
         <button
           type="button"

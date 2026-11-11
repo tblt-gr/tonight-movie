@@ -22,7 +22,10 @@ describe("createDrawClient", () => {
   });
 
   it("tells an outage from a draw that found nothing", async () => {
-    const down = createDrawClient(asFetch(() => json({}, 500)));
+    const down = createDrawClient(
+      asFetch(() => json({}, 500)),
+      { sleep: async () => undefined },
+    );
     await expect(down.deps.getDetails(1)).rejects.toThrow();
     expect(down.isOutage()).toBe(true);
 
@@ -38,7 +41,23 @@ describe("createDrawClient", () => {
       calls += 1;
       return calls < 3
         ? Promise.resolve(new Response("{}", { status: 429, headers: { "Retry-After": "4" } }))
-        : json({ tmdbId: 1 });
+        : json({
+            tmdbId: 1,
+            title: "Test",
+            year: 2000,
+            originalTitle: null,
+            poster: null,
+            rating: 7,
+            overview: null,
+            runtime: 90,
+            genres: [],
+            directors: [],
+            cast: [],
+            offers: [],
+            offersUrl: null,
+            availabilityStatus: "unknown",
+            trailer: null,
+          });
     });
     const client = createDrawClient(asFetch(fetcher), { sleep });
     await expect(client.deps.getDetails(1)).resolves.toMatchObject({ tmdbId: 1 });

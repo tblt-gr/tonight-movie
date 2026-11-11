@@ -1,4 +1,4 @@
-import { fetchWithRetry } from "@/lib/fetch-retry";
+import { tmdbClient, METADATA_TTL_MS } from "@/lib/tmdb-client";
 import { DEFAULT_LOCALE, langParam, type Locale } from "@/lib/i18n/config";
 import { DEFAULT_REGION, regionParam } from "@/lib/regions";
 import type { DiscoverSort } from "@/lib/validation";
@@ -10,20 +10,6 @@ import type {
   ProvidersResponse,
 } from "@/lib/types";
 
-/** GET JSON from the app's own routes, retrying a 429 or a temporary upstream error. */
-async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetchWithRetry((...args) => fetch(...args), url, {
-    signal,
-    retryable: (status) => status >= 500,
-  });
-  return (await response.json()) as T;
-}
-
-/** Successful lookups only, kept for the session so a filter change never refetches. */
-const details = new Map<string, MovieDetails>();
-
-const detailsKey = (tmdbId: number, lang: Locale, region: string) => `${lang}:${region}:${tmdbId}`;
-
 /** Adds the page language and the country to a route URL; the defaults add nothing. */
 const withContext = (url: string, lang: Locale, region: string) => {
   const params = [langParam(lang), regionParam(region)].filter(Boolean).join("&");
@@ -34,7 +20,7 @@ export const cachedDetails = (
   tmdbId: number,
   lang: Locale = DEFAULT_LOCALE,
   region = DEFAULT_REGION,
-) => details.get(detailsKey(tmdbId, lang, region));
+) => tmdbClient.peekMovie(withContext(`/api/movie/${tmdbId}`, lang, region));
 
 export async function fetchDetails(
   tmdbId: number,
@@ -42,14 +28,7 @@ export async function fetchDetails(
   lang: Locale = DEFAULT_LOCALE,
   region = DEFAULT_REGION,
 ): Promise<MovieDetails> {
-  const known = cachedDetails(tmdbId, lang, region);
-  if (known) return known;
-  const fresh = await getJson<MovieDetails>(
-    withContext(`/api/movie/${tmdbId}`, lang, region),
-    signal,
-  );
-  details.set(detailsKey(tmdbId, lang, region), fresh);
-  return fresh;
+  return tmdbClient.getMovie(withContext(`/api/movie/${tmdbId}`, lang, region), signal);
 }
 
 export function fetchDiscover(
@@ -73,7 +52,7 @@ export function fetchDiscover(
   params.set("sort", sort);
   if (lang !== DEFAULT_LOCALE) params.set("lang", lang);
   if (region !== DEFAULT_REGION) params.set("region", region);
-  return getJson<DiscoverResponse>(`/api/discover?${params}`, signal);
+  return tmdbClient.get<DiscoverResponse>(`/api/discover?${params}`, undefined, signal);
 }
 
 export async function fetchProviders(
@@ -81,8 +60,9 @@ export async function fetchProviders(
   lang: Locale = DEFAULT_LOCALE,
   region = DEFAULT_REGION,
 ): Promise<Map<string, ProviderInfo>> {
-  const { providers } = await getJson<ProvidersResponse>(
+  const { providers } = await tmdbClient.get<ProvidersResponse>(
     withContext("/api/providers", lang, region),
+    METADATA_TTL_MS,
     signal,
   );
   return new Map(providers.map((provider) => [provider.id, provider]));

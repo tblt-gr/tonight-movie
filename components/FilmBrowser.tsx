@@ -14,7 +14,6 @@ import {
   parseFilters,
   seenIndex,
   serializeFilters,
-  sortShown,
   type BrowseFilters,
   type BrowseMode,
   type DetailState,
@@ -46,7 +45,9 @@ export function FilmBrowser() {
   const [filters, setFilters] = useState(() =>
     parseFilters(new URLSearchParams(searchParams.toString())),
   );
-  const filterKey = serializeFilters(filters);
+  const filterKey = serializeFilters({ ...filters, view: "grid" });
+  // Presentation changes keep the same data request and the number of visible films.
+  const dataFilters = useMemo(() => parseFilters(new URLSearchParams(filterKey)), [filterKey]);
 
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [lists, setLists] = useState<StoredList[]>([]);
@@ -54,17 +55,17 @@ export function FilmBrowser() {
   const [ready, setReady] = useState(false);
   const [providerInfo, setProviderInfo] = useState<Map<string, ProviderInfo>>(new Map());
   const region = browserRegion(settings.region);
-  const [paging, setPaging] = useState({ key: filterKey, limit: PAGE_SIZE });
+  const paginationKey = serializeFilters({ ...filters, view: "grid", sort: "rank", order: "desc" });
+  const [paging, setPaging] = useState({ key: paginationKey, limit: PAGE_SIZE });
   const [retry, setRetry] = useState(0);
   const [selected, setSelected] = useState<CardFilm | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
 
-  // Details looked up so far; the effects below own it and bump `tick` to redraw.
+  // Both sources share the details already loaded during this visit.
   const [details] = useState(() => new Map<number, DetailState>());
   const [failedKeys] = useState(() => new Set<string>());
-  const [, setTick] = useState(0);
 
-  const limit = paging.key === filterKey ? paging.limit : PAGE_SIZE;
+  const limit = paging.key === paginationKey ? paging.limit : PAGE_SIZE;
 
   useEffect(() => {
     let alive = true;
@@ -107,6 +108,7 @@ export function FilmBrowser() {
     [films, listIds],
   );
   const services = useMemo(() => new Set(settings.services), [settings.services]);
+  const seen = useMemo(() => seenIndex(films), [films]);
   const hasSeen = useMemo(() => films.some((film) => film.seen), [films]);
 
   const update = useCallback(
@@ -119,11 +121,10 @@ export function FilmBrowser() {
     [filters, pathname],
   );
 
-  const bumpDetails = useCallback(() => setTick((tick) => tick + 1), []);
   const list = useListPlan({
     enabled: ready && mode === "lists",
     listFilms,
-    filters,
+    filters: dataFilters,
     services,
     limit,
     lang,
@@ -134,17 +135,18 @@ export function FilmBrowser() {
   const source = useGlobalSource({
     enabled: ready && mode === "services",
     ownServices: settings.services,
-    filters,
+    seen,
+    filters: dataFilters,
     limit,
     lang,
     region,
     retry,
     details,
-    onDetail: bumpDetails,
   });
   const { plan } = list;
-  const { global, key: globalKey, failed } = source;
-  const busy = mode === "lists" ? list.busy : source.busy;
+  const { global, key: globalKey } = source;
+  const failed = mode === "services" && source.failed;
+  const busy = !ready || (mode === "lists" ? list.busy : source.busy);
 
   // Cards show the offers on the visitor's services and on any service the filter picked.
   const cardServices = new Set([...services, ...filters.services]);
@@ -153,11 +155,11 @@ export function FilmBrowser() {
 
   const cards: CardFilm[] = useMemo(() => {
     if (mode === "lists") {
-      return sortShown(plan.shown, filters.sort).map(({ film, detail, uncertain }: Shown) => ({
+      return plan.shown.map(({ film, detail, uncertain }: Shown) => ({
         id: film.key,
         tmdbId: film.confidence === 1 ? film.tmdbId : null,
         title: film.title,
-        year: film.year,
+        year: film.year ?? detail?.year ?? null,
         poster: detail?.poster ?? null,
         rating: detail?.rating ?? null,
         runtime: detail?.runtime ?? null,
@@ -166,7 +168,7 @@ export function FilmBrowser() {
       }));
     }
     if (!global || global.key !== globalKey) return [];
-    const visible = filterGlobalResults(global.results, seenIndex(films), filters.hideSeen);
+    const visible = filterGlobalResults(global.results, seen, filters.hideSeen).slice(0, limit);
     return visible.map((movie) => {
       const detail = details.get(movie.tmdbId);
       const loaded = typeof detail === "object" ? detail : undefined;
@@ -183,17 +185,7 @@ export function FilmBrowser() {
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `cardOffers` only reads `services` and `filters.services`.
-  }, [
-    mode,
-    plan,
-    filters.sort,
-    filters.hideSeen,
-    global,
-    globalKey,
-    films,
-    services,
-    filters.services,
-  ]);
+  }, [mode, plan, filters.hideSeen, global, globalKey, seen, limit, services, filters.services]);
 
   const filtersChanged = filterKey !== "";
   const resetFilters = () =>
@@ -202,8 +194,25 @@ export function FilmBrowser() {
   const more =
     mode === "lists"
       ? plan.done && !plan.exhausted
-      : global !== null && global.page < global.totalPages;
-  const listLoading = mode === "lists" && busy;
+      : global !== null &&
+        (filterGlobalResults(global.results, seen, filters.hideSeen).length > limit ||
+          global.page < global.totalPages);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const sentinelShown = more && !busy && cards.length > 0;
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!sentinelShown || !node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting))
+          setPaging({ key: paginationKey, limit: limit + PAGE_SIZE });
+      },
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [sentinelShown, paginationKey, limit]);
+  const skeletonCount = busy ? Math.max(0, limit - cards.length) : 0;
   const empty =
     cards.length === 0 &&
     !busy &&
@@ -214,7 +223,9 @@ export function FilmBrowser() {
     ? ""
     : busy
       ? cards.length === 0
-        ? t.browse.searching
+        ? mode === "lists" && plan.full && plan.total > 0
+          ? t.browse.sorting(plan.judged, plan.total)
+          : t.browse.searching
         : t.browse.shownMore(cards.length)
       : empty
         ? ""
@@ -246,7 +257,7 @@ export function FilmBrowser() {
       <p role="status" className={`browse-status${failed ? " sr-only" : ""}`}>
         {status}
       </p>
-      {mode === "lists" && (filters.sort === "rating" || filters.sort === "runtime") && more && (
+      {mode === "lists" && (filters.sort === "rating" || filters.sort === "runtime") && (
         <p className="browse-hint">{t.browse.sortHint}</p>
       )}
 
@@ -274,8 +285,12 @@ export function FilmBrowser() {
         </div>
       )}
 
-      {cards.length > 0 && (
-        <ul className={`film-grid${filters.view === "list" ? " is-list" : ""}`}>
+      {(cards.length > 0 || skeletonCount > 0) && (
+        <ul
+          className={`film-grid${filters.view === "list" ? " is-list" : ""}`}
+          aria-label={t.browse.results}
+          aria-busy={busy}
+        >
           {cards.map((card) => (
             <FilmCard
               key={card.id}
@@ -286,20 +301,22 @@ export function FilmBrowser() {
               }}
             />
           ))}
+          {Array.from({ length: skeletonCount }, (_, index) => (
+            <li key={`skeleton:${index}`} className="film-card film-skeleton" aria-hidden="true">
+              <div className="film-card-open">
+                <span className="film-card-poster" />
+                <span className="film-card-body">
+                  <span className="film-skeleton-title" />
+                  <span className="film-skeleton-meta" />
+                </span>
+              </div>
+            </li>
+          ))}
         </ul>
       )}
 
-      {(more || listLoading) && cards.length > 0 && (
-        <button
-          type="button"
-          className="button browse-more"
-          aria-disabled={busy}
-          onClick={() => {
-            if (!busy) setPaging({ key: filterKey, limit: limit + PAGE_SIZE });
-          }}
-        >
-          {busy ? t.browse.loading : t.browse.more}
-        </button>
+      {more && !busy && cards.length > 0 && (
+        <div ref={sentinelRef} className="browse-sentinel" aria-hidden="true" />
       )}
 
       {selected && (

@@ -11,7 +11,7 @@ const MAX_TITLE_LENGTH = 100;
 const FIRST_FILM_YEAR = 1888;
 const MAX_FUTURE_YEARS = 5;
 
-export const DISCOVER_SORTS = ["popularity", "rating", "year"] as const;
+export const DISCOVER_SORTS = ["popularity", "rating", "rating-asc", "year", "year-asc"] as const;
 export type DiscoverSort = (typeof DISCOVER_SORTS)[number];
 
 const bad = (message: string) => new ApiFailure("bad_request", 400, message);

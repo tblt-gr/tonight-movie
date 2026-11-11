@@ -4,6 +4,7 @@ import {
   classifyListFilm,
   filterGlobalResults,
   parseFilters,
+  needsFullSort,
   planListPage,
   seenIndex,
   serializeFilters,
@@ -17,6 +18,7 @@ import type { MovieDetails, MovieSummary } from "@/lib/types";
 
 const filters = (patch: Partial<BrowseFilters> = {}): BrowseFilters => ({
   ...DEFAULT_FILTERS,
+  order: patch.sort === "runtime" ? "asc" : "desc",
   ...patch,
 });
 
@@ -71,6 +73,18 @@ describe("URL state", () => {
     expect(parseFilters(new URLSearchParams(query))).toEqual(state);
   });
 
+  it.each(["runtime", "year", "rating"] as const)("round-trips both directions for %s", (sort) => {
+    for (const order of ["asc", "desc"] as const) {
+      const state = filters({ sort, order });
+      expect(parseFilters(new URLSearchParams(serializeFilters(state)))).toEqual(state);
+    }
+  });
+  it("preserves the direction of existing links without an order parameter", () => {
+    expect(parseFilters(new URLSearchParams("sort=runtime")).order).toBe("asc");
+    expect(parseFilters(new URLSearchParams("sort=year")).order).toBe("desc");
+    expect(parseFilters(new URLSearchParams("sort=rating&order=invalid")).order).toBe("desc");
+  });
+
   it("leaves the URL empty for the defaults", () => {
     expect(serializeFilters(DEFAULT_FILTERS)).toBe("");
     expect(parseFilters(new URLSearchParams(""))).toEqual(DEFAULT_FILTERS);
@@ -88,7 +102,7 @@ describe("URL state", () => {
 describe("sortsFor", () => {
   it("offers only the sorts the source can honour", () => {
     expect(sortsFor("lists")).toEqual(["rank", "rating", "runtime", "title", "year"]);
-    expect(sortsFor("services")).toEqual(["rank", "rating", "year"]);
+    expect(sortsFor("services")).toEqual(["rank", "rating", "runtime", "year"]);
   });
 });
 
@@ -272,6 +286,11 @@ describe("planListPage", () => {
     expect(plan.exhausted).toBe(true);
   });
 
+  it("is exhausted when the final page is exactly full", () => {
+    const all = new Map(films.map((film) => [film.tmdbId!, details()]));
+    expect(planListPage(films, all, filters(), mine, films.length, 10).exhausted).toBe(true);
+  });
+
   it("walks in title order for the title sort", () => {
     const reversed = [stored({ title: "B", tmdbId: 1 }), stored({ title: "A", tmdbId: 2 })];
     const all = new Map([
@@ -280,6 +299,128 @@ describe("planListPage", () => {
     ]);
     const plan = planListPage(reversed, all, filters({ sort: "title" }), mine, 1, 10);
     expect(plan.shown.map((item) => item.film.title)).toEqual(["A"]);
+  });
+  for (const sort of ["rating", "runtime"] as const) {
+    it(`slices the requested page after judging the whole source for ${sort}`, () => {
+      const all = new Map(films.map((film) => [film.tmdbId!, details()]));
+      const plan = planListPage(films, all, filters({ sort }), mine, 2, 2);
+      expect(plan.shown).toHaveLength(2);
+      expect(plan.pending).toEqual([]);
+      expect(plan.done).toBe(true);
+      expect(plan.exhausted).toBe(films.length <= 2);
+    });
+
+    it(`shows nothing until the whole source is judged, then the top of the ${sort} order`, () => {
+      const many = Array.from({ length: 60 }, (_, i) =>
+        stored({ title: `F${i + 1}`, tmdbId: i + 1 }),
+      );
+      const load = (from: number, to: number, loaded: Map<number, MovieDetails | "failed">) =>
+        many
+          .slice(from, to)
+          .forEach((film) =>
+            loaded.set(
+              film.tmdbId!,
+              details({ rating: film.tmdbId! / 10, runtime: 200 - film.tmdbId! }),
+            ),
+          );
+      const loaded = new Map<number, MovieDetails | "failed">();
+      load(0, 12, loaded);
+      const first = planListPage(many, loaded, filters({ sort }), mine, 24, 12);
+      expect(first.shown).toEqual([]);
+      expect(first.pending).toHaveLength(12);
+      expect(first.done).toBe(false);
+      expect(first.judged).toBe(12);
+      expect(first.total).toBe(60);
+      load(12, 60, loaded);
+      const full = planListPage(many, loaded, filters({ sort }), mine, 24, 12);
+      expect(full.pending).toEqual([]);
+      expect(full.done).toBe(true);
+      expect(full.exhausted).toBe(false);
+      expect(full.shown).toHaveLength(24);
+      expect(full.shown[0].film.tmdbId).toBe(60);
+    });
+  }
+
+  it("rules films out with stored facts and no lookup, and still needs one for the others", () => {
+    const facts = { runtime: 150, rating: 6, year: 1999 };
+    const film = stored({ title: "A", facts });
+    const verdict = (patch: Partial<BrowseFilters>) =>
+      classifyListFilm(film, undefined, filters(patch), mine).verdict;
+    expect(verdict({ maxDuration: 120 })).toBe("hide");
+    expect(verdict({ minDuration: 160 })).toBe("hide");
+    expect(verdict({ minRating: 7 })).toBe("hide");
+    expect(verdict({ maxDuration: 200, minRating: 5 })).toBe("pending");
+    const undated = stored({ title: "B", year: null, facts });
+    expect(classifyListFilm(undated, undefined, filters({ minYear: 2000 }), mine).verdict).toBe(
+      "hide",
+    );
+  });
+
+  it("orders by stored facts and looks up only the films of the page", () => {
+    const many = Array.from({ length: 40 }, (_, i) =>
+      stored({
+        title: `F${i + 1}`,
+        tmdbId: i + 1,
+        facts: { runtime: 200 - i, rating: 5, year: 2000 },
+      }),
+    );
+    const plan = planListPage(many, new Map(), filters({ sort: "runtime" }), mine, 10, 10);
+    expect(plan.full).toBe(false);
+    expect(plan.shown).toEqual([]);
+    expect(plan.pending.map(({ tmdbId }) => tmdbId)).toEqual([
+      40, 39, 38, 37, 36, 35, 34, 33, 32, 31,
+    ]);
+    const loaded = new Map(
+      plan.pending.map((film) => [film.tmdbId!, details({ runtime: film.facts!.runtime })]),
+    );
+    const next = planListPage(many, loaded, filters({ sort: "runtime" }), mine, 10, 10);
+    expect(next.shown.map(({ film }) => film.tmdbId)).toEqual([
+      40, 39, 38, 37, 36, 35, 34, 33, 32, 31,
+    ]);
+    expect(next.done).toBe(true);
+  });
+
+  it("judges the whole source first while some matched films have no facts", () => {
+    const many = [
+      stored({ title: "A", tmdbId: 1, facts: { runtime: 90, rating: 5, year: 2000 } }),
+      stored({ title: "B", tmdbId: 2 }),
+    ];
+    expect(needsFullSort("runtime", many)).toBe(true);
+    expect(needsFullSort("title", many)).toBe(false);
+    expect(needsFullSort("runtime", [many[0]])).toBe(false);
+  });
+
+  it("places a short film from a later batch first among all loaded films", () => {
+    const many = Array.from({ length: 30 }, (_, i) =>
+      stored({ title: i === 20 ? "The Kid" : `Film ${i}`, tmdbId: i + 1 }),
+    );
+    const loaded = new Map(
+      many.map((film) => [film.tmdbId!, details({ runtime: film.title === "The Kid" ? 52 : 120 })]),
+    );
+    const plan = planListPage(many, loaded, filters({ sort: "runtime" }), mine, 24, 12);
+    expect(plan.shown[0].film.title).toBe("The Kid");
+    expect(plan.pending).toEqual([]);
+    expect(plan.shown).toHaveLength(24);
+  });
+
+  it("keeps unknown values last and honours filters before taking a sorted page", () => {
+    const all = new Map<number, MovieDetails | "failed">([
+      [1, details({ rating: 9, runtime: 180 })],
+      [2, "failed"],
+      [3, details({ rating: 7, runtime: 90 })],
+      [4, details({ rating: 8, runtime: 80 })],
+      [5, details({ rating: 8, runtime: 100 })],
+    ]);
+    const plan = planListPage(
+      films,
+      all,
+      filters({ sort: "rating", maxDuration: 120, services: ["all"] }),
+      mine,
+      10,
+      2,
+    );
+    expect(plan.shown.map(({ film }) => film.title)).toEqual(["F4", "F5", "F3", "F2"]);
+    expect(plan.shown.at(-1)?.uncertain).toBe(true);
   });
 });
 
@@ -293,6 +434,31 @@ describe("sortShown", () => {
   const b = item("alpha", 2010, { rating: 8, runtime: 90 });
   const c = item("Gamma", 1980);
   const titles = (items: Shown[]) => items.map((entry) => entry.film.title);
+
+  it.each([
+    ["runtime", "asc", ["alpha", "Béta", "Gamma"]],
+    ["runtime", "desc", ["Béta", "alpha", "Gamma"]],
+    ["rating", "asc", ["Béta", "alpha", "Gamma"]],
+    ["rating", "desc", ["alpha", "Béta", "Gamma"]],
+    ["year", "asc", ["Gamma", "Béta", "alpha"]],
+    ["year", "desc", ["alpha", "Béta", "Gamma"]],
+  ] as const)("sorts all results by %s %s", (sort, order, expected) => {
+    expect(titles(sortShown([c, a, b], sort, order))).toEqual(expected);
+  });
+  it("keeps unknown years last in either direction, using TMDB as a fallback", () => {
+    const unknown = { ...c, film: { ...c.film, year: null } };
+    const fallback = { ...b, film: { ...b.film, year: null }, detail: details({ year: 2010 }) };
+    expect(titles(sortShown([unknown, a, fallback], "year", "asc"))).toEqual([
+      "Béta",
+      "alpha",
+      "Gamma",
+    ]);
+    expect(titles(sortShown([unknown, a, fallback], "year", "desc"))).toEqual([
+      "alpha",
+      "Béta",
+      "Gamma",
+    ]);
+  });
 
   it("keeps the list order", () => {
     expect(titles(sortShown([a, b, c], "rank"))).toEqual(["Béta", "alpha", "Gamma"]);
