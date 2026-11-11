@@ -39,6 +39,7 @@ export function ImportBlock() {
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [stored, setStored] = useState<Stored | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [removed, setRemoved] = useState(0);
   const [dragging, setDragging] = useState(false);
   const running = useRef<AbortController | null>(null);
 
@@ -51,6 +52,7 @@ export function ImportBlock() {
     load();
     const stop = onReset(() => {
       setError(null);
+      setRemoved(0);
       load();
     });
     return () => {
@@ -97,9 +99,10 @@ export function ImportBlock() {
     const controller = new AbortController();
     running.current = controller;
     setError(null);
+    setRemoved(0);
     setProgress({ phase: "reading" });
     try {
-      await importExport(file, library, {
+      const outcome = await importExport(file, library, {
         signal: controller.signal,
         fetchFacts: (id, signal) =>
           fetchDetails(id, signal, lang, browserRegion(loadSettings().region)).then(factsOf),
@@ -107,7 +110,10 @@ export function ImportBlock() {
           if (!controller.signal.aborted) setProgress(next);
         },
       });
-      if (!controller.signal.aborted) await refresh();
+      if (!controller.signal.aborted) {
+        setRemoved(outcome.removed ?? 0);
+        await refresh();
+      }
     } catch (reason) {
       if (!controller.signal.aborted) setError(describeImportError(reason, t));
     } finally {
@@ -269,6 +275,7 @@ export function ImportBlock() {
             {t.import.usable(stored.stats.drawable)}
             {stored.stats.toCheck > 0 && t.import.toCheck(stored.stats.toCheck)}
           </p>
+          {removed > 0 && <p>{t.import.removed(removed)}</p>}
         </div>
       )}
     </section>

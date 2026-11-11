@@ -164,6 +164,8 @@ export const fr = {
     lists: "Listes",
     likes: "Likes",
     seen: "Vus",
+    removed: (count: number) =>
+      `${count} ${count > 1 ? "entrées de listes ont été retirées" : "entrée de liste a été retirée"} : ${count > 1 ? "elles ne figurent" : "elle ne figure"} plus dans votre fichier.`,
     usable: (count: number) => `Le tirage peut utiliser ${count} ${count > 1 ? "films" : "film"}.`,
     toCheck: (count: number) =>
       ` ${count} ${count > 1 ? "films sont" : "film est"} à vérifier : la correspondance n’est pas certaine.`,
