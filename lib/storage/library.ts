@@ -237,6 +237,38 @@ export function createLibrary(
       await save([], [clean]);
     },
 
+    /** Makes the store hold exactly these records, in one transaction so a failure changes nothing. */
+    async replaceAll(films: StoredFilm[], lists: StoredList[]) {
+      if (!memory) {
+        try {
+          const db = await open();
+          const transaction = db.transaction([FILMS_STORE, LISTS_STORE], "readwrite");
+          const done = new Promise<void>((resolve, reject) => {
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error);
+          });
+          const filmStore = transaction.objectStore(FILMS_STORE);
+          const listStore = transaction.objectStore(LISTS_STORE);
+          filmStore.clear();
+          listStore.clear();
+          films.forEach((film) => filmStore.put(film));
+          lists.forEach((list) => listStore.put(list));
+          await done;
+          cached = null;
+          channel?.postMessage("changed");
+          return;
+        } catch {
+          cached = null;
+          await degrade();
+        }
+      }
+      memory = {
+        films: new Map(films.map((film) => [film.key, film])),
+        lists: new Map(lists.map((list) => [list.id, list])),
+      };
+    },
+
     /** Deletes the database and forgets the in-memory copy. */
     async reset() {
       memory = null;

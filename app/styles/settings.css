@@ -34,3 +34,17 @@
   color: var(--text);
   font-weight: 700;
 }
+.backup {
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
+}
+.backup h3,
+.backup p {
+  margin: 0;
+}
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+}

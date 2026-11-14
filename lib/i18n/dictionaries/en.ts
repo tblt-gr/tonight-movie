@@ -132,6 +132,24 @@ export const en: Dictionary = {
     confirm: "This can’t be undone. Erase everything?",
     confirmYes: "Yes, erase everything",
     cancel: "Cancel",
+    backupTitle: "Backup",
+    backupText:
+      "Download your services, settings and films as a file, then load it in another browser. The file stays on your device.",
+    backupExport: "Export my data",
+    backupImport: "Import my data",
+    backupExported: "File downloaded.",
+    backupConfirm:
+      "Importing this file replaces all your current services, settings and films. Continue?",
+    backupConfirmYes: "Yes, replace",
+    backupDone: "Data imported.",
+    backupErrors: {
+      too_large: "This file is too large.",
+      unreadable: "This file cannot be read.",
+      unrecognized: "This file is not a Tonight’s Movie backup.",
+      newer: "This backup comes from a newer version of the app.",
+      invalid: "This file is damaged: nothing was changed.",
+      generic: "The import failed: nothing was changed.",
+    },
     erase: "Erase my data",
   },
   import: {

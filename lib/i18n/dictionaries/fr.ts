@@ -133,6 +133,24 @@ export const fr = {
     confirm: "Cette action est définitive. Tout effacer ?",
     confirmYes: "Oui, tout effacer",
     cancel: "Annuler",
+    backupTitle: "Sauvegarde",
+    backupText:
+      "Téléchargez vos services, vos réglages et vos films dans un fichier, puis rechargez-le dans un autre navigateur. Le fichier reste sur votre appareil.",
+    backupExport: "Exporter mes données",
+    backupImport: "Importer mes données",
+    backupExported: "Fichier téléchargé.",
+    backupConfirm:
+      "Importer ce fichier remplace tous vos services, réglages et films actuels. Continuer ?",
+    backupConfirmYes: "Oui, remplacer",
+    backupDone: "Données importées.",
+    backupErrors: {
+      too_large: "Ce fichier est trop volumineux.",
+      unreadable: "Ce fichier n’est pas lisible.",
+      unrecognized: "Ce fichier n’est pas une sauvegarde de Tonight’s Movie.",
+      newer: "Cette sauvegarde vient d’une version plus récente de l’application.",
+      invalid: "Ce fichier est abîmé : rien n’a été modifié.",
+      generic: "L’import a échoué : rien n’a été modifié.",
+    },
     erase: "Effacer mes données",
   },
   import: {
