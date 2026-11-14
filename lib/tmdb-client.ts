@@ -244,6 +244,16 @@ export function createTmdbClient(
         return combine(entry.data, offers.data);
       if (fresh(entry, DAY_MS)) return entry.data;
     },
+    /** What `getMovie` would answer from the cache, offers included, or nothing if it needs a request. */
+    async readFreshMovie(url: string): Promise<MovieDetails | undefined> {
+      const entry = await cache.read(cacheKey(url));
+      if (!fresh(entry, METADATA_TTL_MS) || !movie(entry?.data)) return;
+      if (fresh(entry, DAY_MS)) return entry.data;
+      const offers = await cache.read(cacheKey(offersUrl(url)));
+      if (fresh(offers, DAY_MS) && availability(offers?.data) && offers.at >= entry!.at) {
+        return combine(entry.data, offers.data);
+      }
+    },
     async getMovie(url: string, signal?: AbortSignal): Promise<MovieDetails> {
       const started = generation;
       const id = Number(url.match(/\/api\/movie\/(\d+)/)?.[1]);

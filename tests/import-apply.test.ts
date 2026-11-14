@@ -4,6 +4,7 @@ import {
   describeImportError,
   importExport,
   matchStats,
+  recheckFilms,
   planImport,
   summarizeImport,
   listIgnoredFilms,
@@ -241,6 +242,29 @@ describe("importExport", () => {
     expect(films.find((f) => f.title === "Stalker")?.lists).toEqual(["watchlist"]);
   });
 
+  it("reads the facts of every stored film that has none, not only those in the file", async () => {
+    stubSearch();
+    const store = createLibrary(() => new IDBFactory());
+    await store.upsertFilms([
+      {
+        key: "old",
+        title: "Old",
+        year: 1990,
+        tmdbId: 9,
+        confidence: 1,
+        lists: ["liked"],
+        seen: false,
+      },
+    ]);
+    await importExport(csv("watchlist.csv", watchlist), store);
+    expect((await store.getFilms()).every((film) => !film.facts)).toBe(true);
+
+    const facts = { runtime: 100, rating: 7, year: 2000 };
+    const fetchFacts = vi.fn(async () => facts);
+    await importExport(csv("watchlist.csv", watchlist), store, { fetchFacts });
+    expect((await store.getFilms()).map((film) => film.facts)).toEqual([facts, facts]);
+  });
+
   it("forgets a film left in no list unless it is seen", async () => {
     stubSearch();
     const store = createLibrary(() => new IDBFactory());
@@ -267,6 +291,45 @@ describe("importExport", () => {
     });
     expect(await store.getFilms()).toEqual([]);
     expect(await store.getLists()).toEqual([]);
+  });
+});
+
+describe("recheckFilms", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads the facts of the films it matches", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          results: [
+            {
+              tmdbId: 3,
+              title: "Stalker",
+              originalTitle: null,
+              year: 1979,
+              poster: null,
+              rating: null,
+            },
+          ],
+        }),
+      ),
+    );
+    const store = createLibrary(() => new IDBFactory());
+    await store.upsertFilms([
+      {
+        key: "a",
+        title: "Stalker",
+        year: 1979,
+        tmdbId: null,
+        confidence: null,
+        lists: ["watchlist"],
+        seen: false,
+      },
+    ]);
+    const facts = { runtime: 160, rating: 8, year: 1979 };
+    await recheckFilms(store, { fetchFacts: async () => facts });
+    expect((await store.getFilms())[0]).toMatchObject({ tmdbId: 3, facts });
   });
 });
 

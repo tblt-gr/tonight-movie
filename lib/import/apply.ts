@@ -152,6 +152,23 @@ export function planImport(
   return { films, lists, removals };
 }
 
+/**
+ * Reads the facts of every stored film that has none, not only the films of this file, so a
+ * library imported before facts were kept, or one whose lookup failed, catches up.
+ */
+async function enrichStored(
+  store: Resolver,
+  options: Pick<ImportOptions, "fetchFacts" | "isWarm" | "onProgress" | "signal">,
+) {
+  if (!options.fetchFacts) return;
+  const keys = (await store.getFilms()).map((film) => film.key);
+  await enrichFilms(keys, store, options.fetchFacts, {
+    signal: options.signal,
+    isWarm: options.isWarm,
+    onProgress: (done, total) => options.onProgress?.({ phase: "details", done, total }),
+  });
+}
+
 export type ImportOptions = {
   limits?: { maxFileBytes: number };
   onProgress?: (progress: ImportProgress) => void;
@@ -159,6 +176,8 @@ export type ImportOptions = {
   now?: () => number;
   /** Reads the details of each matched film to keep its runtime, rating and year. */
   fetchFacts?: FactsFetcher;
+  /** Whether a film's details and offers are cached, so only the others are looked up. */
+  isWarm?: (tmdbId: number) => Promise<boolean>;
 };
 
 const SUPPORTED = /\.(zip|csv)$/i;
@@ -205,12 +224,7 @@ export async function importExport(
     signal: options.signal,
     onProgress: (done, total) => options.onProgress?.({ phase: "matching", done, total }),
   });
-  if (options.fetchFacts) {
-    await enrichFilms(keys, store, options.fetchFacts, {
-      signal: options.signal,
-      onProgress: (done, total) => options.onProgress?.({ phase: "details", done, total }),
-    });
-  }
+  await enrichStored(store, options);
   return {
     summary,
     stats: matchStats(await store.getFilms(), new Set(keys)),
@@ -240,7 +254,7 @@ export const listIgnoredFilms = (films: StoredFilm[]) =>
  */
 export async function recheckFilms(
   store: ImportStore,
-  options: Pick<ImportOptions, "onProgress" | "signal"> = {},
+  options: Pick<ImportOptions, "onProgress" | "signal" | "fetchFacts" | "isWarm"> = {},
 ): Promise<MatchStats> {
   const unsure = unsureFilms(await store.getFilms());
   await store.upsertFilms(unsure.map((film) => ({ ...film, tmdbId: null, confidence: null })));
@@ -249,5 +263,6 @@ export async function recheckFilms(
     signal: options.signal,
     onProgress: (done, total) => options.onProgress?.({ phase: "matching", done, total }),
   });
+  await enrichStored(store, options);
   return matchStats(await store.getFilms(), new Set(keys));
 }

@@ -217,13 +217,11 @@ const factSort = (sort: BrowseSort): sort is "runtime" | "rating" =>
 /**
  * Duration and rating come from stored facts. Until every film has them, only a pass over
  * the whole source gives the top of the order; afterwards the order is known with no lookup.
+ * A film that is not a sure match never gets facts, so it does not hold the order back.
  */
 export const needsFullSort = (sort: BrowseSort, films: StoredFilm[]) =>
   factSort(sort) &&
-  films.some(
-    (film) =>
-      !film.facts && (film.confidence === null || (film.confidence === 1 && film.tmdbId !== null)),
-  );
+  films.some((film) => !film.facts && film.confidence === 1 && film.tmdbId !== null);
 
 /** Title and year can order the source before any network lookup. */
 function walkOrder(films: StoredFilm[], sort: BrowseSort, order: BrowseOrder): StoredFilm[] {

@@ -22,6 +22,16 @@ export const cachedDetails = (
   region = DEFAULT_REGION,
 ) => tmdbClient.peekMovie(withContext(`/api/movie/${tmdbId}`, lang, region));
 
+/** The details and offers of a film when the cache holds them fresh, with no request. */
+export const readFreshDetails = (
+  tmdbId: number,
+  lang: Locale = DEFAULT_LOCALE,
+  region = DEFAULT_REGION,
+) => tmdbClient.readFreshMovie(withContext(`/api/movie/${tmdbId}`, lang, region));
+
+export const hasFreshDetails = async (tmdbId: number, lang?: Locale, region?: string) =>
+  (await readFreshDetails(tmdbId, lang, region)) !== undefined;
+
 export async function fetchDetails(
   tmdbId: number,
   signal?: AbortSignal,

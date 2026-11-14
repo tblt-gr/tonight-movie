@@ -43,6 +43,24 @@ describe("enrichFilms", () => {
     expect(store.map.get("f1")?.facts).toEqual(FACTS);
   });
 
+  it("also looks up a film that has facts when its details are not at hand", async () => {
+    const store = memoryStore([
+      stored("f1", { facts: FACTS }),
+      stored("f2", { facts: FACTS }),
+      stored("f3"),
+    ]);
+    const fetchFacts = vi.fn<(id: number) => Promise<typeof FACTS>>(async () => ({
+      runtime: 1,
+      rating: 1,
+      year: 1,
+    }));
+    const isWarm = vi.fn(async (id: number) => id === 2);
+    await enrichFilms(["f1", "f2", "f3"], store, fetchFacts, { intervalMs: 0, isWarm });
+    expect(fetchFacts.mock.calls.map(([id]) => id).sort()).toEqual([1, 3]);
+    expect(store.map.get("f1")?.facts).toEqual(FACTS);
+    expect(store.map.get("f3")?.facts).toEqual({ runtime: 1, rating: 1, year: 1 });
+  });
+
   it("leaves a film without facts when its lookup fails, so a later call retries", async () => {
     const store = memoryStore([stored("f1"), stored("f2")]);
     const fetchFacts = vi.fn(async (id: number) => {

@@ -8,7 +8,7 @@ import {
   type DetailState,
   type ListPlan,
 } from "@/lib/browse";
-import { cachedDetails, fetchDetails, mapLimit } from "@/lib/browse-client";
+import { cachedDetails, fetchDetails, mapLimit, readFreshDetails } from "@/lib/browse-client";
 import type { Locale } from "@/lib/i18n/config";
 import { factsOf } from "@/lib/enrich";
 import { fetchSearch, resolveFilms } from "@/lib/resolve";
@@ -65,6 +65,15 @@ export function useListPlan({
     const controller = new AbortController();
     const { signal } = controller;
     void (async () => {
+      // One read of the cache for the whole source, so filtering never waits on a film at a time.
+      await Promise.all(
+        listFilms.map(async ({ confidence, tmdbId }) => {
+          if (confidence !== 1 || tmdbId === null || details.has(tmdbId)) return;
+          const cached = await readFreshDetails(tmdbId, lang, region);
+          if (cached && !details.has(tmdbId)) details.set(tmdbId, cached);
+        }),
+      );
+      if (signal.aborted) return;
       let current = listFilms;
       for (;;) {
         const judged = current.map((film) =>
