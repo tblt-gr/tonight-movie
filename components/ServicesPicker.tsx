@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { BackupBlock } from "@/components/BackupBlock";
 import { useI18n } from "@/components/I18nProvider";
 import { MultiSelect } from "@/components/MultiSelect";
 import { fetchProviders } from "@/lib/browse-client";
@@ -138,6 +139,15 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
       <section className="reset" aria-labelledby={`${ids}-reset`}>
         <h2 id={`${ids}-reset`}>{t.services.dataTitle}</h2>
         <p>{t.services.dataText}</p>
+        <BackupBlock
+          onRestored={() => {
+            const restored = loadSettings();
+            setSelected(new Set(restored.services));
+            setRegion(browserRegion(restored.region));
+            setConfirming(false);
+            setError(null);
+          }}
+        />
         {confirming ? (
           <div role="alertdialog" aria-labelledby={`${ids}-confirm`} className="reset-confirm">
             <p id={`${ids}-confirm`}>{t.services.confirm}</p>
