@@ -390,6 +390,15 @@ describe("planListPage", () => {
     expect(needsFullSort("runtime", [many[0]])).toBe(false);
   });
 
+  it("does not wait for films that will never have facts", () => {
+    const films = [
+      stored({ title: "A", tmdbId: 1, facts: { runtime: 90, rating: 5, year: 2000 } }),
+      stored({ title: "Unmatched", tmdbId: null, confidence: null }),
+      stored({ title: "Unsure", tmdbId: 3, confidence: 0.5 }),
+    ];
+    expect(needsFullSort("runtime", films)).toBe(false);
+  });
+
   it("places a short film from a later batch first among all loaded films", () => {
     const many = Array.from({ length: 30 }, (_, i) =>
       stored({ title: i === 20 ? "The Kid" : `Film ${i}`, tmdbId: i + 1 }),

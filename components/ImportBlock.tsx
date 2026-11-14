@@ -81,6 +81,8 @@ export function ImportBlock() {
     try {
       await recheckFilms(library, {
         signal: controller.signal,
+        fetchFacts: (id, signal) =>
+          fetchDetails(id, signal, lang, browserRegion(loadSettings().region)).then(factsOf),
         onProgress: (next) => {
           if (!controller.signal.aborted) setProgress(next);
         },
