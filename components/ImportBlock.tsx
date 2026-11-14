@@ -14,7 +14,7 @@ import {
   type ImportOutcome,
   type ImportProgress,
 } from "@/lib/import/apply";
-import { fetchDetails } from "@/lib/browse-client";
+import { fetchDetails, hasFreshDetails } from "@/lib/browse-client";
 import { factsOf } from "@/lib/enrich";
 import { browserRegion } from "@/lib/regions";
 import { onReset } from "@/lib/storage";
@@ -83,6 +83,7 @@ export function ImportBlock() {
         signal: controller.signal,
         fetchFacts: (id, signal) =>
           fetchDetails(id, signal, lang, browserRegion(loadSettings().region)).then(factsOf),
+        isWarm: (id) => hasFreshDetails(id, lang, browserRegion(loadSettings().region)),
         onProgress: (next) => {
           if (!controller.signal.aborted) setProgress(next);
         },
@@ -108,6 +109,7 @@ export function ImportBlock() {
         signal: controller.signal,
         fetchFacts: (id, signal) =>
           fetchDetails(id, signal, lang, browserRegion(loadSettings().region)).then(factsOf),
+        isWarm: (id) => hasFreshDetails(id, lang, browserRegion(loadSettings().region)),
         onProgress: (next) => {
           if (!controller.signal.aborted) setProgress(next);
         },

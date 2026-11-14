@@ -12,6 +12,11 @@ export type FactsFetcher = (tmdbId: number, signal?: AbortSignal) => Promise<Fil
 
 export type EnrichOptions = {
   signal?: AbortSignal;
+  /**
+   * Whether a film's details and offers are already at hand. A film with facts is looked up
+   * again when they are not, so browsing does not have to wait for its offers.
+   */
+  isWarm?: (tmdbId: number) => Promise<boolean>;
   /** Minimum gap between two lookups. */
   intervalMs?: number;
   onProgress?: (done: number, total: number) => void;
@@ -21,8 +26,8 @@ const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, 
 
 /**
  * Stores the runtime, rating and year of every matched film that has none yet, so a list
- * can be sorted later without a lookup. A lookup that fails leaves the film as it was and a
- * later call tries again.
+ * can be sorted later without a lookup, and warms the details and offers of the others.
+ * A lookup that fails leaves the film as it was and a later call tries again.
  */
 export async function enrichFilms(
   keys: string[],
@@ -30,11 +35,16 @@ export async function enrichFilms(
   fetchFacts: FactsFetcher,
   options: EnrichOptions = {},
 ): Promise<void> {
-  const { signal, intervalMs = DEFAULT_INTERVAL_MS, onProgress } = options;
+  const { signal, intervalMs = DEFAULT_INTERVAL_MS, isWarm, onProgress } = options;
   const wanted = new Set(keys);
-  const pending = (await store.getFilms()).filter(
-    (film) => wanted.has(film.key) && film.confidence === 1 && film.tmdbId !== null && !film.facts,
+  const matched = (await store.getFilms()).filter(
+    (film) => wanted.has(film.key) && film.confidence === 1 && film.tmdbId !== null,
   );
+  const pending: typeof matched = [];
+  for (const film of matched) {
+    if (signal?.aborted) break;
+    if (!film.facts || (isWarm && !(await isWarm(film.tmdbId!)))) pending.push(film);
+  }
   let next = 0;
   let done = 0;
   let slot = Date.now();
@@ -54,7 +64,7 @@ export async function enrichFilms(
       if (signal?.aborted) return;
       try {
         const facts = await fetchFacts(film.tmdbId!, signal);
-        unsaved.push({ ...film, facts, lists: [] });
+        if (!film.facts) unsaved.push({ ...film, facts, lists: [] });
         if (unsaved.length >= WRITE_BATCH) await flush();
       } catch {
         // Left without facts on purpose: only a read detail is recorded.

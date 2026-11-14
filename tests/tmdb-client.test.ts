@@ -44,6 +44,22 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
+describe("hasFreshMovie", () => {
+  it("is true only while the details and their offers need no request", async () => {
+    expect(await client.hasFreshMovie(URL)).toBe(false);
+    await client.getMovie(URL);
+    expect(await client.hasFreshMovie(URL)).toBe(true);
+    const reloaded = createTmdbClient(
+      fetcher,
+      { sleep: async () => undefined },
+      createPublicCache(() => factory),
+    );
+    expect(await reloaded.hasFreshMovie(URL)).toBe(true);
+    now += DAY_MS + 1;
+    expect(await reloaded.hasFreshMovie(URL)).toBe(false);
+  });
+});
+
 describe("persistent TMDB cache", () => {
   it("reuses a complete movie without another request, including after a reload", async () => {
     expect(await client.getMovie(URL)).toEqual(details());
