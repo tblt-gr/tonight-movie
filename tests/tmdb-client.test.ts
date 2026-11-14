@@ -44,19 +44,19 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-describe("hasFreshMovie", () => {
-  it("is true only while the details and their offers need no request", async () => {
-    expect(await client.hasFreshMovie(URL)).toBe(false);
+describe("readFreshMovie", () => {
+  it("answers from the cache only while the details and their offers need no request", async () => {
+    expect(await client.readFreshMovie(URL)).toBeUndefined();
     await client.getMovie(URL);
-    expect(await client.hasFreshMovie(URL)).toBe(true);
+    expect(await client.readFreshMovie(URL)).toEqual(details());
     const reloaded = createTmdbClient(
       fetcher,
       { sleep: async () => undefined },
       createPublicCache(() => factory),
     );
-    expect(await reloaded.hasFreshMovie(URL)).toBe(true);
+    expect(await reloaded.readFreshMovie(URL)).toEqual(details());
     now += DAY_MS + 1;
-    expect(await reloaded.hasFreshMovie(URL)).toBe(false);
+    expect(await reloaded.readFreshMovie(URL)).toBeUndefined();
   });
 });
 
