@@ -3,6 +3,7 @@
 import { Upload } from "lucide-react";
 import { useEffect, useId, useRef, useState, type DragEvent } from "react";
 import { ExportGuide } from "@/components/ExportGuide";
+import { MatchDialog } from "@/components/MatchDialog";
 import { useI18n } from "@/components/I18nProvider";
 import {
   describeImportError,
@@ -42,6 +43,8 @@ export function ImportBlock() {
   const [removed, setRemoved] = useState(0);
   const [dragging, setDragging] = useState(false);
   const running = useRef<AbortController | null>(null);
+  const [fixing, setFixing] = useState<StoredFilm | null>(null);
+  const fixOpener = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -213,14 +216,27 @@ export function ImportBlock() {
                     {film.title}
                     {film.year !== null && <span> ({film.year})</span>}
                   </span>
-                  <button
-                    type="button"
-                    className="button"
-                    aria-label={t.import.ignoreFilm(film.title)}
-                    onClick={() => void setIgnored(film, true)}
-                  >
-                    {t.import.ignore}
-                  </button>
+                  <span className="import-actions">
+                    <button
+                      type="button"
+                      className="button"
+                      aria-label={t.import.fixFilm(film.title)}
+                      onClick={(event) => {
+                        fixOpener.current = event.currentTarget;
+                        setFixing(film);
+                      }}
+                    >
+                      {t.import.fix}
+                    </button>
+                    <button
+                      type="button"
+                      className="button"
+                      aria-label={t.import.ignoreFilm(film.title)}
+                      onClick={() => void setIgnored(film, true)}
+                    >
+                      {t.import.ignore}
+                    </button>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -281,6 +297,17 @@ export function ImportBlock() {
           </p>
           {removed > 0 && <p>{t.import.removed(removed)}</p>}
         </div>
+      )}
+      {fixing && (
+        <MatchDialog
+          film={fixing}
+          opener={fixOpener}
+          onClose={() => setFixing(null)}
+          onDone={() => {
+            setFixing(null);
+            void refresh();
+          }}
+        />
       )}
     </section>
   );

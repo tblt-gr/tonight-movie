@@ -158,3 +158,75 @@
 .import-summary p {
   color: var(--text);
 }
+.import-unsure li .import-actions {
+  display: flex;
+  flex: none;
+  gap: var(--s2);
+  color: inherit;
+}
+.match-dialog {
+  width: min(560px, calc(100% - 32px));
+  justify-items: stretch;
+}
+.match-list {
+  display: grid;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.match-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  width: 100%;
+  padding: var(--s2);
+  border: 2px solid var(--text);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  transition: background-color var(--cut) steps(2);
+}
+.match-choice:hover:not(:disabled) {
+  background: var(--text);
+  color: var(--bg);
+}
+.match-poster {
+  flex: none;
+  width: 56px;
+  aspect-ratio: 2 / 3;
+  background: var(--panel);
+  overflow: hidden;
+}
+.match-poster img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.match-info {
+  display: grid;
+  gap: var(--s1);
+  min-width: 0;
+}
+.match-search {
+  display: grid;
+  gap: var(--s3);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--line);
+}
+.match-search p {
+  margin: 0;
+}
+.match-search label {
+  display: grid;
+  gap: var(--s1);
+}
+.match-search input {
+  min-height: 48px;
+  padding: var(--s3) var(--s4);
+  border: 2px solid var(--text);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+}
