@@ -3,6 +3,23 @@ import type { Film, Offer, Provider } from "@/lib/types";
 
 export const STREAM_TYPES = new Set(["FLATRATE", "FREE", "ADS"]);
 export const RENT_TYPES = new Set(["RENT", "BUY"]);
+const PRIME_VIDEO_IDS = new Set(["9", "119", "2100"]);
+
+/** Prime channels are separate subscriptions; this only changes their display priority. */
+export function streamingOffers(film: { offers: Offer[] }, services: ReadonlySet<string>): Offer[] {
+  const hasPrime = [...services].some((id) => PRIME_VIDEO_IDS.has(id));
+  const unique = new Map<string, Offer>();
+  for (const offer of film.offers) {
+    if (STREAM_TYPES.has(offer.type) && !unique.has(offer.id)) unique.set(offer.id, offer);
+  }
+  const priority = (offer: Offer) =>
+    services.has(offer.id)
+      ? 0
+      : hasPrime && /amazon channel|prime video channels?/i.test(offer.name)
+        ? 1
+        : 2;
+  return [...unique.values()].sort((a, b) => priority(a) - priority(b));
+}
 const PHYSICAL_ONLY = new Set(["fnac", "eleclerc"]);
 
 export const PRESETS = [

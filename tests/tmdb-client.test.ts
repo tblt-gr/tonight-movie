@@ -60,6 +60,34 @@ describe("readFreshMovie", () => {
   });
 });
 
+describe("readMovieFacts", () => {
+  it("recovers sorting facts across reloads even after metadata and offers expire", async () => {
+    await client.getMovie(URL);
+    now += METADATA_TTL_MS + 1;
+    const reloaded = createTmdbClient(
+      fetcher,
+      {},
+      createPublicCache(() => factory),
+    );
+    expect(await reloaded.readMovieFacts(URL)).toEqual({ runtime: 100, rating: 7, year: 2000 });
+    expect(await reloaded.readFreshMovie(URL)).toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not request missing facts or accept malformed, mismatched or future entries", async () => {
+    expect(await client.readMovieFacts(URL)).toBeUndefined();
+    for (const entry of [
+      { key: URL, at: now, data: { ...details(), runtime: "broken" } },
+      { key: URL, at: now, data: details(2) },
+      { key: URL, at: now + DAY_MS, data: details() },
+    ]) {
+      await cache.write(entry);
+      expect(await client.readMovieFacts(URL)).toBeUndefined();
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+});
+
 describe("persistent TMDB cache", () => {
   it("reuses a complete movie without another request, including after a reload", async () => {
     expect(await client.getMovie(URL)).toEqual(details());

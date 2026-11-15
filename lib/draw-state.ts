@@ -1,4 +1,4 @@
-import { RENT_TYPES, STREAM_TYPES } from "@/lib/catalog";
+import { RENT_TYPES, streamingOffers } from "@/lib/catalog";
 import { SERVICES_SOURCE_ID, tmdbKey, type DrawInput, type NoneReason } from "@/lib/draw";
 import type { Dictionary } from "@/lib/i18n";
 import { LIKED_ID, WATCHLIST_ID } from "@/lib/import/apply";
@@ -176,11 +176,9 @@ export function offerGroups(film: Pick<MovieDetails, "offers">, services: Readon
   const owned = new Map<string, Offer>();
   const other = new Map<string, Offer>();
   const rental = new Map<string, Offer>();
-  for (const offer of film.offers) {
-    if (STREAM_TYPES.has(offer.type)) {
-      const group = services.has(offer.id) ? owned : other;
-      if (!group.has(offer.id)) group.set(offer.id, offer);
-    }
+  for (const offer of streamingOffers(film, services)) {
+    const group = services.has(offer.id) ? owned : other;
+    group.set(offer.id, offer);
   }
   for (const offer of film.offers) {
     if (RENT_TYPES.has(offer.type) && !owned.has(offer.id) && !other.has(offer.id)) {

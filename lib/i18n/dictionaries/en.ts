@@ -285,6 +285,7 @@ export const en: Dictionary = {
   offers: {
     label: "Where to watch",
     mine: "My platforms",
+    streaming: "Streaming on",
     watchOn: (name: string) => `Watch on ${name}`,
     rentOrBuyOn: (name: string) => `Rent or buy on ${name}`,
     checkOnTmdb: "Check availability on TMDB",
@@ -324,11 +325,12 @@ export const en: Dictionary = {
     films: "films",
     results: "Results",
     searching: "Looking for films…",
-    sorting: (judged: number, total: number) => `Sorting: ${judged} of ${total} films checked…`,
+    sorting: (judged: number, total: number) =>
+      `Preparing sort: data saved for ${judged} of ${total} films…`,
     shownMore: (count: number) => `${count} films shown, looking for more…`,
     shown: (count: number) => `${count} film${count > 1 ? "s" : ""} shown.`,
     sortHint:
-      "Sorting by duration or rating checks the whole source before showing the first films.",
+      "Sorting uses saved runtimes and ratings. Availability is checked as results are loaded.",
     emptySource: "This source has no films.",
     emptyFilters: "No film matches these filters.",
   },
