@@ -50,7 +50,7 @@ function OfferList({
 
 /**
  * Where to watch a film: on the visitor's services first, then on other services, then to rent
- * or buy. Without a confirmed offer on the visitor's services it says À vérifier.
+ * or buy. A confirmed offer elsewhere stays visible even without an owned subscription.
  */
 export function FilmOffers({
   film,
@@ -72,12 +72,22 @@ export function FilmOffers({
   const owned = verified ? groups.owned : [];
   const other = verified ? groups.other : [];
   const rental = verified ? groups.rental : [];
+  const primary = owned.length > 0 ? owned : other.length > 0 ? other : rental;
+  const primaryTitle =
+    owned.length > 0 ? t.offers.mine : other.length > 0 ? t.offers.streaming : t.offers.rentOrBuy;
+  const moreStreaming = owned.length > 0 ? other : [];
+  const moreRental = owned.length > 0 || other.length > 0 ? rental : [];
   return (
     <section aria-label={t.offers.label} className="offers">
-      {owned.length > 0 ? (
+      {primary.length > 0 ? (
         <div className="offers-owned">
-          <h2 className="offers-title">{t.offers.mine}</h2>
-          <OfferList film={film} offers={owned} direct={direct} label={t.offers.watchOn} />
+          <h2 className="offers-title">{primaryTitle}</h2>
+          <OfferList
+            film={film}
+            offers={primary}
+            direct={direct}
+            label={owned.length > 0 || other.length > 0 ? t.offers.watchOn : t.offers.rentOrBuyOn}
+          />
         </div>
       ) : (
         <p className="tag-check">
@@ -93,20 +103,25 @@ export function FilmOffers({
       )}
       <div className="offers-more">
         {between}
-        {(other.length > 0 || rental.length > 0) && (
-          <Accordion title={t.offers.also} count={other.length + rental.length}>
-            {other.length > 0 && (
+        {(moreStreaming.length > 0 || moreRental.length > 0) && (
+          <Accordion title={t.offers.also} count={moreStreaming.length + moreRental.length}>
+            {moreStreaming.length > 0 && (
               <div className="offers-group">
                 <h3 className="offers-title">{t.offers.alsoStreaming}</h3>
-                <OfferList film={film} offers={other} direct={direct} label={t.offers.watchOn} />
+                <OfferList
+                  film={film}
+                  offers={moreStreaming}
+                  direct={direct}
+                  label={t.offers.watchOn}
+                />
               </div>
             )}
-            {rental.length > 0 && (
+            {moreRental.length > 0 && (
               <div className="offers-group">
                 <h3 className="offers-title">{t.offers.rentOrBuy}</h3>
                 <OfferList
                   film={film}
-                  offers={rental}
+                  offers={moreRental}
                   direct={direct}
                   label={t.offers.rentOrBuyOn}
                 />

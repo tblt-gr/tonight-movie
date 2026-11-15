@@ -288,6 +288,7 @@ export const fr = {
   offers: {
     label: "Où le regarder",
     mine: "Mes plateformes",
+    streaming: "En streaming sur",
     watchOn: (name: string) => `Regarder sur ${name}`,
     rentOrBuyOn: (name: string) => `Louer ou acheter sur ${name}`,
     checkOnTmdb: "Voir la disponibilité sur TMDB",
@@ -328,12 +329,12 @@ export const fr = {
     results: "Résultats",
     searching: "Recherche des films en cours…",
     sorting: (judged: number, total: number) =>
-      `Tri en cours : ${judged} films analysés sur ${total}…`,
+      `Préparation du tri : ${judged} films renseignés sur ${total}…`,
     shownMore: (count: number) => `${count} films affichés, recherche de la suite en cours…`,
     shown: (count: number) =>
       `${count} film${count > 1 ? "s" : ""} affiché${count > 1 ? "s" : ""}.`,
     sortHint:
-      "Le tri par durée ou par note analyse toute la source avant d’afficher les premiers films.",
+      "Le tri utilise les durées et les notes enregistrées. Les disponibilités sont vérifiées au fil des résultats.",
     emptySource: "Cette source ne contient aucun film.",
     emptyFilters: "Aucun film ne correspond à ces filtres.",
   },

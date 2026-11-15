@@ -1,5 +1,6 @@
 import { fetchWithRetry, type RetryOptions } from "@/lib/fetch-retry";
 import { publicCache, type CacheEntry } from "@/lib/storage/public-cache";
+import { factsOf } from "@/lib/enrich";
 import type { MovieDetails, MovieAvailability } from "@/lib/types";
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
@@ -243,6 +244,14 @@ export function createTmdbClient(
       if (fresh(offers, DAY_MS) && availability(offers?.data) && offers.at >= entry!.at)
         return combine(entry.data, offers.data);
       if (fresh(entry, DAY_MS)) return entry.data;
+    },
+    /** Stable sorting facts remain useful even when cached offers need a refresh. */
+    async readMovieFacts(url: string) {
+      const entry = await cache.read(cacheKey(url));
+      const id = Number(url.match(/\/api\/movie\/(\d+)/)?.[1]);
+      if (entry && entry.at <= Date.now() && movie(entry.data) && entry.data.tmdbId === id) {
+        return factsOf(entry.data);
+      }
     },
     /** What `getMovie` would answer from the cache, offers included, or nothing if it needs a request. */
     async readFreshMovie(url: string): Promise<MovieDetails | undefined> {

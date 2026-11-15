@@ -11,6 +11,7 @@ import {
   DEFAULT_FILTERS,
   PAGE_SIZE,
   filterGlobalResults,
+  offersForCard,
   parseFilters,
   seenIndex,
   serializeFilters,
@@ -22,7 +23,6 @@ import {
 import { fetchProviders } from "@/lib/browse-client";
 import { browserRegion } from "@/lib/regions";
 import { SERVICES_SOURCE_ID, effectiveSources } from "@/lib/draw";
-import { offersToShow } from "@/lib/draw-state";
 import { useGlobalSource } from "@/lib/use-global-source";
 import { useListPlan } from "@/lib/use-list-plan";
 import { onReset } from "@/lib/storage";
@@ -148,10 +148,10 @@ export function FilmBrowser() {
   const failed = mode === "services" && source.failed;
   const busy = !ready || (mode === "lists" ? list.busy : source.busy);
 
-  // Cards show the offers on the visitor's services and on any service the filter picked.
-  const cardServices = new Set([...services, ...filters.services]);
-  const cardOffers = (detail: Parameters<typeof offersToShow>[0] | undefined) =>
-    detail ? offersToShow(detail, cardServices).map(({ name, icon }) => ({ name, icon })) : [];
+  const cardOffers = (detail: Parameters<typeof offersForCard>[0] | undefined) =>
+    detail
+      ? offersForCard(detail, services, filters.services).map(({ name, icon }) => ({ name, icon }))
+      : [];
 
   const cards: CardFilm[] = useMemo(() => {
     if (mode === "lists") {
@@ -159,10 +159,10 @@ export function FilmBrowser() {
         id: film.key,
         tmdbId: film.confidence === 1 ? film.tmdbId : null,
         title: film.title,
-        year: film.year ?? detail?.year ?? null,
+        year: film.year ?? detail?.year ?? film.facts?.year ?? null,
         poster: detail?.poster ?? null,
-        rating: detail?.rating ?? null,
-        runtime: detail?.runtime ?? null,
+        rating: detail ? detail.rating : (film.facts?.rating ?? null),
+        runtime: detail ? detail.runtime : (film.facts?.runtime ?? null),
         offers: cardOffers(detail),
         uncertain,
       }));

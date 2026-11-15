@@ -32,6 +32,12 @@ export const readFreshDetails = (
 export const hasFreshDetails = async (tmdbId: number, lang?: Locale, region?: string) =>
   (await readFreshDetails(tmdbId, lang, region)) !== undefined;
 
+export const readCachedFacts = (
+  tmdbId: number,
+  lang: Locale = DEFAULT_LOCALE,
+  region = DEFAULT_REGION,
+) => tmdbClient.readMovieFacts(withContext(`/api/movie/${tmdbId}`, lang, region));
+
 export async function fetchDetails(
   tmdbId: number,
   signal?: AbortSignal,

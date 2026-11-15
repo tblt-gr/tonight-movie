@@ -5,6 +5,7 @@ import {
   filterGlobalResults,
   parseFilters,
   needsFullSort,
+  offersForCard,
   planListPage,
   seenIndex,
   serializeFilters,
@@ -170,6 +171,10 @@ describe("classifyListFilm", () => {
     expect(classifyListFilm(film, unknown, filters({ services: ["8"] }), mine).verdict).toBe(
       "hide",
     );
+    expect(classifyListFilm(film, unknown, filters({ services: ["all"] }), mine)).toEqual({
+      verdict: "show",
+      uncertain: true,
+    });
   });
 
   it("filters on one service", () => {
@@ -399,6 +404,70 @@ describe("planListPage", () => {
     expect(needsFullSort("runtime", films)).toBe(false);
   });
 
+  it.each(["runtime", "rating"] as const)(
+    "completes only missing %s facts before checking offers for the requested page",
+    (sort) => {
+      const many = Array.from({ length: 972 }, (_, i) =>
+        stored({
+          title: `Film ${i + 1}`,
+          tmdbId: i + 1,
+          facts:
+            i === 971 ? undefined : { runtime: 100 + Math.floor(i / 3), rating: 5, year: 2000 },
+        }),
+      );
+      const first = planListPage(many, new Map(), filters({ sort }), mine, 30, 12);
+      expect(first.full).toBe(true);
+      expect(first.pending.map((film) => film.tmdbId)).toEqual([972]);
+      expect(first.judged).toBe(971);
+
+      const loaded = new Map([[972, details({ runtime: 60, rating: 9 })]]);
+      const next = planListPage(many, loaded, filters({ sort }), mine, 30, 12);
+      expect(next.full).toBe(false);
+      expect(next.shown[0].film.tmdbId).toBe(972);
+      expect(next.pending.map((film) => film.tmdbId)).toEqual(
+        Array.from({ length: 12 }, (_, i) => i + 1),
+      );
+    },
+  );
+
+  it("does not let a failed or excluded film hold up the sort", () => {
+    const many = [
+      stored({ title: "Seen", tmdbId: 1, seen: true }),
+      stored({ title: "Failed", tmdbId: 2 }),
+      stored({ title: "Known", tmdbId: 3, facts: { runtime: 90, rating: 7, year: 2000 } }),
+    ];
+    const plan = planListPage(
+      many,
+      new Map([[2, "failed"]]),
+      filters({ sort: "runtime", hideSeen: true }),
+      mine,
+      30,
+      12,
+    );
+    expect(plan.full).toBe(false);
+    expect(plan.pending.map((film) => film.tmdbId)).toEqual([3]);
+  });
+
+  it("uses saved sorting facts when a failed lookup is shown as uncertain", () => {
+    const many = [
+      stored({ title: "Long", tmdbId: 1, facts: { runtime: 180, rating: 5, year: 2000 } }),
+      stored({ title: "Short", tmdbId: 2, facts: { runtime: 60, rating: 9, year: 2000 } }),
+    ];
+    const plan = planListPage(
+      many,
+      new Map([
+        [1, "failed"],
+        [2, "failed"],
+      ]),
+      filters({ sort: "runtime", services: ["all"] }),
+      mine,
+      30,
+      12,
+    );
+    expect(plan.shown.map(({ film }) => film.title)).toEqual(["Short", "Long"]);
+    expect(plan.shown.every(({ uncertain }) => uncertain)).toBe(true);
+  });
+
   it("places a short film from a later batch first among all loaded films", () => {
     const many = Array.from({ length: 30 }, (_, i) =>
       stored({ title: i === 20 ? "The Kid" : `Film ${i}`, tmdbId: i + 1 }),
@@ -430,6 +499,53 @@ describe("planListPage", () => {
     );
     expect(plan.shown.map(({ film }) => film.title)).toEqual(["F4", "F5", "F3", "F2"]);
     expect(plan.shown.at(-1)?.uncertain).toBe(true);
+  });
+});
+
+describe("offersForCard", () => {
+  const offer = (id: string, name: string, type = "FLATRATE") => ({
+    id,
+    name,
+    type,
+    icon: null,
+    url: null,
+  });
+  const movie = details({
+    offers: [
+      offer("2", "Apple", "RENT"),
+      offer("337", "Disney+"),
+      offer("234", "Arte", "FREE"),
+      offer("1899", "HBO Max Amazon Channel"),
+      offer("8", "Netflix"),
+      offer("8", "Netflix", "ADS"),
+      offer("531", "Paramount+"),
+    ],
+  });
+
+  it("caps any-service icons at three, with owned services then Prime channels first", () => {
+    expect(offersForCard(movie, new Set(["119", "8"]), ["all"]).map((o) => o.id)).toEqual([
+      "8",
+      "1899",
+      "337",
+    ]);
+  });
+  it("does not promote Prime channels without a Prime subscription", () => {
+    expect(offersForCard(movie, mine, ["all"]).map((o) => o.id)).toEqual(["8", "337", "234"]);
+  });
+  it("shows outside streaming offers even with no owned service", () => {
+    expect(offersForCard(movie, new Set(), ["all"]).map((o) => o.id)).toEqual([
+      "337",
+      "234",
+      "1899",
+    ]);
+  });
+  it("keeps ordinary service filters restricted to owned and explicitly selected offers", () => {
+    expect(offersForCard(movie, mine, []).map((o) => o.id)).toEqual(["8"]);
+    expect(offersForCard(movie, mine, ["337"]).map((o) => o.id)).toEqual(["8", "337"]);
+  });
+  it("does not treat Prime channels as owned or unverified offers as confirmed", () => {
+    expect(offersForCard(movie, new Set(["119"]), [])).toEqual([]);
+    expect(offersForCard({ ...movie, availabilityStatus: "unknown" }, mine, ["all"])).toEqual([]);
   });
 });
 

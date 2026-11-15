@@ -1,4 +1,4 @@
-import { availabilityOn, collator, STREAM_TYPES } from "@/lib/catalog";
+import { availabilityOn, collator, streamingOffers, STREAM_TYPES } from "@/lib/catalog";
 import { normalizeTitle } from "@/lib/match";
 import type { StoredFilm } from "@/lib/storage/schema";
 import type { MovieDetails, MovieSummary } from "@/lib/types";
@@ -18,6 +18,21 @@ export type BrowseMode = "lists" | "services";
 
 /** `all` ignores availability; any other chosen service is a provider id. */
 export const SERVICE_ANY = "all";
+
+/** Any-service browsing includes outside subscriptions, with the visitor's services first. */
+export function offersForCard(
+  film: Pick<MovieDetails, "offers" | "availabilityStatus">,
+  services: ReadonlySet<string>,
+  selected: readonly string[],
+) {
+  if (film.availabilityStatus !== "verified") return [];
+  return streamingOffers(film, services)
+    .filter(
+      (offer) =>
+        selected.includes(SERVICE_ANY) || services.has(offer.id) || selected.includes(offer.id),
+    )
+    .slice(0, 3);
+}
 
 const MAX_SERVICES = 20;
 
@@ -185,7 +200,7 @@ export function classifyListFilm(
     return HIDE;
   }
 
-  if (anyService) return SHOW;
+  if (anyService) return detail.availabilityStatus === "unknown" ? FLAGGED : SHOW;
   if (detail.availabilityStatus === "unknown") return unsure;
   const onService =
     filters.services.length === 0
@@ -204,34 +219,45 @@ export type ListPlan = {
   done: boolean;
   /** Every film was judged and no further results remain. */
   exhausted: boolean;
-  /** Films already judged out of the whole source, to report the progress of a full sort. */
+  /** Films with enough data to order, or already judged when the order is known. */
   judged: number;
   total: number;
-  /** The whole source is judged before the first film shows, because some films have no stored facts. */
+  /** Missing sorting facts must be loaded before the first page can be ordered. */
   full: boolean;
 };
 
 const factSort = (sort: BrowseSort): sort is "runtime" | "rating" =>
   sort === "runtime" || sort === "rating";
 
-/**
- * Duration and rating come from stored facts. Until every film has them, only a pass over
- * the whole source gives the top of the order; afterwards the order is known with no lookup.
- * A film that is not a sure match never gets facts, so it does not hold the order back.
- */
-export const needsFullSort = (sort: BrowseSort, films: StoredFilm[]) =>
-  factSort(sort) &&
-  films.some((film) => !film.facts && film.confidence === 1 && film.tmdbId !== null);
+const missingFacts = (film: StoredFilm, details: ReadonlyMap<number, DetailState>) =>
+  !film.facts &&
+  film.confidence === 1 &&
+  film.tmdbId !== null &&
+  details.get(film.tmdbId) === undefined;
 
-/** Title and year can order the source before any network lookup. */
-function walkOrder(films: StoredFilm[], sort: BrowseSort, order: BrowseOrder): StoredFilm[] {
+/** Unmatched films and failed lookups cannot supply facts, so neither holds up the order. */
+export const needsFullSort = (
+  sort: BrowseSort,
+  films: StoredFilm[],
+  details: ReadonlyMap<number, DetailState> = new Map(),
+) => factSort(sort) && films.some((film) => missingFacts(film, details));
+
+/** Stored facts and loaded details order the source before any availability lookup. */
+function walkOrder(
+  films: StoredFilm[],
+  details: ReadonlyMap<number, DetailState>,
+  sort: BrowseSort,
+  order: BrowseOrder,
+): StoredFilm[] {
   if (sort === "title") return [...films].sort((a, b) => collator.compare(a.title, b.title));
   if (sort === "year")
     return [...films].sort((a, b) => nullsLast(a.year, b.year, order === "asc" ? 1 : -1));
   if (factSort(sort)) {
-    return [...films].sort((a, b) =>
-      nullsLast(a.facts?.[sort], b.facts?.[sort], order === "asc" ? 1 : -1),
-    );
+    const value = (film: StoredFilm) => {
+      const detail = film.tmdbId === null ? undefined : details.get(film.tmdbId);
+      return typeof detail === "object" ? detail[sort] : film.facts?.[sort];
+    };
+    return [...films].sort((a, b) => nullsLast(value(a), value(b), order === "asc" ? 1 : -1));
   }
   return films;
 }
@@ -247,25 +273,41 @@ export function planListPage(
 ): ListPlan {
   const shown: Shown[] = [];
   const pending: StoredFilm[] = [];
-  const full = needsFullSort(filters.sort, films);
-  const ordered = walkOrder(films, filters.sort, filters.order);
+  if (needsFullSort(filters.sort, films, details)) {
+    const missing = films.filter(
+      (film) =>
+        missingFacts(film, details) &&
+        classifyListFilm(film, undefined, filters, services).verdict === "pending",
+    );
+    // Complete the order before checking offers: one missing fact must not refresh every film.
+    if (missing.length > 0) {
+      return {
+        shown,
+        pending: missing.slice(0, batch),
+        done: false,
+        exhausted: false,
+        judged: films.length - missing.length,
+        total: films.length,
+        full: true,
+      };
+    }
+  }
+  const ordered = walkOrder(films, details, filters.sort, filters.order);
   let walked = 0;
   const publish = (done: boolean, exhausted: boolean): ListPlan => {
     const sorted = sortShown(shown, filters.sort, filters.order);
-    // A partial sort would reorder under the visitor's eyes: show it once every film is judged.
-    const complete = done && full;
     return {
-      shown: full ? (complete ? sorted.slice(0, limit) : []) : sorted,
+      shown: sorted,
       pending,
       done,
-      exhausted: complete ? sorted.length <= limit : exhausted,
+      exhausted,
       judged: Math.max(0, walked - pending.length),
       total: ordered.length,
-      full,
+      full: false,
     };
   };
   for (const film of ordered) {
-    if (!full && pending.length === 0 && shown.length >= limit) {
+    if (pending.length === 0 && shown.length >= limit) {
       return publish(true, false);
     }
     if (pending.length >= batch) break;
@@ -314,8 +356,8 @@ export function sortShown(
   const values = ({ film, detail }: Shown): SortValues => ({
     title: film.title,
     year: film.year ?? detail?.year ?? null,
-    rating: detail?.rating,
-    runtime: detail?.runtime,
+    rating: detail ? detail.rating : film.facts?.rating,
+    runtime: detail ? detail.runtime : film.facts?.runtime,
   });
   return [...items].sort((a, b) => compareBrowseFilms(values(a), values(b), sort, order));
 }

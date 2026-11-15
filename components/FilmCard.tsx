@@ -14,7 +14,7 @@ export type CardFilm = {
   poster: string | null;
   rating: number | null;
   runtime: number | null;
-  /** Streaming services of the visitor that offer the film. */
+  /** Up to three streaming offers, prioritizing the visitor's services. */
   offers: { name: string; icon: string | null }[];
   /** Weak match, failed lookup or unknown offer: shown as À vérifier. */
   uncertain: boolean;

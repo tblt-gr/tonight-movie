@@ -8,7 +8,13 @@ import {
   type DetailState,
   type ListPlan,
 } from "@/lib/browse";
-import { cachedDetails, fetchDetails, mapLimit, readFreshDetails } from "@/lib/browse-client";
+import {
+  cachedDetails,
+  fetchDetails,
+  mapLimit,
+  readCachedFacts,
+  readFreshDetails,
+} from "@/lib/browse-client";
 import type { Locale } from "@/lib/i18n/config";
 import { factsOf } from "@/lib/enrich";
 import { fetchSearch, resolveFilms } from "@/lib/resolve";
@@ -66,15 +72,26 @@ export function useListPlan({
     const { signal } = controller;
     void (async () => {
       // One read of the cache for the whole source, so filtering never waits on a film at a time.
-      await Promise.all(
-        listFilms.map(async ({ confidence, tmdbId }) => {
-          if (confidence !== 1 || tmdbId === null || details.has(tmdbId)) return;
-          const cached = await readFreshDetails(tmdbId, lang, region);
+      const restored: StoredFilm[] = [];
+      let current = await Promise.all(
+        listFilms.map(async (film) => {
+          const { confidence, tmdbId } = film;
+          if (confidence !== 1 || tmdbId === null) return film;
+          const [cached, facts] = await Promise.all([
+            details.has(tmdbId) ? undefined : readFreshDetails(tmdbId, lang, region),
+            film.facts ? undefined : readCachedFacts(tmdbId, lang, region),
+          ]);
           if (cached && !details.has(tmdbId)) details.set(tmdbId, cached);
+          if (!facts) return film;
+          const learned = { ...film, facts };
+          restored.push(learned);
+          return learned;
         }),
       );
       if (signal.aborted) return;
-      let current = listFilms;
+      if (restored.length > 0) {
+        await library.upsertFilms(restored.map((film) => ({ ...film, lists: [] })));
+      }
       for (;;) {
         const judged = current.map((film) =>
           failedKeys.has(film.key) ? { ...film, confidence: 0 } : film,
@@ -127,6 +144,10 @@ export function useListPlan({
         // One write for the whole batch: each write reads the entire library.
         if (learned.length > 0) {
           await library.upsertFilms(learned.map((film) => ({ ...film, lists: [] })));
+          const facts = new Map(learned.map((film) => [film.key, film.facts]));
+          current = current.map((film) =>
+            facts.has(film.key) ? { ...film, facts: facts.get(film.key) } : film,
+          );
         }
       }
     })();
