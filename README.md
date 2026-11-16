@@ -4,9 +4,10 @@
 
 <p align="center">
   <a href="https://github.com/tblt-gr/tonight-movie/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/tblt-gr/tonight-movie/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white">
-  <a href="https://github.com/tblt-gr/tonight-movie/releases"><img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-blue"></a>
+  <img alt="Next.js 16.4" src="https://img.shields.io/badge/Next.js-16.4-000000?logo=nextdotjs">
+  <img alt="React 19.3" src="https://img.shields.io/badge/React-19.3-087ea4?logo=react&logoColor=white">
+  <img alt="TypeScript 6.0" src="https://img.shields.io/badge/TypeScript-6.0-3178c6?logo=typescript&logoColor=white">
+  <a href="https://github.com/tblt-gr/tonight-movie/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/tblt-gr/tonight-movie"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
 
@@ -33,7 +34,7 @@ Optionally, import your Letterboxd export to draw among your own watchlist and l
 
 ## Run locally
 
-Requires Node.js 22 or newer (Node 20.9+ is supported by the dependencies) and a free TMDB account for the API key.
+Requires Node.js 26 or newer and a free TMDB account for the API key.
 
 1. Create a TMDB API read access token: sign in at <https://www.themoviedb.org/settings/api> and copy the **API Read Access Token** (the long v4 token, not the short v3 API key).
 2. Install and configure:
@@ -148,7 +149,7 @@ A single Next.js App Router application serves the React interface and a few sta
 
 ## Deployment
 
-The app is stateless, so it runs anywhere Node.js 22 runs. `next.config.ts` builds a standalone server, which is what the [Dockerfile](Dockerfile) ships (non-root user, port 3000).
+The app is stateless, so it runs anywhere Node.js 26 runs. `next.config.ts` builds a standalone server, which is what the [Dockerfile](Dockerfile) ships (non-root user, port 3000).
 
 **Docker or any Node host:** set `TMDB_API_KEY`, put the app behind a reverse proxy that overwrites `X-Forwarded-For`, and set `TRUSTED_PROXY_HOPS` to the number of proxies. No volume is required.
 

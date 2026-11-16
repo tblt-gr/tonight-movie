@@ -6,7 +6,7 @@ By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). Report 
 
 ## Local setup
 
-Requires Node.js 22 (20.9+ is supported by the dependencies).
+Requires Node.js 26 or newer.
 
 ```bash
 npm ci
