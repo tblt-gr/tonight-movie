@@ -96,6 +96,7 @@ export const fr = {
   },
   about: {
     title: "À propos",
+    version: "Version",
     intro:
       "Tonight’s Movie tire un film que vous pouvez regarder ce soir avec vos abonnements en France. Vos réglages et votre export Letterboxd restent dans ce navigateur : rien n’est envoyé à un serveur.",
     creditsTitle: "Crédits",

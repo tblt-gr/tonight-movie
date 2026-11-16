@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n";
+import { version } from "@/package.json";
 
 type Props = { params: Promise<{ lang: string }> };
 
@@ -19,6 +20,9 @@ export default async function AboutPage({ params }: Props) {
       <h1>{about.title}</h1>
       <div className="about">
         <p>{about.intro}</p>
+        <p>
+          {about.version} {version}
+        </p>
         <section aria-labelledby="about-credits">
           <h2 id="about-credits">{about.creditsTitle}</h2>
           {/* eslint-disable-next-line @next/next/no-img-element -- Official TMDB logo, served as is. */}
