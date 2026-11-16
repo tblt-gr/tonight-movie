@@ -96,6 +96,7 @@ export const en: Dictionary = {
   },
   about: {
     title: "About",
+    version: "Version",
     intro:
       "Tonight’s Movie draws a movie you can watch tonight with your subscriptions in France. Your settings and your Letterboxd export stay in this browser: nothing is sent to a server.",
     creditsTitle: "Credits",
