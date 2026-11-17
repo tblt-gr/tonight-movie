@@ -232,6 +232,31 @@ describe("routes", () => {
     expect(languages).toEqual(["fr-FR", "en-US"]);
   });
 
+  it("skips the English search when French already names the film in that year", async () => {
+    reply({
+      results: [
+        { id: 603, title: "Matrix", original_title: "The Matrix", release_date: "1999-03-30" },
+      ],
+    });
+    const body = await (await search(req("/api/search?title=The%20Matrix&year=1999"))).json();
+    expect(body.results).toMatchObject([{ tmdbId: 603, englishTitle: null }]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["another year", "/api/search?title=The%20Matrix&year=2003"],
+    ["no year", "/api/search?title=The%20Matrix"],
+  ])("still searches in English when French has no match for %s", async (_name, path) => {
+    reply({
+      results: [
+        { id: 603, title: "Matrix", original_title: "The Matrix", release_date: "1999-03-30" },
+      ],
+    });
+    reply({ results: [] });
+    await search(req(path));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("searches with the title and year", async () => {
     reply({ results: [{ id: 1, title: "A", release_date: "2001-01-01" }, { id: 2 }] });
     reply({ results: [] });

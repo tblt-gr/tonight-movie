@@ -1,6 +1,7 @@
 import { ApiFailure } from "@/lib/errors";
 import { DEFAULT_LOCALE, TMDB_LANGUAGE, type Locale } from "@/lib/i18n/config";
 import { GENRES } from "@/lib/genres";
+import { normalizeTitle } from "@/lib/match";
 import type {
   DiscoverFilters,
   DiscoverResponse,
@@ -289,10 +290,21 @@ export async function searchMovies(title: string, year: number | null): Promise<
       page: "1",
       ...(year === null ? {} : { year: String(year) }),
     });
-  const [french, english] = await Promise.all([
-    search(LANGUAGE),
-    search(ENGLISH).catch(() => ({ results: [] }) as TmdbPage),
-  ]);
+  const french = await search(LANGUAGE);
+  // The English search only adds the English title of films French does not name that way. A
+  // French result that already bears the title in the year asked for settles the match alone.
+  const settled =
+    year !== null &&
+    summarizeAll(french.results).some(
+      (movie) =>
+        movie.year === year &&
+        [movie.title, movie.originalTitle ?? ""]
+          .map(normalizeTitle)
+          .includes(normalizeTitle(title)),
+    );
+  const english = settled
+    ? ({ results: [] } as TmdbPage)
+    : await search(ENGLISH).catch(() => ({ results: [] }) as TmdbPage);
   const englishTitles = new Map(
     (english.results ?? []).flatMap((movie) =>
       typeof movie.id === "number" && movie.title ? [[movie.id, movie.title] as const] : [],
