@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Accordion } from "@/components/Accordion";
 import { FilmOffers } from "@/components/FilmOffers";
+import { SeenButton } from "@/components/SeenButton";
 import { TrailerButton } from "@/components/TrailerButton";
 import { useI18n } from "@/components/I18nProvider";
 import { formatMinutes, formatRating } from "@/lib/catalog";
@@ -12,10 +13,14 @@ export function DrawResult({
   film,
   services,
   headingRef,
+  seen,
+  onToggleSeen,
 }: {
   film: MovieDetails;
   services: ReadonlySet<string>;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
+  seen: boolean;
+  onToggleSeen: () => void;
 }) {
   const { t, href } = useI18n();
   return (
@@ -36,7 +41,10 @@ export function DrawResult({
             <dd>{formatRating(film.rating, t)}</dd>
           </div>
         </dl>
-        <TrailerButton trailer={film.trailer} title={film.title} />
+        <div className="result-actions">
+          <TrailerButton trailer={film.trailer} title={film.title} />
+          <SeenButton seen={seen} onToggle={onToggleSeen} withLabel />
+        </div>
         <FilmOffers
           film={film}
           services={services}

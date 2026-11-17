@@ -1,8 +1,10 @@
+import { normalizeTitle } from "@/lib/match";
 import {
   DB_NAME,
   DB_VERSION,
   FILMS_STORE,
   LISTS_STORE,
+  filmKey,
   parseFilm,
   parseList,
   type StoredFilm,
@@ -14,6 +16,16 @@ type Snapshot = { films: Map<string, StoredFilm>; lists: Map<string, StoredList>
 
 /** Fields a caller may set; membership, seen and resolved ids merge into the stored record. */
 export type FilmInput = Omit<StoredFilm, "lists"> & { lists?: string[] };
+
+/** A film as the visitor sees it: `key` is the stored record when the card comes from a list. */
+export type SeenTarget = {
+  key?: string;
+  tmdbId: number | null;
+  title: string;
+  year: number | null;
+};
+
+const titleYear = (title: string, year: number | null) => `${normalizeTitle(title)}|${year ?? ""}`;
 
 /** Memberships a sync takes away from one film. */
 export type MembershipRemoval = { key: string; lists: string[] };
@@ -226,6 +238,55 @@ export function createLibrary(
         else changed.push({ ...film, lists: left });
       }
       if (changed.length > 0 || forgotten.length > 0) await save(changed, [], forgotten);
+    },
+
+    /**
+     * Marks a film as seen or not, the way an imported diary does. A film is the same one by
+     * record key, TMDB id, or normalized title and year: the rule the draw and the browser use
+     * to decide what is seen, so clearing one record would leave a card seen.
+     */
+    async setSeen(target: SeenTarget, seen: boolean) {
+      const { films } = await load();
+      const sameTitle = titleYear(target.title, target.year);
+      const matches = [...films.values()].filter(
+        (film) =>
+          film.key === target.key ||
+          (target.tmdbId !== null && film.tmdbId === target.tmdbId) ||
+          titleYear(film.title, film.year) === sameTitle,
+      );
+      if (seen) {
+        const created =
+          matches.length === 0
+            ? parseFilm({
+                key: filmKey(target),
+                title: target.title,
+                year: target.year,
+                tmdbId: target.tmdbId,
+                confidence: target.tmdbId === null ? null : 1,
+                lists: [],
+                seen: true,
+              })
+            : null;
+        const changed = created ? [created] : matches.filter((film) => !film.seen);
+        if (changed.length > 0) {
+          await save(
+            changed.map((film) => ({ ...film, seen: true })),
+            [],
+          );
+        }
+        return;
+      }
+      const stale = matches.filter((film) => film.seen);
+      // A film that only exists because it was marked as seen has nothing left to keep.
+      const forgotten = stale.filter((film) => film.lists.length === 0 && !film.ignored);
+      const kept = stale.filter((film) => !forgotten.includes(film));
+      if (stale.length > 0) {
+        await save(
+          kept.map((film) => ({ ...film, seen: false })),
+          [],
+          forgotten.map((film) => film.key),
+        );
+      }
     },
 
     async upsertList(list: StoredList) {
