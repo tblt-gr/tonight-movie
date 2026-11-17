@@ -3,6 +3,7 @@ import { WATCHLIST_ID } from "@/lib/import/apply";
 import { isDrawable, matchFilm, normalizeTitle, type SearchFn } from "@/lib/match";
 import {
   RECENT_DRAWS_LIMIT,
+  type FilmFacts,
   type Settings,
   type StoredFilm,
   type StoredList,
@@ -94,22 +95,34 @@ export function discoverFilters(
   };
 }
 
-/** Whether a film passes the fine filters; runtime limits are judged apart. */
-function fitsFilters(film: MovieDetails, settings: DrawInput["settings"]): boolean {
+type Figures = Pick<MovieDetails, "runtime" | "rating" | "year">;
+
+/**
+ * Why a film's runtime, rating or year rules it out, if they do. These figures are also kept
+ * with every imported film, so a list film can be rejected before any lookup.
+ */
+function figuresVerdict(film: Figures, settings: DrawInput["settings"]): Rejection | null {
+  // A film of unknown runtime cannot be shown to fit, so a limit skips it.
+  if (settings.maxDuration !== null) {
+    if (film.runtime === null || film.runtime > settings.maxDuration) return "tooLong";
+  }
   if (settings.minDuration !== null) {
-    if (film.runtime === null || film.runtime < settings.minDuration) return false;
+    if (film.runtime === null || film.runtime < settings.minDuration) return "filtered";
   }
   if (settings.minRating !== null) {
-    if (film.rating === null || film.rating < settings.minRating) return false;
+    if (film.rating === null || film.rating < settings.minRating) return "filtered";
   }
   if (settings.minYear !== null && (film.year === null || film.year < settings.minYear)) {
-    return false;
+    return "filtered";
   }
   if (settings.maxYear !== null && (film.year === null || film.year > settings.maxYear)) {
-    return false;
+    return "filtered";
   }
-  return settings.genres.length === 0 || film.genres.some((name) => settings.genres.includes(name));
+  return null;
 }
+
+const fitsGenres = (film: MovieDetails, settings: DrawInput["settings"]) =>
+  settings.genres.length === 0 || film.genres.some((name) => settings.genres.includes(name));
 
 const titleYear = (title: string, year: number | null) => `${normalizeTitle(title)}|${year ?? ""}`;
 
@@ -133,6 +146,8 @@ type Candidate = {
   unmatched: boolean;
   /** Stored match is low or none, so the film is never drawn. */
   weak: boolean;
+  /** Runtime, rating and year read at import: they rule a film out without a lookup. */
+  facts?: FilmFacts;
 };
 
 function fromSummary(movie: MovieSummary): Candidate {
@@ -189,6 +204,7 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
     tmdbId: film.tmdbId,
     unmatched: film.confidence === null,
     weak: film.confidence !== null && !isDrawable(film),
+    facts: film.facts,
   }));
 
   const counts: Record<Rejection, number> = { unavailable: 0, seen: 0, tooLong: 0, filtered: 0 };
@@ -212,13 +228,13 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
     if (recent.has(tmdbKey(tmdbId)) || tried.has(tmdbId)) return null;
     tried.add(tmdbId);
     if (isSeen(candidate, tmdbId)) return "seen";
+    const early = candidate.facts && figuresVerdict(candidate.facts, settings);
+    if (early) return early;
     const details = await deps.getDetails(tmdbId);
     if (availabilityOn(details, services) !== "available") return "unavailable";
-    // A film of unknown runtime cannot be shown to fit, so a limit skips it.
-    if (settings.maxDuration !== null) {
-      if (details.runtime === null || details.runtime > settings.maxDuration) return "tooLong";
-    }
-    return fitsFilters(details, settings) ? details : "filtered";
+    const verdict = figuresVerdict(details, settings);
+    if (verdict) return verdict;
+    return fitsGenres(details, settings) ? details : "filtered";
   }
 
   // Discover pages already fetched, minus the items already tried.

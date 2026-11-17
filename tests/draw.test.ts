@@ -242,6 +242,76 @@ describe("drawFilm from lists", () => {
     expect(result).toMatchObject({ status: "none", reason: "all-too-long" });
   });
 
+  describe("stored facts", () => {
+    const facts = (patch: Partial<NonNullable<StoredFilm["facts"]>> = {}) => ({
+      runtime: 100,
+      rating: 7,
+      year: 2001,
+      ...patch,
+    });
+
+    it("skips the lookup of a film whose stored runtime is over the limit", async () => {
+      const { deps, calls } = makeDeps({ 1: details(1) });
+      const result = await drawFilm(
+        {
+          settings: { ...settings, maxDuration: 90 },
+          films: [stored(1, { facts: facts({ runtime: 150 }) })],
+          lists,
+        },
+        deps,
+      );
+      expect(calls.details).toEqual([]);
+      expect(result).toMatchObject({ status: "none", reason: "all-too-long" });
+    });
+
+    it("skips the lookup of a film whose stored rating, year or runtime breaks a filter", async () => {
+      const cases = [
+        { settings: { minRating: 8 }, facts: facts({ rating: 6.5 }) },
+        { settings: { minRating: 8 }, facts: facts({ rating: null }) },
+        { settings: { minYear: 2010 }, facts: facts({ year: 1999 }) },
+        { settings: { maxYear: 1990 }, facts: facts({ year: 1999 }) },
+        { settings: { minDuration: 120 }, facts: facts({ runtime: 100 }) },
+      ];
+      for (const item of cases) {
+        const { deps, calls } = makeDeps({ 1: details(1) });
+        const result = await drawFilm(
+          {
+            settings: { ...settings, ...item.settings },
+            films: [stored(1, { facts: item.facts })],
+            lists,
+          },
+          deps,
+        );
+        expect(calls.details).toEqual([]);
+        expect(result).toMatchObject({ status: "none", reason: "no-match" });
+      }
+    });
+
+    it("still looks up a film whose stored facts pass, and checks its genres afterwards", async () => {
+      const { deps, calls } = makeDeps({ 1: details(1, { genres: ["Drame"] }) });
+      const result = await drawFilm(
+        {
+          settings: { ...settings, maxDuration: 120, minRating: 6, genres: ["Comédie"] },
+          films: [stored(1, { facts: facts() })],
+          lists,
+        },
+        deps,
+      );
+      expect(calls.details).toEqual([1]);
+      expect(result).toMatchObject({ status: "none", reason: "no-match" });
+    });
+
+    it("looks up a film that has no stored facts yet", async () => {
+      const { deps, calls } = makeDeps({ 1: details(1, { runtime: 80 }) });
+      const result = await drawFilm(
+        { settings: { ...settings, maxDuration: 90 }, films: [stored(1)], lists },
+        deps,
+      );
+      expect(calls.details).toEqual([1]);
+      expect(result.status).toBe("found");
+    });
+  });
+
   it("excludes seen films by TMDB id and by title and year", async () => {
     const films = [
       stored(1),
