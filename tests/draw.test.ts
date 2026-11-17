@@ -495,6 +495,50 @@ describe("drawFilm from all films on my services", () => {
     expect(result).toMatchObject({ status: "found", key: tmdbKey(3) });
   });
 
+  it("reads the details of the drawn film only", async () => {
+    const { deps, calls } = makeDeps(
+      Object.fromEntries([1, 2, 3, 4, 5].map((id) => [id, details(id)])),
+      {
+        discover: async (_p, _m, page) => ({
+          page,
+          totalPages: 1,
+          results: [1, 2, 3, 4, 5].map((id) => details(id)),
+        }),
+      },
+    );
+    const result = await drawFilm({ settings: global, films: [], lists: [] }, deps);
+    expect(result.status).toBe("found");
+    expect(calls.details).toHaveLength(1);
+  });
+
+  it("draws another film when the drawn one turns out unavailable or unreadable", async () => {
+    const { deps, calls } = makeDeps(
+      { 1: details(1, { offers: [offer("9")] }), 3: details(3) },
+      {
+        discover: async (_p, _m, page) => ({
+          page,
+          totalPages: 1,
+          results: [details(1), details(2), details(3)],
+        }),
+      },
+    );
+    const result = await drawFilm({ settings: global, films: [], lists: [] }, deps);
+    // Film 2 has no entry in the catalog, so its lookup fails.
+    expect(result).toMatchObject({ status: "found", key: tmdbKey(3) });
+    expect(calls.details.sort()).toEqual([1, 2, 3]);
+  });
+
+  it("reports nothing available when no discovered film passes its details", async () => {
+    const { deps } = makeDeps(
+      { 1: details(1, { offers: [offer("9")] }) },
+      {
+        discover: async (_p, _m, page) => ({ page, totalPages: 1, results: [details(1)] }),
+      },
+    );
+    const result = await drawFilm({ settings: global, films: [], lists: [] }, deps);
+    expect(result).toMatchObject({ status: "none", reason: "nothing-available" });
+  });
+
   it("excludes seen films and recent draws", async () => {
     const { deps } = makeDeps(
       { 1: details(1), 2: details(2), 3: details(3) },

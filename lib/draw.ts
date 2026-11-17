@@ -148,7 +148,15 @@ type Candidate = {
   weak: boolean;
   /** Runtime, rating and year read at import: they rule a film out without a lookup. */
   facts?: FilmFacts;
+  /**
+   * Comes from a discover page, which already narrowed it to the visitor's services and filters:
+   * its details are read only if it is the film drawn.
+   */
+  discovered?: boolean;
 };
+
+/** A film that qualified; `film` is missing while its details are not read yet. */
+type Found = { key: string; tmdbId: number; film?: MovieDetails };
 
 function fromSummary(movie: MovieSummary): Candidate {
   return {
@@ -158,6 +166,7 @@ function fromSummary(movie: MovieSummary): Candidate {
     tmdbId: movie.tmdbId,
     unmatched: false,
     weak: false,
+    discovered: true,
   };
 }
 
@@ -213,10 +222,18 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
   let misses = 0;
   let exhausted = false;
   const tried = new Set<number>();
-  const found: Array<{ key: string; film: MovieDetails }> = [];
+  const found: Found[] = [];
+
+  /** The details when the film suits the visitor, otherwise why it does not. */
+  function check(details: MovieDetails): MovieDetails | Rejection {
+    if (availabilityOn(details, services) !== "available") return "unavailable";
+    const verdict = figuresVerdict(details, settings);
+    if (verdict) return verdict;
+    return fitsGenres(details, settings) ? details : "filtered";
+  }
 
   /** The film when it qualifies, a rejection reason, or `null` when it was merely repeated. */
-  async function judge(candidate: Candidate): Promise<MovieDetails | Rejection | null> {
+  async function judge(candidate: Candidate): Promise<Found | Rejection | null> {
     if (candidate.weak) return "unavailable";
     let tmdbId = candidate.tmdbId;
     if (candidate.unmatched) {
@@ -228,13 +245,24 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
     if (recent.has(tmdbKey(tmdbId)) || tried.has(tmdbId)) return null;
     tried.add(tmdbId);
     if (isSeen(candidate, tmdbId)) return "seen";
+    if (candidate.discovered) return { key: candidate.key, tmdbId };
     const early = candidate.facts && figuresVerdict(candidate.facts, settings);
     if (early) return early;
-    const details = await deps.getDetails(tmdbId);
-    if (availabilityOn(details, services) !== "available") return "unavailable";
-    const verdict = figuresVerdict(details, settings);
-    if (verdict) return verdict;
-    return fitsGenres(details, settings) ? details : "filtered";
+    const result = check(await deps.getDetails(tmdbId));
+    return typeof result === "string" ? result : { key: candidate.key, tmdbId, film: result };
+  }
+
+  /** Reads the details of a film found on a discover page and checks them like any other. */
+  async function confirm(pick: Found): Promise<MovieDetails | null> {
+    if (pick.film) return pick.film;
+    try {
+      const result = check(await deps.getDetails(pick.tmdbId));
+      if (typeof result !== "string") return result;
+      counts[result] += 1;
+    } catch {
+      counts.unavailable += 1;
+    }
+    return null;
   }
 
   // Discover pages already fetched, minus the items already tried.
@@ -293,7 +321,7 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
         const outcome = await judge(candidate);
         if (outcome === null) continue;
         if (typeof outcome === "string") counts[outcome] += 1;
-        else found.push({ key: candidate.key, film: outcome });
+        else found.push(outcome);
       } catch {
         // A TMDB failure only costs this candidate.
         misses += 1;
@@ -303,9 +331,12 @@ export async function drawFilm(input: DrawInput, deps: DrawDeps): Promise<DrawRe
 
   await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
 
-  if (found.length > 0) {
-    const pick = found[Math.floor(random() * found.length)];
-    return { status: "found", key: pick.key, film: pick.film, attempts };
+  // A film from a discover page is drawn first and read after: only the drawn one costs a request.
+  while (found.length > 0) {
+    const index = Math.floor(random() * found.length);
+    const film = await confirm(found[index]);
+    if (film) return { status: "found", key: found[index].key, film, attempts };
+    found.splice(index, 1);
   }
   return { status: "none", reason: reasonFor(counts, judged), attempts };
 }
