@@ -6,6 +6,7 @@ import { AdvancedFilters, type AdvancedValues } from "@/components/AdvancedFilte
 import { DrawResult } from "@/components/DrawResult";
 import { FilmPoster } from "@/components/FilmPoster";
 import { useI18n } from "@/components/I18nProvider";
+import { isSeen, seenIndex } from "@/lib/browse";
 import { drawFilm, effectiveSources } from "@/lib/draw";
 import { collectSwapPosters, createDrawClient } from "@/lib/draw-client";
 import { browserRegion } from "@/lib/regions";
@@ -23,6 +24,7 @@ import { onReset } from "@/lib/storage";
 import { library } from "@/lib/storage/library";
 import { DEFAULT_SETTINGS, type Settings, type StoredList } from "@/lib/storage/schema";
 import { loadSettings, recordDraw, updateSettings } from "@/lib/storage/settings";
+import type { MovieDetails } from "@/lib/types";
 
 const NEUTRAL_MS = 600;
 const POSTER_WAIT_MS = 1200;
@@ -60,6 +62,8 @@ export function DrawMachine() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [lists, setLists] = useState<StoredList[]>([]);
   const [hasSeen, setHasSeen] = useState(false);
+  /** Whether the film on screen is already seen: possible when the visitor keeps seen films in the draw. */
+  const [drawnSeen, setDrawnSeen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [slot, setSlot] = useState<Slot>({ poster: null, framed: false });
@@ -187,12 +191,23 @@ export function DrawMachine() {
         if (!alive.current) return;
       }
       setSettings(recordDraw(result.key));
+      setDrawnSeen(isSeen(seenIndex(films), result.film));
       dispatch({ type: "found", film: result.film, key: result.key });
     } catch {
       if (alive.current) dispatch({ type: "fail" });
     } finally {
       running.current = false;
     }
+  }
+
+  async function toggleSeen(film: MovieDetails) {
+    const seen = !drawnSeen;
+    await library.setSeen({ tmdbId: film.tmdbId, title: film.title, year: film.year }, seen);
+    if (!alive.current) return;
+    setHasSeen((await library.getFilms()).some((stored) => stored.seen));
+    setDrawnSeen(seen);
+    // A film the visitor has already seen is not tonight's film: draw another one.
+    if (seen) void run();
   }
 
   const services = new Set(settings.services);
@@ -236,7 +251,13 @@ export function DrawMachine() {
 
         <div className="draw-side">
           {state.phase === "result" && !drawing && (
-            <DrawResult film={state.film} services={services} headingRef={headingRef} />
+            <DrawResult
+              film={state.film}
+              services={services}
+              headingRef={headingRef}
+              seen={drawnSeen}
+              onToggleSeen={() => void toggleSeen(state.film)}
+            />
           )}
           {state.phase === "none" && (
             <div className="draw-outcome">

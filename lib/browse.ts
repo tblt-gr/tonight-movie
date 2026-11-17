@@ -377,13 +377,21 @@ export function seenIndex(films: StoredFilm[]): SeenIndex {
 }
 
 /** Same rule as the draw: a TMDB id or an equal normalized title and year means seen. */
+export function isSeen(
+  seen: SeenIndex,
+  film: { tmdbId: number | null; title: string; year: number | null },
+): boolean {
+  return (
+    (film.tmdbId !== null && seen.ids.has(film.tmdbId)) ||
+    seen.titles.has(titleYear(film.title, film.year))
+  );
+}
+
 export function filterGlobalResults(
   results: MovieSummary[],
   seen: SeenIndex,
   hideSeen: boolean,
 ): MovieSummary[] {
   if (!hideSeen) return results;
-  return results.filter(
-    (movie) => !seen.ids.has(movie.tmdbId) && !seen.titles.has(titleYear(movie.title, movie.year)),
-  );
+  return results.filter((movie) => !isSeen(seen, movie));
 }

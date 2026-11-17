@@ -2,6 +2,7 @@
 
 import { FilmPoster } from "@/components/FilmPoster";
 import { useI18n } from "@/components/I18nProvider";
+import { SeenButton } from "@/components/SeenButton";
 import { formatMinutes, formatRating } from "@/lib/catalog";
 
 /** What a result needs to be drawn, whatever source it came from. */
@@ -18,14 +19,18 @@ export type CardFilm = {
   offers: { name: string; icon: string | null }[];
   /** Weak match, failed lookup or unknown offer: shown as À vérifier. */
   uncertain: boolean;
+  /** Already seen, by the import or by the visitor. */
+  seen: boolean;
 };
 
 export function FilmCard({
   film,
   onOpen,
+  onToggleSeen,
 }: {
   film: CardFilm;
   onOpen: (opener: HTMLElement) => void;
+  onToggleSeen: () => void;
 }) {
   const { t } = useI18n();
   const meta = [
@@ -66,6 +71,7 @@ export function FilmCard({
           )}
         </span>
       </button>
+      <SeenButton seen={film.seen} onToggle={onToggleSeen} />
     </li>
   );
 }
