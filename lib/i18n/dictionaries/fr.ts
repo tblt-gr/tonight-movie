@@ -38,6 +38,8 @@ export const fr = {
     unreachable: "Impossible de joindre TMDB pour le moment. Vérifiez votre connexion.",
     posterOf: (title: string) => `Affiche de ${title}`,
     hideSeen: "Masquer les films déjà vus",
+    markSeen: "Marquer comme déjà vu",
+    unmarkSeen: "Réafficher ce film",
   },
   format: {
     runtime: (minutes: number) =>

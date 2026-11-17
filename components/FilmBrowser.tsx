@@ -11,6 +11,7 @@ import {
   DEFAULT_FILTERS,
   PAGE_SIZE,
   filterGlobalResults,
+  isSeen,
   offersForCard,
   parseFilters,
   seenIndex,
@@ -165,6 +166,7 @@ export function FilmBrowser() {
         runtime: detail ? detail.runtime : (film.facts?.runtime ?? null),
         offers: cardOffers(detail),
         uncertain,
+        seen: film.seen || isSeen(seen, film),
       }));
     }
     if (!global || global.key !== globalKey) return [];
@@ -182,10 +184,25 @@ export function FilmBrowser() {
         runtime: loaded?.runtime ?? null,
         offers: cardOffers(loaded),
         uncertain: false,
+        seen: isSeen(seen, movie),
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `cardOffers` only reads `services` and `filters.services`.
   }, [mode, plan, filters.hideSeen, global, globalKey, seen, limit, services, filters.services]);
+
+  const toggleSeen = async (card: CardFilm) => {
+    await library.setSeen(
+      {
+        // A list card is a stored record, whose year or match may differ from what the card shows.
+        key: mode === "lists" ? card.id : undefined,
+        tmdbId: card.tmdbId,
+        title: card.title,
+        year: card.year,
+      },
+      !card.seen,
+    );
+    setFilms(await library.getFilms());
+  };
 
   const filtersChanged = filterKey !== "";
   const resetFilters = () =>
@@ -299,6 +316,7 @@ export function FilmBrowser() {
                 openerRef.current = opener;
                 setSelected(card);
               }}
+              onToggleSeen={() => void toggleSeen(card)}
             />
           ))}
           {Array.from({ length: skeletonCount }, (_, index) => (

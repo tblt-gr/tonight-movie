@@ -491,3 +491,8 @@ body:has(.draw-page[data-room="dark"]) .site-header,
   grid-column: 1 / -1;
   justify-self: start;
 }
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+}

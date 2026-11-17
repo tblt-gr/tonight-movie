@@ -38,6 +38,8 @@ export const en: Dictionary = {
     unreachable: "Can’t reach TMDB right now. Check your connection.",
     posterOf: (title: string) => `Poster of ${title}`,
     hideSeen: "Hide films I’ve already seen",
+    markSeen: "Mark as already seen",
+    unmarkSeen: "Show this film again",
   },
   format: {
     runtime: (minutes: number) =>

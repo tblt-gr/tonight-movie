@@ -294,3 +294,41 @@
   width: 60%;
   margin-top: var(--s1);
 }
+.film-card {
+  position: relative;
+}
+.seen-button {
+  position: absolute;
+  top: var(--s2);
+  right: var(--s2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--text);
+  background: var(--bg);
+  color: var(--text);
+}
+.seen-button:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+.seen-button svg {
+  width: 20px;
+  height: 20px;
+}
+@media (hover: hover) {
+  .seen-button {
+    opacity: 0;
+  }
+  .film-card:hover .seen-button,
+  .seen-button:focus-visible,
+  .seen-button.is-seen {
+    opacity: 1;
+  }
+}
+.is-list .film-card .seen-button {
+  top: var(--s3);
+}
