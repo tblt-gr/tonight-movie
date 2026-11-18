@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LayoutGrid, List } from "lucide-react";
+import { ChevronDown, Info, LayoutGrid, List } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { AdvancedFilters } from "@/components/AdvancedFilters";
 import { useI18n } from "@/components/I18nProvider";
@@ -97,23 +97,36 @@ export function FilterBar({
     <div className="filters" role="search">
       <div className="filter">
         <label htmlFor={`${ids}-source`}>{t.draw.source}</label>
-        <select
-          className="select"
-          id={`${ids}-source`}
-          value={sourceValue}
-          onChange={(event) => update({ source: event.target.value })}
-        >
-          {sourceValue === "many" && (
-            <option value="many" disabled>
-              {t.draw.manySources}
-            </option>
+        <div className="filter-source">
+          <select
+            className="select"
+            id={`${ids}-source`}
+            value={sourceValue}
+            onChange={(event) => update({ source: event.target.value })}
+          >
+            {sourceValue === "many" && (
+              <option value="many" disabled>
+                {t.draw.manySources}
+              </option>
+            )}
+            {sourceOptions(lists, t).map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+          {mode === "lists" && onSubscriptions && (
+            <button
+              type="button"
+              className="icon-button filter-source-info"
+              aria-label={t.browse.subscriptions.button}
+              title={t.browse.subscriptions.button}
+              onClick={(event) => onSubscriptions(event.currentTarget)}
+            >
+              <Info aria-hidden="true" />
+            </button>
           )}
-          {sourceOptions(lists, t).map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-            </option>
-          ))}
-        </select>
+        </div>
       </div>
       {mode === "lists" && (
         <div className="filter">
@@ -201,15 +214,6 @@ export function FilterBar({
           <List aria-hidden="true" />
         </button>
       </div>
-      {mode === "lists" && onSubscriptions && (
-        <button
-          type="button"
-          className="button"
-          onClick={(event) => onSubscriptions(event.currentTarget)}
-        >
-          {t.browse.subscriptions.button}
-        </button>
-      )}
       <button
         type="button"
         className="button filters-toggle"

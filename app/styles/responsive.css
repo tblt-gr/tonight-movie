@@ -158,7 +158,8 @@
     min-width: 0;
   }
   .filter-services,
-  .browse-filters-panel {
+  .browse-filters-panel,
+  .filter:has(> .filter-source) {
     grid-column: 1 / -1;
   }
   .filter {

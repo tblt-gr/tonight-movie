@@ -373,3 +373,17 @@
   height: 4px;
   background: var(--live);
 }
+.filter-source {
+  display: flex;
+}
+.filter-source .select {
+  flex: 1;
+  min-width: 0;
+}
+/* Glued to the select: one shared border between the two controls. */
+.filters .filter-source-info {
+  width: 48px;
+  height: 48px;
+  margin-left: -2px;
+  border: 2px solid var(--text);
+}
