@@ -340,6 +340,22 @@ export const fr = {
       "Le tri utilise les durées et les notes enregistrées. Les disponibilités sont vérifiées au fil des résultats.",
     emptySource: "Cette source ne contient aucun film.",
     emptyFilters: "Aucun film ne correspond à ces filtres.",
+    subscriptions: {
+      button: "Quel abonnement prendre ?",
+      title: "Quel abonnement prendre ?",
+      intro: (count: number) =>
+        `Les services de streaming en France, classés par nombre de films de cette source qu’ils proposent (${count} film${count > 1 ? "s" : ""} analysé${count > 1 ? "s" : ""}).`,
+      progress: (done: number, total: number) => `Analyse en cours : ${done} / ${total} films.`,
+      owned: "Déjà abonné",
+      filmCount: (count: number) => `${count} film${count > 1 ? "s" : ""}`,
+      unknown: (count: number) =>
+        `${count} film${count > 1 ? "s" : ""} à vérifier : offres incertaines, non comptés.`,
+      none: (count: number) =>
+        `${count} film${count > 1 ? "s" : ""} sur aucun service de streaming.`,
+      empty: "Cette source ne contient aucun film.",
+      failed: "Impossible de lire les offres de cette source pour le moment.",
+      ranked: (count: number) => `Classement terminé : ${count} service${count > 1 ? "s" : ""}.`,
+    },
   },
   trailer: {
     watch: "Voir la bande-annonce",

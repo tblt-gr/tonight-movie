@@ -336,6 +336,21 @@ export const en: Dictionary = {
       "Sorting uses saved runtimes and ratings. Availability is checked as results are loaded.",
     emptySource: "This source has no films.",
     emptyFilters: "No film matches these filters.",
+    subscriptions: {
+      button: "Which subscription to take?",
+      title: "Which subscription to take?",
+      intro: (count: number) =>
+        `Streaming services in France, ranked by how many films of this source they offer (${count} film${count > 1 ? "s" : ""} analysed).`,
+      progress: (done: number, total: number) => `Analysing: ${done} / ${total} films.`,
+      owned: "Already subscribed",
+      filmCount: (count: number) => `${count} film${count > 1 ? "s" : ""}`,
+      unknown: (count: number) =>
+        `${count} film${count > 1 ? "s" : ""} to check: uncertain offers, not counted.`,
+      none: (count: number) => `${count} film${count > 1 ? "s" : ""} on no streaming service.`,
+      empty: "This source has no films.",
+      failed: "The offers of this source cannot be read right now.",
+      ranked: (count: number) => `Ranking complete: ${count} service${count > 1 ? "s" : ""}.`,
+    },
   },
   trailer: {
     watch: "Watch the trailer",
