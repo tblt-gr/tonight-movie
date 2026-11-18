@@ -198,3 +198,62 @@ export function availabilityOn(
     ? "available"
     : "unavailable";
 }
+
+export type RankedService = {
+  id: string;
+  name: string;
+  icon: string | null;
+  count: number;
+  owned: boolean;
+};
+
+export type ServiceRanking = {
+  ranking: RankedService[];
+  /** Films whose offers are missing or uncertain: À vérifier, never counted as absent. */
+  unknown: number;
+  /** Films with verified offers and no streaming service. */
+  none: number;
+  total: number;
+};
+
+/**
+ * Ranks services by the number of films they stream. A `null` film is one whose details are
+ * missing or failed. Rent and buy never count, and a film counts once per provider id.
+ */
+export function rankServices(
+  films: ReadonlyArray<{
+    offers: Offer[];
+    availabilityStatus: "verified" | "unknown";
+  } | null>,
+  owned: ReadonlySet<string>,
+): ServiceRanking {
+  const rows = new Map<string, RankedService>();
+  let unknown = 0;
+  let none = 0;
+  for (const film of films) {
+    if (!film || film.availabilityStatus === "unknown") {
+      unknown += 1;
+      continue;
+    }
+    const seen = new Set<string>();
+    for (const offer of film.offers) {
+      if (!STREAM_TYPES.has(offer.type) || seen.has(offer.id)) continue;
+      seen.add(offer.id);
+      const row = rows.get(offer.id);
+      if (row) row.count += 1;
+      else
+        rows.set(offer.id, {
+          id: offer.id,
+          name: offer.name,
+          icon: offer.icon,
+          count: 1,
+          owned: owned.has(offer.id),
+        });
+    }
+    if (seen.size === 0) none += 1;
+  }
+  const ranking = [...rows.values()].sort(
+    (a, b) => b.count - a.count || collator.compare(a.name, b.name),
+  );
+  return { ranking, unknown, none, total: films.length };
+}

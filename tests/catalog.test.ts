@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { categoryOf, isOwned, relevantOffers } from "@/lib/catalog";
-import type { Film } from "@/lib/types";
+import { categoryOf, isOwned, rankServices, relevantOffers } from "@/lib/catalog";
+import type { Film, Offer } from "@/lib/types";
 
 const film: Film = {
   rank: 1,
@@ -40,5 +40,74 @@ describe("availability categories", () => {
     expect(
       categoryOf({ ...film, justwatchId: null, availabilityStatus: "unknown" }, false, new Set()),
     ).toBe("unknown");
+  });
+});
+
+const offer = (id: string, type: Offer["type"], name = `Service ${id}`): Offer => ({
+  id,
+  name,
+  icon: null,
+  type,
+  url: null,
+});
+const verified = (...offers: Offer[]) => ({ offers, availabilityStatus: "verified" as const });
+
+describe("rankServices", () => {
+  it("counts a film once per provider even with several offer types", () => {
+    const result = rankServices([verified(offer("8", "FLATRATE"), offer("8", "ADS"))], new Set());
+    expect(result.ranking).toEqual([
+      { id: "8", name: "Service 8", icon: null, count: 1, owned: false },
+    ]);
+  });
+
+  it("ignores rent and buy", () => {
+    const result = rankServices([verified(offer("8", "RENT"), offer("9", "BUY"))], new Set());
+    expect(result.ranking).toEqual([]);
+    expect(result.none).toBe(1);
+  });
+
+  it("counts unknown and missing films apart", () => {
+    const result = rankServices(
+      [{ offers: [offer("8", "FLATRATE")], availabilityStatus: "unknown" }, null],
+      new Set(),
+    );
+    expect(result).toEqual({ ranking: [], unknown: 2, none: 0, total: 2 });
+  });
+
+  it("keeps Prime Video and a Prime channel separate", () => {
+    const result = rankServices(
+      [verified(offer("9", "FLATRATE"), offer("119", "FLATRATE"))],
+      new Set(),
+    );
+    expect(result.ranking.map((row) => row.id).sort()).toEqual(["119", "9"]);
+  });
+
+  it("flags owned services", () => {
+    const result = rankServices(
+      [verified(offer("8", "FLATRATE"), offer("9", "FLATRATE"))],
+      new Set(["8"]),
+    );
+    expect(result.ranking.find((row) => row.id === "8")?.owned).toBe(true);
+    expect(result.ranking.find((row) => row.id === "9")?.owned).toBe(false);
+  });
+
+  it("sorts by count then name", () => {
+    const result = rankServices(
+      [
+        verified(offer("2", "FLATRATE", "Zeta"), offer("1", "FLATRATE", "Alpha")),
+        verified(offer("3", "FREE", "Beta"), offer("2", "FLATRATE", "Zeta")),
+        verified(offer("3", "FREE", "Beta")),
+      ],
+      new Set(),
+    );
+    expect(result.ranking.map((row) => [row.name, row.count])).toEqual([
+      ["Beta", 2],
+      ["Zeta", 2],
+      ["Alpha", 1],
+    ]);
+  });
+
+  it("handles an empty list", () => {
+    expect(rankServices([], new Set())).toEqual({ ranking: [], unknown: 0, none: 0, total: 0 });
   });
 });
