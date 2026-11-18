@@ -354,6 +354,7 @@ export const fr = {
         `${count} film${count > 1 ? "s" : ""} sur aucun service de streaming.`,
       empty: "Cette source ne contient aucun film.",
       failed: "Impossible de lire les offres de cette source pour le moment.",
+      ranked: (count: number) => `Classement terminé : ${count} service${count > 1 ? "s" : ""}.`,
     },
   },
   trailer: {

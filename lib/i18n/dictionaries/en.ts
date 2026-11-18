@@ -349,6 +349,7 @@ export const en: Dictionary = {
       none: (count: number) => `${count} film${count > 1 ? "s" : ""} on no streaming service.`,
       empty: "This source has no films.",
       failed: "The offers of this source cannot be read right now.",
+      ranked: (count: number) => `Ranking complete: ${count} service${count > 1 ? "s" : ""}.`,
     },
   },
   trailer: {

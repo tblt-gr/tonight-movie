@@ -45,6 +45,7 @@ export function SubscriptionDialog({
     void loadListOffers({
       films,
       details,
+      failedKeys,
       signal,
       onProgress: (next) => {
         if (!signal.aborted) setProgress(next);
@@ -58,11 +59,7 @@ export function SubscriptionDialog({
             signal,
           });
           const wanted = new Set(keys);
-          const fresh = (await library.getFilms()).filter((film) => wanted.has(film.key));
-          for (const film of fresh) {
-            if (film.confidence === null) failedKeys.add(film.key);
-          }
-          return fresh;
+          return (await library.getFilms()).filter((film) => wanted.has(film.key));
         },
         fetchDetail: (tmdbId, signal) => fetchDetails(tmdbId, signal, lang, region),
       },
@@ -94,15 +91,19 @@ export function SubscriptionDialog({
           <Dialog.Description className="dialog-text">
             {t.browse.subscriptions.intro(progress?.total ?? films.length)}
           </Dialog.Description>
-          <div role="status" className="subscription-status">
+          <p className="subscription-status">
             {progress === null || !finished
               ? t.browse.subscriptions.progress(progress?.done ?? 0, progress?.total ?? 0)
               : ""}
             {finished && result?.total === 0 && t.browse.subscriptions.empty}
             {everyLookupFailed && t.browse.subscriptions.failed}
-          </div>
+          </p>
+          {/* One message when the analysis ends, not one per film. */}
+          <p role="status" className="sr-only">
+            {finished && result ? t.browse.subscriptions.ranked(result.ranking.length) : ""}
+          </p>
           {result && result.ranking.length > 0 && (
-            <ol className="subscription-list">
+            <ol className="subscription-list" aria-busy={!finished}>
               {result.ranking.map((row) => (
                 <li
                   key={row.id}

@@ -42,10 +42,11 @@ function setup(overrides: Partial<ListOffersDeps> = {}) {
     ...overrides,
   };
   const details = new Map<number, DetailState>();
+  const failedKeys = new Set<string>();
   const onProgress = vi.fn();
   const run = (films: StoredFilm[], signal = new AbortController().signal) =>
-    loadListOffers({ films, details, deps, signal, onProgress });
-  return { deps, details, onProgress, run };
+    loadListOffers({ films, details, failedKeys, deps, signal, onProgress });
+  return { deps, details, failedKeys, onProgress, run };
 }
 
 describe("loadListOffers", () => {
@@ -85,6 +86,32 @@ describe("loadListOffers", () => {
     expect(resolve).toHaveBeenCalledWith(["a"]);
     expect(deps.fetchDetail).toHaveBeenCalledWith(7, expect.anything());
     expect(result).toEqual([detail(7)]);
+  });
+
+  it("marks a film whose search stayed unresolved as failed", async () => {
+    const resolve = vi.fn(async () => [film("a", { confidence: null })]);
+    const { failedKeys, run } = setup({ resolve });
+    await run([film("a", { confidence: null })]);
+    expect([...failedKeys]).toEqual(["a"]);
+  });
+
+  it("clears a failed mark once the film is matched", async () => {
+    const resolve = vi.fn(async () => [matched("a", 7)]);
+    const { failedKeys, run } = setup({ resolve });
+    failedKeys.add("a");
+    await run([film("a", { confidence: null })]);
+    expect(failedKeys.has("a")).toBe(false);
+  });
+
+  it("leaves failed marks alone when aborted while resolving", async () => {
+    const controller = new AbortController();
+    const resolve = vi.fn(async () => {
+      controller.abort();
+      return [film("a", { confidence: null })];
+    });
+    const { failedKeys, run } = setup({ resolve });
+    await run([film("a", { confidence: null })], controller.signal);
+    expect(failedKeys.size).toBe(0);
   });
 
   it("turns a failed lookup into null and still finishes", async () => {

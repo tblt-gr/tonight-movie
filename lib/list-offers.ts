@@ -28,12 +28,15 @@ type Entry = { tmdbId: number } | null;
 export async function loadListOffers({
   films,
   details,
+  failedKeys,
   deps,
   signal,
   onProgress,
 }: {
   films: StoredFilm[];
   details: Map<number, DetailState>;
+  /** Film keys whose search failed, shared with the grid so they are not searched again. */
+  failedKeys: Set<string>;
   deps: ListOffersDeps;
   signal: AbortSignal;
   onProgress: (progress: ListOffersProgress) => void;
@@ -42,6 +45,12 @@ export async function loadListOffers({
   const unresolved = films.filter((film) => film.confidence === null).map((film) => film.key);
   if (unresolved.length > 0 && !signal.aborted) {
     const fresh = new Map((await deps.resolve(unresolved)).map((film) => [film.key, film]));
+    // An aborted search never ran: its films are not failures.
+    if (signal.aborted) return [];
+    for (const key of unresolved) {
+      if (fresh.get(key)?.confidence == null) failedKeys.add(key);
+      else failedKeys.delete(key);
+    }
     current = films.map((film) => fresh.get(film.key) ?? film);
   }
 
