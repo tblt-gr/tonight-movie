@@ -33,6 +33,8 @@ type Props = {
   hasSeen: boolean;
   filtersChanged: boolean;
   onReset: () => void;
+  /** Opens the subscription ranking; only offered when browsing a list. */
+  onSubscriptions?: (opener: HTMLElement) => void;
 };
 
 /** The source, search, service, sort and view controls, plus the panel of fine filters. */
@@ -48,6 +50,7 @@ export function FilterBar({
   hasSeen,
   filtersChanged,
   onReset,
+  onSubscriptions,
 }: Props) {
   const ids = useId();
   const { t } = useI18n();
@@ -198,6 +201,15 @@ export function FilterBar({
           <List aria-hidden="true" />
         </button>
       </div>
+      {mode === "lists" && onSubscriptions && (
+        <button
+          type="button"
+          className="button"
+          onClick={(event) => onSubscriptions(event.currentTarget)}
+        >
+          {t.browse.subscriptions.button}
+        </button>
+      )}
       <button
         type="button"
         className="button filters-toggle"

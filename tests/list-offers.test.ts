@@ -118,13 +118,20 @@ describe("loadListOffers", () => {
     const { onProgress, run } = setup();
     await run([matched("a", 1), matched("b", 2), film("c", { confidence: 0 })]);
     const last = onProgress.mock.calls.at(-1)?.[0];
-    expect(last).toEqual({ done: 3, total: 3 });
+    expect(last).toEqual({ done: 3, total: 3, entries: [detail(1), detail(2), null] });
+  });
+
+  it("offers the entries loaded so far with each progress report", async () => {
+    const { onProgress, details, run } = setup();
+    details.set(1, detail(1));
+    await run([matched("a", 1), matched("b", 2)]);
+    expect(onProgress.mock.calls[0][0]).toEqual({ done: 1, total: 2, entries: [detail(1), null] });
   });
 
   it("reports an empty list once", async () => {
     const { onProgress, run } = setup();
     expect(await run([])).toEqual([]);
     expect(onProgress).toHaveBeenCalledTimes(1);
-    expect(onProgress).toHaveBeenCalledWith({ done: 0, total: 0 });
+    expect(onProgress).toHaveBeenCalledWith({ done: 0, total: 0, entries: [] });
   });
 });

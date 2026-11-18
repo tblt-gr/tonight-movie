@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FilmCard, type CardFilm } from "@/components/FilmCard";
 import { FilmDialog } from "@/components/FilmDialog";
 import { FilterBar } from "@/components/FilterBar";
+import { SubscriptionDialog } from "@/components/SubscriptionDialog";
 import { useI18n } from "@/components/I18nProvider";
 import {
   DEFAULT_FILTERS,
@@ -61,6 +62,7 @@ export function FilmBrowser() {
   const [retry, setRetry] = useState(0);
   const [selected, setSelected] = useState<CardFilm | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const [ranking, setRanking] = useState(false);
 
   // Both sources share the details already loaded during this visit.
   const [details] = useState(() => new Map<number, DetailState>());
@@ -267,6 +269,10 @@ export function FilmBrowser() {
           hasSeen={hasSeen}
           filtersChanged={filtersChanged}
           onReset={resetFilters}
+          onSubscriptions={(opener) => {
+            openerRef.current = opener;
+            setRanking(true);
+          }}
         />
       )}
 
@@ -335,6 +341,19 @@ export function FilmBrowser() {
 
       {more && !busy && cards.length > 0 && (
         <div ref={sentinelRef} className="browse-sentinel" aria-hidden="true" />
+      )}
+
+      {ranking && mode === "lists" && (
+        <SubscriptionDialog
+          films={listFilms}
+          services={services}
+          details={details}
+          failedKeys={failedKeys}
+          lang={lang}
+          region={region}
+          opener={openerRef}
+          onClose={() => setRanking(false)}
+        />
       )}
 
       {selected && (

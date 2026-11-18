@@ -11,7 +11,12 @@ export type ListOffersDeps = {
   fetchDetail: (tmdbId: number, signal: AbortSignal) => Promise<MovieDetails>;
 };
 
-export type ListOffersProgress = { done: number; total: number };
+export type ListOffersProgress = {
+  done: number;
+  total: number;
+  /** One entry per distinct film, `null` while its details are not loaded yet. */
+  entries: Array<MovieDetails | null>;
+};
 
 type Entry = { tmdbId: number } | null;
 
@@ -52,9 +57,14 @@ export async function loadListOffers({
   }
 
   const total = entries.length;
+  const snapshot = () =>
+    entries.map((entry) => {
+      const detail = entry ? details.get(entry.tmdbId) : undefined;
+      return typeof detail === "object" ? detail : null;
+    });
   const wanted = [...ids].filter((id) => typeof details.get(id) !== "object");
   let done = total - wanted.length;
-  onProgress({ done, total });
+  onProgress({ done, total, entries: snapshot() });
 
   await mapLimit(
     wanted,
@@ -67,13 +77,10 @@ export async function loadListOffers({
         details.set(id, "failed");
       }
       done += 1;
-      onProgress({ done, total });
+      onProgress({ done, total, entries: snapshot() });
     },
     signal,
   );
 
-  return entries.map((entry) => {
-    const detail = entry ? details.get(entry.tmdbId) : undefined;
-    return typeof detail === "object" ? detail : null;
-  });
+  return snapshot();
 }
