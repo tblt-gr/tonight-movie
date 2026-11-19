@@ -373,15 +373,16 @@
   height: 4px;
   background: var(--live);
 }
-.filter-source {
+.filter-services-row {
   display: flex;
+  align-items: flex-end;
 }
-.filter-source .select {
+.filter-services-row .multiselect {
   flex: 1;
   min-width: 0;
 }
-/* Glued to the select: one shared border between the two controls. */
-.filters .filter-source-info {
+/* Glued to the services field: one shared border between the two controls. */
+.filters .filter-services-info {
   width: 48px;
   height: 48px;
   margin-left: -2px;

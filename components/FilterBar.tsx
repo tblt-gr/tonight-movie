@@ -115,17 +115,6 @@ export function FilterBar({
               </option>
             ))}
           </select>
-          {mode === "lists" && onSubscriptions && (
-            <button
-              type="button"
-              className="icon-button filter-source-info"
-              aria-label={t.browse.subscriptions.button}
-              title={t.browse.subscriptions.button}
-              onClick={(event) => onSubscriptions(event.currentTarget)}
-            >
-              <Info aria-hidden="true" />
-            </button>
-          )}
         </div>
       </div>
       {mode === "lists" && (
@@ -142,19 +131,32 @@ export function FilterBar({
         </div>
       )}
       <div className="filter filter-services">
-        <MultiSelect
-          label={t.browse.services}
-          options={serviceOptions}
-          selected={serviceSelected}
-          onChange={(next) => update({ services: [...next] })}
-          emptyMessage={t.services.empty}
-          removeLabel={t.services.remove}
-          clearLabel={t.services.clear}
-          sectionLabels={{ mine: t.services.mine, others: t.services.others }}
-          owned={services}
-          pinnedId={SERVICE_ANY}
-          summary={servicesSummary}
-        />
+        <div className="filter-services-row">
+          <MultiSelect
+            label={t.browse.services}
+            options={serviceOptions}
+            selected={serviceSelected}
+            onChange={(next) => update({ services: [...next] })}
+            emptyMessage={t.services.empty}
+            removeLabel={t.services.remove}
+            clearLabel={t.services.clear}
+            sectionLabels={{ mine: t.services.mine, others: t.services.others }}
+            owned={services}
+            pinnedId={SERVICE_ANY}
+            summary={servicesSummary}
+          />
+          {mode === "lists" && onSubscriptions && (
+            <button
+              type="button"
+              className="icon-button filter-services-info"
+              aria-label={t.browse.subscriptions.button}
+              title={t.browse.subscriptions.button}
+              onClick={(event) => onSubscriptions(event.currentTarget)}
+            >
+              <Info aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
       <div className="filter">
         <label htmlFor={`${ids}-sort`}>{t.browse.sort}</label>
