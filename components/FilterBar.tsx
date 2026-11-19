@@ -8,6 +8,7 @@ import { MultiSelect } from "@/components/MultiSelect";
 import {
   DEFAULT_FILTERS,
   SERVICE_ANY,
+  exclusiveAnyService,
   sortsFor,
   type BrowseFilters,
   type BrowseMode,
@@ -136,7 +137,9 @@ export function FilterBar({
             label={t.browse.services}
             options={serviceOptions}
             selected={serviceSelected}
-            onChange={(next) => update({ services: [...next] })}
+            onChange={(next) =>
+              update({ services: exclusiveAnyService(filters.services, [...next]) })
+            }
             emptyMessage={t.services.empty}
             removeLabel={t.services.remove}
             clearLabel={t.services.clear}

@@ -34,6 +34,12 @@ export function offersForCard(
     .slice(0, 3);
 }
 
+/** « Any service » and specific services exclude each other: the last choice made wins. */
+export function exclusiveAnyService(previous: readonly string[], next: readonly string[]) {
+  if (!next.includes(SERVICE_ANY)) return [...next];
+  return previous.includes(SERVICE_ANY) ? next.filter((id) => id !== SERVICE_ANY) : [SERVICE_ANY];
+}
+
 const MAX_SERVICES = 20;
 
 export type BrowseFilters = {

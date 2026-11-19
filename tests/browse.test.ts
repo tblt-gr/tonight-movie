@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_FILTERS,
   classifyListFilm,
+  SERVICE_ANY,
+  exclusiveAnyService,
   filterGlobalResults,
   parseFilters,
   needsFullSort,
@@ -97,6 +99,19 @@ describe("URL state", () => {
     );
     expect(parseFilters(params)).toEqual(DEFAULT_FILTERS);
     expect(parseFilters(new URLSearchParams("duration=99999")).maxDuration).toBeNull();
+  });
+});
+
+describe("exclusiveAnyService", () => {
+  it("drops the specific services when any is ticked", () => {
+    expect(exclusiveAnyService(["8", "337"], ["8", "337", SERVICE_ANY])).toEqual([SERVICE_ANY]);
+  });
+  it("drops any when a specific service is ticked", () => {
+    expect(exclusiveAnyService([SERVICE_ANY], [SERVICE_ANY, "8"])).toEqual(["8"]);
+  });
+  it("keeps other changes as they are", () => {
+    expect(exclusiveAnyService(["8"], ["8", "337"])).toEqual(["8", "337"]);
+    expect(exclusiveAnyService([SERVICE_ANY], [])).toEqual([]);
   });
 });
 
