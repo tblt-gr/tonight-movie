@@ -143,6 +143,7 @@ export function FilterBar({
             emptyMessage={t.services.empty}
             removeLabel={t.services.remove}
             clearLabel={t.services.clear}
+            clearSearchLabel={t.services.clearSearch}
             sectionLabels={{ mine: t.services.mine, others: t.services.others }}
             owned={services}
             pinnedId={SERVICE_ANY}

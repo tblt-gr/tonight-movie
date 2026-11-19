@@ -127,6 +127,7 @@ export const fr = {
     empty: (query: string) => `Aucun service ne correspond à « ${query} ».`,
     remove: (name: string) => `Retirer ${name}`,
     clear: "Vider la sélection",
+    clearSearch: "Effacer la recherche",
     mine: "Mes services",
     others: "Autres services",
     submit: "Valider",
