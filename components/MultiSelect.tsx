@@ -30,6 +30,7 @@ type Props = {
   emptyMessage: (query: string) => string;
   removeLabel: (name: string) => string;
   clearLabel: string;
+  clearSearchLabel: string;
   sectionLabels: { mine: string; others: string };
   /** The visitor's own services; defaults to the selection, so ticking a service moves it up. */
   owned?: ReadonlySet<string>;
@@ -96,6 +97,7 @@ export function MultiSelect({
   emptyMessage,
   removeLabel,
   clearLabel,
+  clearSearchLabel,
   sectionLabels,
   owned,
   pinnedId,
@@ -148,8 +150,14 @@ export function MultiSelect({
     onChange(toggleId(selected, id));
   }
 
+  // While text is typed the button erases it; the selection is only cleared from an empty field.
   function clear() {
-    onChange(new Set());
+    if (query) {
+      search("");
+      setOpen(false);
+    } else {
+      onChange(new Set());
+    }
     inputRef.current?.focus();
   }
 
@@ -231,11 +239,11 @@ export function MultiSelect({
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
         />
-        {selected.size > 0 && (
+        {(query || selected.size > 0) && (
           <button
             type="button"
             className="multiselect-clear"
-            aria-label={clearLabel}
+            aria-label={query ? clearSearchLabel : clearLabel}
             onClick={clear}
           >
             <X aria-hidden="true" />

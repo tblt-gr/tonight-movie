@@ -126,6 +126,7 @@ export const en: Dictionary = {
     empty: (query: string) => `No service matches “${query}”.`,
     remove: (name: string) => `Remove ${name}`,
     clear: "Clear the selection",
+    clearSearch: "Clear the search",
     mine: "My services",
     others: "Other services",
     submit: "Save",

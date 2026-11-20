@@ -118,6 +118,7 @@ export function ServicesPicker({ children }: { children?: ReactNode }) {
               emptyMessage={t.services.empty}
               removeLabel={t.services.remove}
               clearLabel={t.services.clear}
+              clearSearchLabel={t.services.clearSearch}
               sectionLabels={{ mine: t.services.mine, others: t.services.others }}
               summary={summarizeNames(
                 providers.filter((provider) => selected.has(provider.id)).map((p) => p.name),
